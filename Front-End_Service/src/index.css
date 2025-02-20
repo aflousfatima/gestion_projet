@@ -1,0 +1,13 @@
+/* index.css */
+
+/* Applique une couleur de fond à toute la page */
+body {
+    background-color: rgb(238, 238, 238)e7;  /* Changer avec la couleur que tu veux */
+    color: #ecf0f1;  /* Couleur du texte pour un bon contraste */
+    margin: 0;  /* Supprimer les marges par défaut */
+    padding: 0;  /* Supprimer les paddings par défaut */
+    height: 100vh; /* Assure-toi que la page occupe toute la hauteur de la fenêtre */
+  }
+  
+  /* Tu peux également styliser d'autres éléments si nécessaire */
+  
