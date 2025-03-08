@@ -12,10 +12,16 @@
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "axios": "^1.8.1",
     "bootstrap": "^5.3.3",
+    "chart.js": "^4.4.8",
+    "curlrequest": "^1.0.1",
+    "dotenv": "^16.4.7",
     "font-awesome": "^4.7.0",
     "next": "15.2.0",
+    "node-vault": "^0.10.2",
     "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
@@ -28,5 +34,15 @@
     "eslint-config-next": "15.2.0",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "ssl": {
+    "ecdhCurve": "",
+    "enabled": true,
+    "accept_invalid_cert": false,
+    "ca_file": "",
+    "key_file": "",
+    "cert_file": "",
+    "secure_protocol": "SSLv3_method",
+    "ciphers": ""
   }
 }

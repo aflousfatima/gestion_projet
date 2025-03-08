@@ -1,7 +1,8 @@
 "use client";
 import "../../../styles/Signup.css";
 import { useState, ChangeEvent, FormEvent } from "react";
-
+import axios from "axios";
+import Link from "next/link";
 interface FormData {
   firstName: string;
   lastName: string;
@@ -31,18 +32,49 @@ export default function SignupPage() {
     }));
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // Assurez-vous que la fonction handleSubmit est marquée comme async
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Form Data:", formData);
+
+    try {
+      // Log des données envoyées pour l'inscription
+      console.log("Données envoyées pour l'inscription:", formData);
+
+      // Utilisation d'Axios pour envoyer une requête POST
+      const response = await axios.post("/api/auth/register", formData);
+
+      // Log de la réponse du serveur
+      console.log("Réponse du serveur:", response);
+
+      if (response.status === 200) {
+        alert("Inscription réussie! Vérifiez votre email pour confirmer.");
+      } else {
+        alert(`Erreur : ${response.data.message}`);
+      }
+    } catch (error: unknown) {
+      console.error("Erreur lors de l'inscription :", error);
+
+      // Log détaillé de l'erreur Axios si c'est une erreur Axios
+      if (axios.isAxiosError(error)) {
+        console.error("Détails de l'erreur Axios:", error.response?.data);
+        console.error("Statut de l'erreur Axios:", error.response?.status);
+        console.error("En-têtes de l'erreur Axios:", error.response?.headers);
+      } else if (error instanceof Error) {
+        console.error("Erreur inconnue:", error.message);
+      } else {
+        console.error("Erreur non identifiable:", error);
+      }
+
+      alert("Erreur dans l'inscription. Veuillez réessayer.");
+    }
   };
 
   return (
     <div className="container1">
       <div className=" form-box">
-        <h3 className="title1">Get started with AGILIA
-        </h3>
+        <h3 className="title1">Get started with AGILIA</h3>
         <h2 className="title2">
-        It’s free for up to 10 users - no credit card needed.
+          It’s free for up to 10 users - no credit card needed.
         </h2>
         {/* Horizontal Signup Sections */}
         <div className="signup-sections">
@@ -50,18 +82,10 @@ export default function SignupPage() {
           {/* Social Sign Up Section */}
           <div className="social-signup">
             <a href="#" className="social-icon" title="Continuer avec Google">
-              <img
-                src="/google.png"
-                alt="Google"
-                className="social-img"
-              />
+              <img src="/google.png" alt="Google" className="social-img" />
             </a>
             <a href="#" className="social-icon" title="Continuer avec Facebook">
-              <img
-                src="/facebook.png"
-                alt="Facebook"
-                className="social-img"
-              />
+              <img src="/facebook.png" alt="Facebook" className="social-img" />
             </a>
             <a
               href="#"
@@ -184,14 +208,25 @@ export default function SignupPage() {
               <button type="submit" className="submit-btn">
                 Sign Up
               </button>
+              <p className="quest">
+                Already have an account ?{" "}
+                <Link
+                  className="nav-link active low-custom1"
+                  aria-current="page"
+                  href="/authentification/signin"
+                >
+                  Sign In
+                </Link>{" "}
+              </p>
             </form>
           </div>
         </div>
       </div>
       <div className="signup-image-container">
         <img
-          src="/signup.png"
-          alt="Signup Illustration" loading="eager"
+          src="/signin.png"
+          alt="Signup Illustration"
+          loading="eager"
           className="signup-image"
         />
       </div>

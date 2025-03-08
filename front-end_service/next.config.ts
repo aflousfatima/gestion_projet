@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  env: {
+    VAULT_URL: process.env.VAULT_URL,
+    VAULT_TOKEN: process.env.VAULT_TOKEN,
+}, /* config options here */
 };
 
 export default nextConfig;

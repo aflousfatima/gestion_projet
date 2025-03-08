@@ -1,10 +1,10 @@
 import "../styles/Navbar.css";
-import Link from 'next/link';
+import Link from "next/link";
 const Navbar = () => {
   return (
     <div>
       <nav className="navbar navbar-expand-lg ">
-      <div className="container">
+        <div className="container">
           <img className="navbar-logo" src="/logo.png" alt="logo"></img>
           <button
             className="navbar-toggler"
@@ -19,15 +19,15 @@ const Navbar = () => {
           </button>
           <div className="navbar-collapse" id="navbarSupportedContent">
             <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item">
+              <li className="nav-item">
                 <Link className="nav-link active" aria-current="page" href="/">
                   Home
                 </Link>
               </li>
               <li className="nav-item">
-                <a className="nav-link active" aria-current="page" href="#">
+                <Link className="nav-link active" aria-current="page" href="/authentification/signin">
                   Product
-                </a>
+                </Link>
               </li>
               <li className="nav-item">
                 <a className="nav-link active" aria-current="page" href="#">
@@ -45,16 +45,18 @@ const Navbar = () => {
                 </a>
               </li>
               <li className="style-try">
-              <Link href="/authentification/signup" className="nav-link active btn" aria-current="page">
-                     Start for Free
-              </Link>
+                <Link
+                  href="/authentification/signup"
+                  className="nav-link active btn"
+                  aria-current="page"
+                >
+                  Start for Free
+                </Link>
               </li>
-        </ul>
-
+            </ul>
           </div>
         </div>
-        
-                    </nav>
+      </nav>
     </div>
   );
 };
