@@ -23,6 +23,7 @@ export default function SignupPage() {
     marketingConsent: false,
     termsAccepted: false,
   });
+  const API_AUTHENTIFICATON_SERVICE_URL = process.env.API_AUTHENTIFICATON_SERVICE_URL;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -32,7 +33,6 @@ export default function SignupPage() {
     }));
   };
 
-  // Assurez-vous que la fonction handleSubmit est marquée comme async
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -40,8 +40,11 @@ export default function SignupPage() {
       // Log des données envoyées pour l'inscription
       console.log("Données envoyées pour l'inscription:", formData);
 
-      // Utilisation d'Axios pour envoyer une requête POST
-      const response = await axios.post("/api/auth/register", formData);
+      // Envoi de la requête POST au backend Spring Boot
+      const response = await axios.post(
+        "${API_AUTHENTIFICATON_SERVICE_URL}/api/signup",
+        formData
+      );
 
       // Log de la réponse du serveur
       console.log("Réponse du serveur:", response);
@@ -51,20 +54,8 @@ export default function SignupPage() {
       } else {
         alert(`Erreur : ${response.data.message}`);
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error("Erreur lors de l'inscription :", error);
-
-      // Log détaillé de l'erreur Axios si c'est une erreur Axios
-      if (axios.isAxiosError(error)) {
-        console.error("Détails de l'erreur Axios:", error.response?.data);
-        console.error("Statut de l'erreur Axios:", error.response?.status);
-        console.error("En-têtes de l'erreur Axios:", error.response?.headers);
-      } else if (error instanceof Error) {
-        console.error("Erreur inconnue:", error.message);
-      } else {
-        console.error("Erreur non identifiable:", error);
-      }
-
       alert("Erreur dans l'inscription. Veuillez réessayer.");
     }
   };
