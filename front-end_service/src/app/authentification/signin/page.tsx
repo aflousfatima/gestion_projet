@@ -22,40 +22,39 @@ export default function SigninPage() {
     }));
   };
 
-  // Assurez-vous que la fonction handleSubmit est marquée comme async
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     try {
-        console.log("Tentative de connexion avec :", formData);
+      // Log des données envoyées pour l'inscription
+      console.log("Données envoyées pour l'inscription:", formData);
+      console.log(process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL);
 
-        const response = await axios.post("/api/auth/login", formData);
+      // Envoi de la requête POST au backend Spring Boot
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/login`,
+        formData
+      );
 
-        if (response.status === 200) {
-            const { access_token, refresh_token } = response.data;
+      // Log de la réponse du serveur
+      console.log("Réponse du serveur:", response);
 
-            // Stockage du token localement
-            localStorage.setItem("accessToken", access_token);
-            localStorage.setItem("refreshToken", refresh_token);
-
-            alert("Connexion réussie !");
-            window.location.href = "/"; // Redirection vers la page sécurisée
-        } else {
-            alert(`Erreur : ${response.data.message}`);
-        }
+      if (response.status === 200) {
+        alert("Inscription réussie! Vérifiez votre email pour confirmer.");
+      } else {
+        alert(`Erreur : ${response.data.message}`);
+      }
     } catch (error) {
-        console.error("Erreur de connexion :", error);
-        alert("Identifiants incorrects ou problème serveur.");
+      console.error("Erreur lors de l'inscription :", error);
+      alert("Erreur dans l'inscription. Veuillez réessayer.");
     }
-};
+  };
 
   return (
     <div className="container2">
       <div className="form-box">
         <h3 className="title1">Welcome Back to AGILIA</h3>
-        <h2 className="title2">
-        Sign in to access your workspace
-        </h2>
+        <h2 className="title2">Sign in to access your workspace</h2>
         {/* Horizontal Signup Sections */}
         <div className="signin-sections">
           {/* Social Sign Up Section (Left) */}
@@ -92,8 +91,26 @@ export default function SigninPage() {
               <button type="submit" className="submit1-btn">
                 Sign In
               </button>
-              <p className="quest1">Don{"'"}t have an account ? <Link className="nav-link active low-custom" aria-current="page" href="/authentification/signup">Sign Up</Link> </p>
-              <p className="quest2"> <Link className="nav-link active low-custom2" aria-current="page" href="/authentification/signup">Forgot your password ?</Link> </p>
+              <p className="quest1">
+                Don{"'"}t have an account ?{" "}
+                <Link
+                  className="nav-link active low-custom"
+                  aria-current="page"
+                  href="/authentification/signup"
+                >
+                  Sign Up
+                </Link>{" "}
+              </p>
+              <p className="quest2">
+                {" "}
+                <Link
+                  className="nav-link active low-custom2"
+                  aria-current="page"
+                  href="/authentification/signup"
+                >
+                  Forgot your password ?
+                </Link>{" "}
+              </p>
             </form>
           </div>
         </div>

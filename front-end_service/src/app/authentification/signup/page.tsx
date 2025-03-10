@@ -23,8 +23,6 @@ export default function SignupPage() {
     marketingConsent: false,
     termsAccepted: false,
   });
-  const API_AUTHENTIFICATON_SERVICE_URL = process.env.API_AUTHENTIFICATON_SERVICE_URL;
-
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => ({
@@ -42,14 +40,14 @@ export default function SignupPage() {
 
       // Envoi de la requête POST au backend Spring Boot
       const response = await axios.post(
-        "${API_AUTHENTIFICATON_SERVICE_URL}/api/signup",
+        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/signup`,
         formData
       );
 
       // Log de la réponse du serveur
       console.log("Réponse du serveur:", response);
 
-      if (response.status === 200) {
+      if (response.status === 201) {
         alert("Inscription réussie! Vérifiez votre email pour confirmer.");
       } else {
         alert(`Erreur : ${response.data.message}`);
