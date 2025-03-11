@@ -163,7 +163,7 @@ export default function SignupPage() {
                 />
               </div>
 
-              <div className="checkbox-group">
+              <div className="checkbox-group1">
                 <input
                   type="checkbox"
                   name="marketingConsent"
@@ -173,7 +173,7 @@ export default function SignupPage() {
                 <label>I agree to receive marketing emails.</label>
               </div>
 
-              <div className="checkbox-group">
+              <div className="checkbox-group1">
                 <input
                   type="checkbox"
                   name="termsAccepted"

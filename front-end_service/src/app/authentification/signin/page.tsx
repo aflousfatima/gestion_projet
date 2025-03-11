@@ -1,8 +1,10 @@
 "use client";
 import "../../../styles/Signin.css";
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Utilisez `next/navigation` au lieu de `next/router`
+
 interface FormData {
   email: string;
   password: string;
@@ -13,7 +15,10 @@ export default function SigninPage() {
     email: "",
     password: "",
   });
-
+  const router = useRouter(); // Initialisation de useRouter pour la redirection
+  useEffect(() => {
+    router.prefetch("/company-registration"); // Précharge la page en cache
+  }, []);
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => ({
@@ -40,7 +45,9 @@ export default function SigninPage() {
       console.log("Réponse du serveur:", response);
 
       if (response.status === 200) {
-        alert("Inscription réussie! Vérifiez votre email pour confirmer.");
+        alert("Login réussie!");
+        // Redirection vers la page de création d'entreprise après une connexion réussie
+        router.replace("/company-registration"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
       } else {
         alert(`Erreur : ${response.data.message}`);
       }
