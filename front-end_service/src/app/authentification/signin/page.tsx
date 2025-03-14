@@ -4,6 +4,7 @@ import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Utilisez `next/navigation` au lieu de `next/router`
+import { useAuth } from "../../../context/AuthContext"; // Importer le contexte d'authentification
 
 interface FormData {
   email: string;
@@ -16,6 +17,8 @@ export default function SigninPage() {
     password: "",
   });
   const router = useRouter(); // Initialisation de useRouter pour la redirection
+  const { login } = useAuth(); // Utilisation du contexte Auth pour accéder à la fonction login
+
   useEffect(() => {
     router.prefetch("/company-registration"); // Précharge la page en cache
   }, []);
@@ -38,7 +41,8 @@ export default function SigninPage() {
       // Envoi de la requête POST au backend Spring Boot
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/login`,
-        formData
+        formData,
+        { withCredentials: true }
       );
 
       // Log de la réponse du serveur
@@ -46,6 +50,11 @@ export default function SigninPage() {
 
       if (response.status === 200) {
         alert("Login réussie!");
+        // Récupération du access_token dans la réponse et stockage dans le contexte
+        const accessToken = response.data.access_token;
+        console.log("Access Token récupéré:", accessToken);
+        login(accessToken); // Appeler la fonction `login` du contexte pour stocker le token
+
         // Redirection vers la page de création d'entreprise après une connexion réussie
         router.replace("/company-registration"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
       } else {

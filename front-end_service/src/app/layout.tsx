@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import 'font-awesome/css/font-awesome.min.css';
-import 'bootstrap/dist/css/bootstrap.min.css'; // Importer Bootstrap CSS globalement
+import "font-awesome/css/font-awesome.min.css";
+import "bootstrap/dist/css/bootstrap.min.css"; // Importer Bootstrap CSS globalement
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-
+import { AuthProvider } from "../context/AuthContext";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -29,17 +29,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-  <link
-    rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
-  />
-  
-</head>
-    <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-      <Navbar /> {/* Affichage de la navbar sur toutes les pages */}
-      <main>{children}</main> {/* Contenu de la page */}
-      <Footer /> {/* Affichage du footer sur toutes les pages */}
-    </body>
-  </html>
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"
+        />
+      </head>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <AuthProvider>
+          <Navbar /> {/* Affichage de la navbar sur toutes les pages */}
+          <main>{children}</main> {/* Contenu de la page */}
+          <Footer /> {/* Affichage du footer sur toutes les pages */}
+        </AuthProvider>
+      </body>
+    </html>
   );
 }
