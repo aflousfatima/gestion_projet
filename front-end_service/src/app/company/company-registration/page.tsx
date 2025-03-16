@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import "../../styles/Company-registration.css";
-import ProtectedRoute from "../../components/ProtectedRoute";
+import ProtectedRoute from "../../../components/ProtectedRoute";
 
 const Page = () => {
   const [formData, setFormData] = useState({

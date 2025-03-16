@@ -56,7 +56,7 @@ export default function SigninPage() {
         login(accessToken); // Appeler la fonction `login` du contexte pour stocker le token
 
         // Redirection vers la page de création d'entreprise après une connexion réussie
-        router.replace("/company-registration"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
+        router.replace("/company/company-choice"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
       } else {
         alert(`Erreur : ${response.data.message}`);
       }

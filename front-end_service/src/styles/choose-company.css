@@ -1,0 +1,40 @@
+
+  .container-choice {
+    text-align: center;
+    
+  }
+  
+  .title {
+    margin-top:20px;
+    font-size: 2rem;
+    font-weight: bold;
+  }
+  
+  .subtitle {
+    margin-bottom: 2rem;
+    opacity: 0.8;
+  }
+  
+  .options {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+  }
+  
+  
+
+  .btn-hoice {
+    background-color: white;
+    color: black;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 1rem;
+  }
+  
+  .btn:hover {
+    background-color: #ddd;
+  }
+  
