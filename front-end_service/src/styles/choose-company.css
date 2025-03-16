@@ -1,40 +1,153 @@
+/* styles/choose-company.css */
+.choose-company-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Arial', sans-serif;
+  color: #000000;
+  margin-top:-10px;
+}
 
-  .container-choice {
-    text-align: center;
-    
-  }
-  
-  .title {
-    margin-top:20px;
+/* Hero Section */
+.hero-section {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 1s ease-in-out;
+}
+
+.hero-subtitle {
+  font-size: 1.00rem;
+  max-width: 800px;
+  margin: 1rem auto 0;
+  opacity: 0.9;
+}
+
+/* Choice Cards Container */
+.choice-container {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top:-50px;
+}
+
+/* Choice Card Styling */
+.choice-card {
+  width: 330px;
+  height: 300px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  color: #ffffff;
+
+}
+
+.choice-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.create-card {
+  background: linear-gradient(45deg, #133030, #133030, #68927e);
+}
+
+.join-card {
+  background: linear-gradient(45deg, #ff4500, #ff8c00, #ffae42, #ffd700);
+}
+
+.card-content {
+  padding: 2rem;
+  text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.card-title {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.card-description {
+  font-size: 1rem;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+
+/* Buttons */
+.choice-btn {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.create-btn {
+  background: #ffffff;
+  color: #000000;
+}
+
+.create-btn:hover {
+  background: #e5e7eb;
+  transform: scale(1.05);
+}
+
+.join-btn {
+  background: #ffffff;
+  color: #000000;
+}
+
+.join-btn:hover {
+  background: #e5e7eb;
+  transform: scale(1.05);
+}
+
+/* Footer Note */
+.footer-note {
+  margin-top: 3rem;
+  font-size: 0.9rem;
+  opacity: 0.7;
+  text-align: center;
+  margin-top:20px;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(-20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .hero-title {
     font-size: 2rem;
-    font-weight: bold;
   }
-  
-  .subtitle {
-    margin-bottom: 2rem;
-    opacity: 0.8;
-  }
-  
-  .options {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-  }
-  
-  
 
-  .btn-hoice {
-    background-color: white;
-    color: black;
-    padding: 10px 20px;
-    border: none;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 1rem;
+  .hero-subtitle {
+    font-size: 1rem;
   }
-  
-  .btn:hover {
-    background-color: #ddd;
+
+  .choice-card {
+    width: 100%;
+    max-width: 300px;
   }
-  
+}
