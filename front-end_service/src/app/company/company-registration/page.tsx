@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import "../../styles/Company-registration.css";
+import "../../../styles/Company-registration.css";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 
 const Page = () => {
@@ -35,7 +35,6 @@ const Page = () => {
       <div className="form-container">
         {/* Section 1: Tell us about your company */}
         <section className="company-section">
-          <img src="/batiment.png" alt="Step Icon" />
           <p className="titres">Tell us about your company</p>
           <div className="roadmap-container">
             <div className="step step-1">

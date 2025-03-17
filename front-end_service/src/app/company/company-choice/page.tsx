@@ -10,14 +10,15 @@ export default function ChooseCompanyPage() {
       <div className="hero-section">
         <h1 className="hero-title">Embark on Your Agile Journey</h1>
         <p className="hero-subtitle">
-          Will you lead your own empire or join a thriving team? The choice is yours.
+          Will you lead your own empire or join a thriving team? The choice is
+          yours.
         </p>
       </div>
 
       <div className="choice-container">
         <div
           className="choice-card create-card"
-          onClick={() => router.push("/create-company")}
+          onClick={() => router.push("/company/company-registration")}
         >
           <div className="card-content">
             <h2 className="card-title">Create a Company</h2>
