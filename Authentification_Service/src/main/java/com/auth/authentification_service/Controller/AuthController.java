@@ -1,18 +1,21 @@
 package com.auth.authentification_service.Controller;
 
 import com.auth.authentification_service.DTO.LoginRequest;
+import com.auth.authentification_service.DTO.TokenDto;
 import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.Service.KeycloakService;
 import com.auth.authentification_service.Service.LoginService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 
+import java.util.Collections;
+
 @RestController
 @RequestMapping("/api/")
-@CrossOrigin(origins = "http://localhost:3000")
 public class AuthController {
     private final KeycloakService keycloakService;
     private  final LoginService loginService;
@@ -28,36 +31,55 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         try {
-            System.out.println("Tentative d'authentification pour l'utilisateur : " + request.getEmail());
+            TokenDto tokens = loginService.authenticateUser(request.getEmail(), request.getPassword());
 
-            // Authentifier l'utilisateur avec email et mot de passe
-            String accessToken = loginService.authenticateUser(request.getEmail(), request.getPassword());
+            // Création du cookie HttpOnly avec le refresh_token
+            Cookie refreshTokenCookie = new Cookie("REFRESH_TOKEN", tokens.getRefreshToken());
+            refreshTokenCookie.setSecure(false); // ⚠ Met à true en prod (HTTPS obligatoire)
+            refreshTokenCookie.setHttpOnly(true);
+            refreshTokenCookie.setPath("/");
+            refreshTokenCookie.setDomain("localhost");  // Exemple de domaine explicitement défini
+            refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 jours
+            refreshTokenCookie.setAttribute("SameSite", "Lax"); // Ajoute ceci
+            response.addCookie(refreshTokenCookie);  // Envoie du cookie au navigateur
 
-            // Vérifier si le token d'accès est obtenu
-            if (accessToken != null) {
-                System.out.println("Token d'accès obtenu avec succès pour l'utilisateur : " + request.getEmail());
-                // Décoder le token pour récupérer l'ID utilisateur
-                String userId = loginService.decodeToken(accessToken);  // Appelle la méthode pour décoder le token
-                System.out.println("User ID extrait du token : " + userId);
+            // Retourner seulement l'access_token dans la réponse JSON
+            return ResponseEntity.ok(Collections.singletonMap("access_token", tokens.getAccessToken()));
 
-                // Stocker le token dans un cookie sécurisé HttpOnly
-                Cookie cookie = new Cookie("SESSION_TOKEN", accessToken);
-                cookie.setHttpOnly(true);
-                cookie.setSecure(true);  // Assurez-vous d'utiliser HTTPS
-                cookie.setPath("/");  // Rendre le cookie accessible sur tout le domaine
-                response.addCookie(cookie);
-                System.out.println("Cookie SESSION_TOKEN ajouté à la réponse");
-
-                return ResponseEntity.ok().build();
-            } else {
-                System.out.println("Échec de l'authentification pour l'utilisateur : " + request.getEmail());
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Échec de l'authentification");
-            }
         } catch (Exception e) {
-            System.out.println("Erreur pendant le processus d'authentification : " + e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Échec de l'authentification");
         }
     }
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refreshAccessToken(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Refresh token manquant !");
+        }
+
+        try {
+            TokenDto newTokens = loginService.refreshToken(refreshToken);
+
+            // Optionnel : Si Keycloak renvoie un nouveau refresh token, on met à jour le cookie
+            Cookie newRefreshTokenCookie = new Cookie("REFRESH_TOKEN", newTokens.getRefreshToken());
+            newRefreshTokenCookie.setSecure(false); // ⚠ Met à true en prod (HTTPS obligatoire)
+            newRefreshTokenCookie.setHttpOnly(true);
+            newRefreshTokenCookie.setPath("/");
+            newRefreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 jours
+            newRefreshTokenCookie.setAttribute("SameSite", "Lax"); // Ajoute ceci
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.SET_COOKIE, newRefreshTokenCookie.toString());
+
+            // Retourner le nouvel access_token dans la réponse JSON
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(Collections.singletonMap("access_token", newTokens.getAccessToken()));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Échec du renouvellement du token");
+        }
+    }
+
 
 
 }
