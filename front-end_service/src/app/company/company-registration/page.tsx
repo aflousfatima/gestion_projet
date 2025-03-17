@@ -2,8 +2,10 @@
 import React, { useState } from "react";
 import "../../../styles/Company-registration.css";
 import ProtectedRoute from "../../../components/ProtectedRoute";
-
+import useAxios from "../../../hooks/useAxios";
 const Page = () => {
+  const axiosInstance = useAxios("http://localhost:8085/"); // Remplacez par votre API
+
   const [formData, setFormData] = useState({
     companyName: "",
     industry: "",
@@ -25,9 +27,15 @@ const Page = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     console.log(formData);
+    try {
+      const response = await axiosInstance.post("/api/create-initial-project", formData);
+      console.log("Success:", response.data);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
   };
 
   return (
@@ -164,7 +172,7 @@ const Page = () => {
               <div className="step-content">
                 <input
                   type="text"
-                  id="ProjectName"
+                  id="projectName"
                   value={formData.projectName}
                   onChange={handleChange}
                   placeholder="Project name"
@@ -178,7 +186,7 @@ const Page = () => {
               <div className="step-content">
                 <input
                   type="text"
-                  id="ProjectDescription"
+                  id="projectDescription"
                   value={formData.projectDescription}
                   onChange={handleChange}
                   placeholder="Project desription"

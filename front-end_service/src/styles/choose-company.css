@@ -8,7 +8,7 @@
   padding: 2rem;
   font-family: 'Arial', sans-serif;
   color: #000000;
-  margin-top:-10px;
+  margin-top:10px;
 }
 
 /* Hero Section */
@@ -38,7 +38,7 @@
   gap: 2rem;
   flex-wrap: wrap;
   justify-content: center;
-  margin-top:-50px;
+  margin-top:-100px;
 }
 
 /* Choice Card Styling */
@@ -127,7 +127,7 @@
   font-size: 0.9rem;
   opacity: 0.7;
   text-align: center;
-  margin-top:20px;
+  margin-top:10px;
 }
 
 /* Animation */
