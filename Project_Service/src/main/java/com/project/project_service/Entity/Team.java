@@ -4,8 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Getter
-@Setter
+
 @NoArgsConstructor
 @AllArgsConstructor
 public class Team {
@@ -13,10 +12,42 @@ public class Team {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String nom;
-    private int taille;
+    private String name;
+    private String size;
 
-    @ManyToOne
-    @JoinColumn(name = "projet_id")
-    private Projet projet;
+    @ManyToOne(cascade = CascadeType.ALL) // Ou un autre type de cascade selon les besoins
+    @JoinColumn(name = "company_id")
+    private Entreprise company;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getSize() {
+        return size;
+    }
+
+    public void setSize(String size) {
+        this.size = size;
+    }
+
+    public Entreprise getCompany() {
+        return company;
+    }
+
+    public void setCompany(Entreprise company) {
+        this.company = company;
+    }
 }
