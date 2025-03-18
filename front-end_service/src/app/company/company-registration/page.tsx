@@ -17,6 +17,8 @@ const Page = () => {
     projectDescription: "",
   });
 
+  const [successMessage, setSuccessMessage] = useState(""); // État pour gérer le message de succès
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -33,6 +35,8 @@ const Page = () => {
     try {
       const response = await axiosInstance.post("/api/create-initial-project", formData);
       console.log("Success:", response.data);
+      setSuccessMessage("Company created successfully!"); // Affiche le message de succès
+
     } catch (error) {
       console.error("Error submitting form:", error);
     }
@@ -196,6 +200,12 @@ const Page = () => {
             </div>
           </div>
         </section>
+           {/* Success Message */}
+           {successMessage && (
+          <div className="success-message">
+            <p>{successMessage}</p>
+          </div>
+        )}
         {/* Submit button */}
         <div className="submit-container">
           <button onClick={handleSubmit}>Submit</button>
