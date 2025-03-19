@@ -7,7 +7,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "../context/AuthContext";
 import { usePathname } from "next/navigation"; // Importation de usePathname
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
