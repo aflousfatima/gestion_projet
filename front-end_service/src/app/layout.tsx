@@ -17,7 +17,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,10 +25,7 @@ export default function RootLayout({
   const pathname = usePathname(); // Récupérer le pathname actuel
 
   // Liste des pages où la navbar et le footer ne doivent pas s'afficher
-  const excludeNavbarFooterPages = ["/manager/dashboard"]; // Par exemple, login et signup
-
-  const showNavbarFooter = !excludeNavbarFooterPages.includes(pathname);
-
+  const shouldExcludeNavbarFooter = pathname.startsWith("/user/dashboard");
   return (
     <html lang="en">
       <head>
@@ -42,10 +38,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          {showNavbarFooter && <Navbar />}{" "}
+          {!shouldExcludeNavbarFooter && <Navbar />}{" "}
           {/* Affiche Navbar uniquement si nécessaire */}
           <main>{children}</main>
-          {showNavbarFooter && <Footer />}{" "}
+          {!shouldExcludeNavbarFooter && <Footer />}{" "}
           {/* Affiche Footer uniquement si nécessaire */}
         </AuthProvider>
       </body>
