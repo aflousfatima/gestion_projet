@@ -2,8 +2,13 @@ package com.auth.authentification_service.Service;
 
 import com.auth.authentification_service.DTO.KeycloakTokenResponse;
 import com.auth.authentification_service.DTO.TokenDto;
+import com.auth.authentification_service.DTO.UserInfoDto;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -13,7 +18,6 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 public class LoginService {
-
 
     @Value("${keycloak.auth-server-url}")
     private String keycloakUrl;
@@ -26,10 +30,12 @@ public class LoginService {
 
     private final RestTemplate restTemplate;
     private final  VaultService vaultService;
+    private final KeycloakService keycloakService;
 
-    public LoginService(RestTemplate restTemplate , VaultService vaultService) {
+    public LoginService(RestTemplate restTemplate , VaultService vaultService ,KeycloakService keycloakService) {
         this.restTemplate = restTemplate;
         this.vaultService = vaultService;
+        this.keycloakService= keycloakService;
     }
 
     public TokenDto authenticateUser(String email, String password) throws Exception {
@@ -96,19 +102,129 @@ public class LoginService {
     }
 
     public String decodeToken(String token) {
-        // Décoder le token sans valider la signature
-        DecodedJWT decodedJWT = JWT.decode(token);
+        try {
+            System.out.println("🔍 Tentative de décodage du token : " + token);
 
-        // Extraire l'ID utilisateur (le "sub")
-        String userId = decodedJWT.getSubject();  // Le 'sub' dans le JWT est l'ID utilisateur
-        String issuer = decodedJWT.getIssuer();   // Le 'iss' peut aussi être utile
-        long expirationTime = decodedJWT.getExpiresAt().getTime(); // Expiration du token
+            // Décoder le token sans valider la signature
+            DecodedJWT decodedJWT = JWT.decode(token);
+            System.out.println("✅ Token décodé avec succès.");
 
-        // Afficher ou retourner l'ID utilisateur
-        System.out.println("User ID (sub): " + userId);
-        System.out.println("Issuer: " + issuer);
-        System.out.println("Expiration Time: " + expirationTime);
+            // Extraire l'ID utilisateur (le "sub")
+            String userId = decodedJWT.getSubject();  // Le 'sub' dans le JWT est l'ID utilisateur
+            String issuer = decodedJWT.getIssuer();   // Le 'iss' peut aussi être utile
+            long expirationTime = decodedJWT.getExpiresAt().getTime(); // Expiration du token
 
-        return userId;  // Retourner l'ID utilisateur
+            System.out.println("User ID (sub): " + userId);
+            System.out.println("Issuer: " + issuer);
+            System.out.println("Expiration Time: " + expirationTime);
+
+            return userId;  // Retourner l'ID utilisateur
+        } catch (Exception e) {
+            // Gérer les erreurs dans le cas où le token serait invalide ou mal formé
+            System.out.println("❌ Erreur lors du décodage du token : " + e.getMessage());
+            return null;
+        }
+    }
+
+    public UserInfoDto getUserInfo(String accessToken) {
+        try {
+            DecodedJWT decodedJWT = JWT.decode(accessToken);
+            String firstName = decodedJWT.getClaim("given_name").asString();
+            String lastName = decodedJWT.getClaim("family_name").asString();
+            return new UserInfoDto(firstName, lastName);
+        } catch (Exception e) {
+            throw new RuntimeException("Impossible de décoder le token", e);
+        }
+    }
+
+    public void assignManagerRoleToUser(String userId) throws Exception {
+        System.out.println("🔄 Attribution du rôle MANAGER à l'utilisateur : " + userId);
+
+        // Obtenir le token d'administration
+        String adminToken = keycloakService.getAdminToken();
+
+        // URL pour récupérer la liste des rôles dans le realm
+        String rolesUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/roles";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);  // Définir le type de contenu à JSON
+
+        // Requête pour récupérer la liste des rôles
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<String> rolesResponse = restTemplate.exchange(rolesUrl, HttpMethod.GET, entity, String.class);
+
+        if (rolesResponse.getStatusCode() == HttpStatus.OK) {
+            // Extraire l'ID du rôle MANAGER
+            String roleId = extractRoleIdFromResponse(rolesResponse.getBody(), "MANAGER");
+
+            if (roleId != null) {
+                // URL de l'API Keycloak pour affecter un rôle à l'utilisateur
+                String roleMappingUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + userId + "/role-mappings/realm";
+
+                // Définir le rôle MANAGER en utilisant l'ID obtenu dynamiquement
+                String roleJson = "[{\"id\": \"" + roleId + "\", \"name\": \"MANAGER\"}]";
+                HttpEntity<String> roleMappingEntity = new HttpEntity<>(roleJson, headers);
+
+                // Effectuer la requête pour attribuer le rôle
+                ResponseEntity<String> response = restTemplate.exchange(roleMappingUrl, HttpMethod.POST, roleMappingEntity, String.class);
+
+                if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                    System.out.println("✅ Rôle MANAGER attribué avec succès !");
+                } else {
+                    System.out.println("❌ Échec de l'attribution du rôle MANAGER : " + response.getBody());
+                    throw new Exception("Erreur lors de l'attribution du rôle.");
+                }
+            } else {
+                System.out.println("❌ Le rôle MANAGER n'a pas été trouvé.");
+                throw new Exception("Rôle MANAGER non trouvé.");
+            }
+        } else {
+            System.out.println("❌ Erreur lors de la récupération des rôles : " + rolesResponse.getBody());
+            throw new Exception("Erreur lors de la récupération des rôles.");
+        }
+    }
+
+    // Fonction pour extraire dynamiquement l'ID du rôle MANAGER
+    private String extractRoleIdFromResponse(String jsonResponse, String roleName) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode roles = objectMapper.readTree(jsonResponse);
+
+            // Chercher le rôle avec le nom spécifié (MANAGER)
+            for (JsonNode role : roles) {
+                if (role.get("name").asText().equals(roleName)) {
+                    return role.get("id").asText();  // Retourner l'ID du rôle
+                }
+            }
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
+        return null;  // Si le rôle n'a pas été trouvé
+    }
+
+
+    //logout
+    public void logout(String refreshToken) throws Exception {
+        String logoutUrl = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/logout";
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("client_id", keycloakClientId);
+        params.add("client_secret", vaultService.getClientSecret());
+        params.add("refresh_token", refreshToken);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
+
+        System.out.println("Envoi de la requête de déconnexion à Keycloak");
+
+        ResponseEntity<String> responseEntity = restTemplate.exchange(
+                logoutUrl, HttpMethod.POST, entity, String.class);
+
+        if (responseEntity.getStatusCode() == HttpStatus.NO_CONTENT) {
+            System.out.println("Déconnexion réussie !");
+        } else {
+            throw new Exception("Échec de la déconnexion auprès de Keycloak");
+        }
     }
 }

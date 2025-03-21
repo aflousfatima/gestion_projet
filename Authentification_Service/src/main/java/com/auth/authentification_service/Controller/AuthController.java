@@ -3,6 +3,7 @@ package com.auth.authentification_service.Controller;
 import com.auth.authentification_service.DTO.LoginRequest;
 import com.auth.authentification_service.DTO.TokenDto;
 import com.auth.authentification_service.DTO.UserDto;
+import com.auth.authentification_service.DTO.UserInfoDto;
 import com.auth.authentification_service.Service.KeycloakService;
 import com.auth.authentification_service.Service.LoginService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -80,6 +81,64 @@ public class AuthController {
         }
     }
 
+    @GetMapping("/user-id")
+    public ResponseEntity<String> extractManagerId(@RequestHeader("Authorization") String authorization) {
+        try {
+            if (authorization == null || !authorization.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body("Token invalide ou mal formé");
+            }
+
+            // Extraction du token en enlevant le "Bearer "
+            String token = authorization.substring(7);
+
+            // Appel au service pour décoder le token et obtenir l'ID utilisateur
+            String userId = loginService.decodeToken(token);
+
+            if (userId != null) {
+                loginService.assignManagerRoleToUser(userId);
+                return ResponseEntity.ok(userId);
+            } else {
+                return ResponseEntity.badRequest().body("Token invalide ou mal formé");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erreur lors du décodage du token : " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            String accessToken = authorizationHeader.replace("Bearer ", "");
+            UserInfoDto userInfo = loginService.getUserInfo(accessToken);
+            return ResponseEntity.ok(userInfo);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token invalide");
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken, HttpServletResponse response) {
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Aucun refresh token fourni");
+        }
+        try {
+            // Révoquer le refresh token dans Keycloak
+            loginService.logout(refreshToken);
+
+            // Supprimer le cookie côté client en mettant une expiration immédiate
+            Cookie expiredCookie = new Cookie("REFRESH_TOKEN", "");
+            expiredCookie.setHttpOnly(true);
+            expiredCookie.setSecure(false); // ⚠ Mettre true en prod
+            expiredCookie.setPath("/");
+            expiredCookie.setMaxAge(0); // Expiration immédiate
+            expiredCookie.setAttribute("SameSite", "Lax");
+            response.addCookie(expiredCookie);
+
+            return ResponseEntity.ok().body("Déconnexion réussie");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de la déconnexion");
+        }
+    }
 
 
 }
