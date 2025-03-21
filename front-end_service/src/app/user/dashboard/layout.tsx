@@ -1,8 +1,13 @@
 // src/app/user/dashboard/layout.tsx
 "use client";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import "../../../styles/UserDashboard.css";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter } from "next/navigation";
+
+import axios from "axios";
 
 export default function DashboardLayout({
   children,
@@ -10,7 +15,55 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const currentPath = usePathname();
-  console.log("DashboardLayout is rendering"); // Ajoute ce log
+  const [user, setUser] = useState({ firstName: "", lastName: "" });
+  const { accessToken, isLoading } = useAuth(); // Utilisation du contexte pour récupérer le token
+  const router = useRouter();
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (accessToken) {
+        try {
+          const response = await axios.get("http://localhost:8083/api/me", {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          if (response.status === 200) {
+            setUser(response.data);
+          } else {
+            console.error(
+              "Erreur lors de la récupération des infos utilisateur"
+            );
+          }
+        } catch (error) {
+          console.error(
+            "Erreur lors de la récupération des infos utilisateur",
+            error
+          );
+        }
+      }
+    };
+
+    if (!isLoading && accessToken) {
+      fetchUserInfo();
+    }
+  }, [accessToken, isLoading]);
+
+  const handleLogout = async () => {
+    try {
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/logout`,
+        {},
+        { withCredentials: true }
+      );
+      router.push("/authentification/signin");
+      console.log("Déconnexion réussie");
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion :", error);
+    }
+  };
+
+  if (isLoading) return <div>Chargement...</div>;
   return (
     <div className="container-manager">
       {/* Topbar */}
@@ -28,7 +81,10 @@ export default function DashboardLayout({
         </div>
         <div className="user-container">
           <i className="fa fa-user"></i>
-          <span>fatima aflous</span>
+          <span>
+            {user.firstName} {user.lastName}
+            <button onClick={handleLogout}>Déconnexion</button>
+          </span>
         </div>
       </div>
 
