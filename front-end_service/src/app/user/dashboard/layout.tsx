@@ -6,7 +6,6 @@ import Link from "next/link";
 import "../../../styles/UserDashboard.css";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-
 import axios from "axios";
 
 export default function DashboardLayout({
@@ -14,10 +13,41 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    try {
+      await axios.post("http://localhost:8083/api/invitations", {
+        email,
+        role,
+        entrepriseId: "123",
+      });
+      setMessage("Invitation envoyée avec succès !");
+      setEmail("");
+      setRole("DEVELOPER");
+      setIsModalOpen(false);
+    } catch (error) {
+      setMessage(
+        "Erreur lors de l'envoi de l'invitation : " + (error as Error).message
+      );
+    }
+  };
   const currentPath = usePathname();
   const [user, setUser] = useState({ firstName: "", lastName: "" });
-  const { accessToken, isLoading } = useAuth(); // Utilisation du contexte pour récupérer le token
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false); // État pour le menu déroulant
+  const { accessToken, isLoading } = useAuth();
   const router = useRouter();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState("DEVELOPER");
+  const [message, setMessage] = useState("");
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      setIsModalOpen(false);
+    }
+  };
+
   useEffect(() => {
     const fetchUserInfo = async () => {
       if (accessToken) {
@@ -63,7 +93,14 @@ export default function DashboardLayout({
     }
   };
 
+  const toggleDropdown = () => {
+    console.log("Clic détecté, isDropdownOpen avant :", isDropdownOpen);
+    setIsDropdownOpen(!isDropdownOpen);
+    console.log("isDropdownOpen après :", !isDropdownOpen);
+  };
+
   if (isLoading) return <div>Chargement...</div>;
+
   return (
     <div className="container-manager">
       {/* Topbar */}
@@ -79,12 +116,71 @@ export default function DashboardLayout({
           <i className="fa fa-search search-icon"></i>
           <input type="text" placeholder="Search" className="search-bar" />
         </div>
+
         <div className="user-container">
-          <i className="fa fa-user"></i>
-          <span>
+          <span className="user-name" style={{ color: "white" }}>
             {user.firstName} {user.lastName}
-            <button onClick={handleLogout}>Déconnexion</button>
+            {""}
           </span>
+          <div
+            className="user-icon"
+            onClick={toggleDropdown}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                toggleDropdown();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            {""}
+            <i className="fa fa-user"></i>
+          </div>
+
+          {isDropdownOpen && (
+            <div className="dropdown-menu">
+              {/* En-tête avec les initiales et l'email */}
+              <div className="dropdown-header">
+                <div className="user-initials">
+                  {user.firstName.charAt(0)}
+                  {user.lastName.charAt(0)}
+                </div>
+                <div className="user-info">
+                  <span className="user-fullname">
+                    {user.firstName} {user.lastName}
+                  </span>
+                  <span className="user-email">aflousfatima@gmail.com</span>
+                </div>
+              </div>
+              <div className="dropdown-divider"></div>
+              {/* Options du menu */}
+              <div className="dropdown-item">
+                <i className="fa fa-tachometer-alt"></i>
+                <span>Administration Console</span>
+              </div>
+              <div className="dropdown-item">
+                <i className="fa fa-plus-circle"></i>
+                <span>New Workspace</span>
+              </div>
+              <div className="dropdown-item">
+                <i className="fa fa-user-plus"></i>
+                <span>Invite to Join AGILIA</span>
+              </div>
+              <div className="dropdown-item">
+                <i className="fa fa-user-circle"></i>
+                <span>Profil</span>
+              </div>
+              <div className="dropdown-item">
+                <i className="fa fa-cog"></i>
+                <span>Settings</span>
+              </div>
+              <div className="dropdown-divider"></div>
+              <div className="dropdown-item" onClick={handleLogout}>
+                <i className="fa fa-sign-out-alt logout-icon"></i>
+                <span>Log Out</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -169,21 +265,80 @@ export default function DashboardLayout({
               </li>
 
               {/* Section "ÉQUIPE" */}
-              <li className="section-title">
-                <span className="section-title-style">Teams</span>
-              </li>
+
               <li
                 className={
                   currentPath === "/user/dashboard/teams" ? "active" : ""
                 }
               >
                 <Link href="/user/dashboard/teams">
-                  <span className="invite-style">
-                    <i className="fa fa-envelope"></i>
-                    Invite colleagues
-                  </span>
+                  <li className="section-title">
+                    <span className="section-title-style">Teams</span>
+                  </li>
                 </Link>
               </li>
+              <div className="section-invite">
+                <ul>
+                  <li>
+                    <span
+                      className="invite-style"
+                      onClick={() => setIsModalOpen(true)}
+                    >
+                      <i className="fa fa-envelope"></i> Invite colleagues
+                    </span>
+                  </li>
+                </ul>
+
+                {isModalOpen && (
+                  <div
+                    className="teams-modalOverlay"
+                    onClick={handleOverlayClick}
+                  >
+                    <div className="teams-modal">
+                      <h2 className="teams-modalTitle">Inviter un collègue</h2>
+                      <form onSubmit={handleInvite} className="teams-form">
+                        <div className="teams-formGroup">
+                          <label htmlFor="email">Email</label>
+                          <input
+                            type="email"
+                            id="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Entrez l'email du collègue"
+                            required
+                          />
+                        </div>
+                        <div className="teams-formGroup">
+                          <label htmlFor="role">Rôle</label>
+                          <select
+                            id="role"
+                            value={role}
+                            onChange={(e) => setRole(e.target.value)}
+                          >
+                            <option value="DEVELOPER">Développeur</option>
+                            <option value="TESTER">Testeur</option>
+                            <option value="DEVOPS">DevOps</option>
+                            <option value="DESIGNER">Designer</option>
+                          </select>
+                        </div>
+                        {message && <p className="teams-message">{message}</p>}
+                        <div className="teams-modalActions">
+                          <button type="submit" className="teams-submitButton">
+                            Envoyer invitation
+                          </button>
+                          <button
+                            type="button"
+                            className="teams-cancelButton"
+                            onClick={() => setIsModalOpen(false)}
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                )}
+              </div>
             </ul>
           </nav>
         </div>

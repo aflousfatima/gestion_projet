@@ -78,28 +78,10 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
 }
 
 /* Style pour l'icône utilisateur */
-.user-container {
-    position: absolute;
-    right: 20px; /* Place à l'extrémité droite */
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Espace entre l'icône et le texte */
-    color: #aaa;
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-  
-  .user-container i {
-    color: #aaa;
-  }
-  
-  .user-container:hover {
-    color: #fff;
-  }
-  
-  .user-container:hover i {
-    color: #fff;
-  }
+/* User container */
+
+
+/*search */
   
   .search-container {
     position: absolute;
@@ -187,6 +169,12 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     align-items: center;
     position: relative; /* Ajouté pour que position: absolute de ::before fonctionne */
   }
+  .section-invite{
+    margin-top: -10px;
+    color: #666;
+    font-size: 0.1rem;
+    position: absolute; /* Ajouté pour que position: absolute de ::before fonctionne */
+  }
   
   .section-title::before {
     content: '';
@@ -236,3 +224,145 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     text-decoration: none; /* Supprime le soulignement */
     color: inherit; /* Hérite de la couleur du parent (li) */
   }
+
+
+
+
+
+
+
+  .user-container {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    font-family: "Arial", sans-serif;
+    cursor: pointer;
+    right: 20px; /* Place à l'extrémité droite */
+    
+  }
+
+  .user-icon {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 50px;
+    background-color: #f0f2f5;
+    transition: background-color 0.3s ease;
+  }
+  .user-icon:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .user-icon .fa-user {
+    font-size: 20px;
+    color: #333;
+  }
+  
+  .user-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  /* Style du menu déroulant */
+  /* Style du menu déroulant */
+  .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 10px;
+    background-color: #fff; /* La couleur rouge de style={{ backgroundColor: "red" }} écrasera ceci */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    min-width: 150px;
+    z-index: 1000; /* Assure que le menu est au-dessus des autres éléments */
+    display: block; /* Force l'affichage */
+    animation: slideDown 0.3s ease forwards;
+  }
+
+  /* Animation d'apparition */
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* En-tête du menu */
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border-bottom: 1px solid #e8ecef;
+}
+  
+.user-initials {
+  width: 40px;
+  height: 40px;
+  background-color: #F1BD6C; /* Jaune comme dans l'image, mais tu peux ajuster */
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-fullname {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.user-email {
+  font-size: 13px;
+  color: #666;
+}
+
+/* Séparateur */
+.dropdown-divider {
+  height: 1px;
+  background-color: #e8ecef;
+  margin: 5px 0;
+}
+
+/* Élément du menu */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 15px;
+  font-size: 14px;
+  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+}
+
+.dropdown-item i {
+  font-size: 16px;
+  color: #666;
+}
+
+.dropdown-item .logout-icon {
+  color: #ff4d4f; /* Rouge pour la déconnexion */
+}
+
+.dropdown-item span {
+  font-weight: 500;
+}
