@@ -6,6 +6,7 @@ public class UserDto {
     private String username;
     private String email;
     private String password;
+    private String token; // Champ optionnel pour le jeton d'invitation
 
     public String getFirstName() {
         return firstName;
@@ -45,5 +46,13 @@ public class UserDto {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
     }
 }

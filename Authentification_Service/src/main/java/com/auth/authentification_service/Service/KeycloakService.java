@@ -1,6 +1,10 @@
 package com.auth.authentification_service.Service;
 
 import com.auth.authentification_service.DTO.UserDto;
+import com.auth.authentification_service.Entity.Invitation;
+import com.auth.authentification_service.Repository.InvitationRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -24,10 +28,12 @@ public class KeycloakService {
 
     private final VaultService vaultService;
     private final RestTemplate restTemplate;
+    private final InvitationRepository invitationRepository;
 
-    public KeycloakService(VaultService vaultService, RestTemplate restTemplate) {
+    public KeycloakService(VaultService vaultService, RestTemplate restTemplate , InvitationRepository invitationRepository) {
         this.vaultService = vaultService;
         this.restTemplate = restTemplate;
+        this.invitationRepository = invitationRepository;
     }
 
     public String getAdminToken() {
@@ -65,24 +71,23 @@ public class KeycloakService {
         throw new RuntimeException("Impossible de récupérer le token d'admin Keycloak");
     }
 
-    public ResponseEntity<String> createUser(UserDto userDTO) {
-        System.out.println("Début de la création de l'utilisateur : " + userDTO.getUsername());
+    public ResponseEntity<String> createUser(UserDto userDto) {
+        System.out.println("🔄 Début de la création de l'utilisateur : " + userDto.getUsername());
 
         String accessToken = getAdminToken();
         String createUserUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users";
 
-        System.out.println("URL pour créer l'utilisateur : " + createUserUrl);
-
+        // Créer le payload pour l'utilisateur
         Map<String, Object> userPayload = new HashMap<>();
-        userPayload.put("username", userDTO.getUsername());
-        userPayload.put("firstName", userDTO.getFirstName());
-        userPayload.put("lastName", userDTO.getLastName());
-        userPayload.put("email", userDTO.getEmail());
+        userPayload.put("username", userDto.getUsername());
+        userPayload.put("firstName", userDto.getFirstName());
+        userPayload.put("lastName", userDto.getLastName());
+        userPayload.put("email", userDto.getEmail());
         userPayload.put("enabled", true);
 
         Map<String, String> credentials = new HashMap<>();
         credentials.put("type", "password");
-        credentials.put("value", userDTO.getPassword());
+        credentials.put("value", userDto.getPassword());
         credentials.put("temporary", "false");
 
         userPayload.put("credentials", new Map[]{credentials});
@@ -93,18 +98,134 @@ public class KeycloakService {
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(userPayload, headers);
 
-        System.out.println("Envoi de la requête pour créer l'utilisateur...");
-
+        // Créer l'utilisateur dans Keycloak
+        System.out.println("📤 Envoi de la requête pour créer l'utilisateur à : " + createUserUrl);
         ResponseEntity<String> response = restTemplate.postForEntity(createUserUrl, request, String.class);
 
-        System.out.println("Statut de la réponse : " + response.getStatusCode());
+        System.out.println("📥 Réponse de Keycloak pour la création : " + response.getStatusCode() + " - " + response.getBody());
 
-        if (response.getStatusCode() == HttpStatus.CREATED) {
-            System.out.println("Utilisateur créé avec succès !");
-        } else {
-            System.out.println("Échec de la création de l'utilisateur : " + response.getBody());
+        if (response.getStatusCode() != HttpStatus.CREATED) {
+            throw new RuntimeException("Échec de la création de l'utilisateur : " + response.getBody());
         }
 
-        return response;
+        // Récupérer l'ID de l'utilisateur créé
+        String locationHeader = response.getHeaders().getFirst(HttpHeaders.LOCATION);
+        System.out.println("📍 En-tête Location : " + locationHeader);
+        String userId = locationHeader.substring(locationHeader.lastIndexOf("/") + 1);
+        System.out.println("🆔 ID de l'utilisateur créé : " + userId);
+
+        // Attribuer un rôle à l'utilisateur
+        String roleToAssign;
+        if (userDto.getToken() != null) {
+            System.out.println("🔑 Jeton d'invitation détecté : " + userDto.getToken());
+            Invitation invitation = invitationRepository.findByToken(userDto.getToken())
+                    .orElseThrow(() -> new RuntimeException("Jeton d'invitation invalide"));
+
+            if (invitation.getExpiresAt() < System.currentTimeMillis()) {
+                throw new RuntimeException("Lien d'invitation expiré");
+            }
+
+            if (invitation.isUsed()) {
+                throw new RuntimeException("L'invitation a déjà été utilisée");
+            }
+
+            roleToAssign = invitation.getRole();
+            System.out.println("🎭 Rôle à attribuer (depuis l'invitation) : " + roleToAssign);
+        } else {
+            roleToAssign = "USER";
+            System.out.println("🎭 Rôle par défaut à attribuer : " + roleToAssign);
+        }
+
+        // Attribuer le rôle dans Keycloak
+        assignRoleToUser(userId, roleToAssign, accessToken);
+
+        // Si un jeton est présent, marquer l'invitation comme utilisée
+        if (userDto.getToken() != null) {
+            System.out.println("✅ Marquage de l'invitation comme utilisée...");
+            Invitation invitation = invitationRepository.findByToken(userDto.getToken()).get();
+            invitation.setUsed(true);
+            invitationRepository.save(invitation);
+            System.out.println("✅ Invitation marquée comme utilisée avec succès");
+        }
+
+        System.out.println("✅ Utilisateur créé avec succès !");
+        return ResponseEntity.status(HttpStatus.CREATED).body("Utilisateur créé avec succès");
     }
+
+    private void assignRoleToUser(String userId, String roleName, String accessToken) {
+        System.out.println("🔄 Attribution du rôle " + roleName + " à l'utilisateur : " + userId);
+
+        // URL pour récupérer la liste des rôles dans le realm
+        String rolesUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/roles";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // Requête pour récupérer la liste des rôles
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        System.out.println("📤 Récupération des rôles depuis : " + rolesUrl);
+        ResponseEntity<String> rolesResponse = restTemplate.exchange(rolesUrl, HttpMethod.GET, entity, String.class);
+
+        System.out.println("📥 Réponse de Keycloak pour les rôles : " + rolesResponse.getStatusCode() + " - " + rolesResponse.getBody());
+
+        if (rolesResponse.getStatusCode() == HttpStatus.OK) {
+            // Extraire l'ID du rôle
+            String roleId = extractRoleIdFromResponse(rolesResponse.getBody(), roleName);
+
+            if (roleId != null) {
+                System.out.println("🆔 ID du rôle " + roleName + " : " + roleId);
+
+                // URL de l'API Keycloak pour affecter un rôle à l'utilisateur
+                String roleMappingUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + userId + "/role-mappings/realm";
+
+                // Définir le rôle en utilisant l'ID obtenu dynamiquement
+                String roleJson = "[{\"id\": \"" + roleId + "\", \"name\": \"" + roleName + "\"}]";
+                System.out.println("📤 Requête d'attribution du rôle : " + roleJson);
+                HttpEntity<String> roleMappingEntity = new HttpEntity<>(roleJson, headers);
+
+                // Effectuer la requête pour attribuer le rôle
+                ResponseEntity<String> response = restTemplate.exchange(
+                        roleMappingUrl,
+                        HttpMethod.POST,
+                        roleMappingEntity,
+                        String.class
+                );
+
+                System.out.println("📥 Réponse de Keycloak pour l'attribution du rôle : " + response.getStatusCode() + " - " + response.getBody());
+
+                if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                    System.out.println("✅ Rôle " + roleName + " attribué avec succès !");
+                } else {
+                    System.out.println("❌ Échec de l'attribution du rôle " + roleName + " : " + response.getBody());
+                    throw new RuntimeException("Échec de l'attribution du rôle : " + roleName);
+                }
+            } else {
+                System.out.println("❌ Le rôle " + roleName + " n'a pas été trouvé.");
+                throw new RuntimeException("Rôle " + roleName + " non trouvé.");
+            }
+        } else {
+            System.out.println("❌ Erreur lors de la récupération des rôles : " + rolesResponse.getBody());
+            throw new RuntimeException("Erreur lors de la récupération des rôles.");
+        }
+    }
+
+    private String extractRoleIdFromResponse(String responseBody, String roleName) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode roles = mapper.readTree(responseBody);
+            for (JsonNode role : roles) {
+                if (role.get("name").asText().equals(roleName)) {
+                    return role.get("id").asText();
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de l'extraction de l'ID du rôle : " + e.getMessage());
+            return null;
+        }
+    }
+
+
+
+
 }
