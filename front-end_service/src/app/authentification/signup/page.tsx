@@ -1,7 +1,8 @@
 "use client";
 import "../../../styles/Signup.css";
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import axios from "axios";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 interface FormData {
   firstName: string;
@@ -11,9 +12,17 @@ interface FormData {
   password: string;
   marketingConsent: boolean;
   termsAccepted: boolean;
+  token?: string; // Ajout du jeton optionnel
 }
-
+interface InvitationData {
+  email: string;
+  role: string;
+  entrepriseId: string;
+  project: string;
+}
 export default function SignupPage() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token"); // Extraire le jeton de l'URL
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
@@ -22,7 +31,41 @@ export default function SignupPage() {
     password: "",
     marketingConsent: false,
     termsAccepted: false,
+    token: token || undefined, // Stocker le jeton dans formData
   });
+  const [invitationData, setInvitationData] = useState<InvitationData | null>(
+    null
+  );
+  const [error, setError] = useState<string | null>(null);
+  // Vérifier le jeton au chargement de la page
+  useEffect(() => {
+    const verifyToken = async () => {
+      if (token) {
+        try {
+          const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/invitations/verify?token=${token}`
+          );
+          const invitation = response.data;
+          setInvitationData({
+            email: invitation.email,
+            role: invitation.role,
+            entrepriseId: invitation.entrepriseId,
+            project: invitation.project,
+          });
+          // Pré-remplir l'email
+          setFormData((prevData) => ({
+            ...prevData,
+            email: invitation.email,
+          }));
+        } catch (err) {
+          console.error(err); // Log the error for debugging
+          setError("Lien d'invitation invalide ou expiré");
+        }
+      }
+    };
+    verifyToken();
+  }, [token]);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => ({
@@ -57,7 +100,17 @@ export default function SignupPage() {
       alert("Erreur dans l'inscription. Veuillez réessayer.");
     }
   };
-
+  if (error) {
+    return (
+      <div className="container1">
+        <div className="form-box">
+          <h3 className="title1">Erreur</h3>
+          <p>{error}</p>
+          <Link href="/authentification/signin">Retour à la connexion</Link>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="container1">
       <div className=" form-box">
@@ -147,6 +200,7 @@ export default function SignupPage() {
                   placeholder="Professionnel e-mail"
                   className="input-field"
                   required
+                  readOnly={!!invitationData} // Rendre l'email non modifiable si pré-rempli
                 />
               </div>
 

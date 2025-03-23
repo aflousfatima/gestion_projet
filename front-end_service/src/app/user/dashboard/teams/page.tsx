@@ -44,6 +44,7 @@ export default function Teams() {
       await axios.post("http://localhost:8083/api/invitations", {
         email,
         role,
+        project,
         entrepriseId: "123",
       });
       setMessage("Invitation envoyée avec succès !");
