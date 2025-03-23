@@ -8,7 +8,6 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -185,7 +184,7 @@ public class LoginService {
     }
 
     // Fonction pour extraire dynamiquement l'ID du rôle MANAGER
-    private String extractRoleIdFromResponse(String jsonResponse, String roleName) {
+    public  String extractRoleIdFromResponse(String jsonResponse, String roleName) {
         try {
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode roles = objectMapper.readTree(jsonResponse);

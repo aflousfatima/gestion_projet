@@ -27,7 +27,11 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity<String> createUser(@RequestBody UserDto userDTO) {
-        return keycloakService.createUser(userDTO);
+        try {
+            return keycloakService.createUser(userDTO);
+        }catch (Exception e) {
+            return ResponseEntity.status(400).body("Erreur lors de l'inscription : " + e.getMessage());
+        }
     }
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
