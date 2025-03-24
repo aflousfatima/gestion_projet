@@ -3,7 +3,7 @@ package com.auth.authentification_service.DTO;
 public  class InvitationRequest {
     private String email;
     private String role;
-    private String entrepriseId;
+    private String entreprise;
     private String project;
 
     // Getters et setters
@@ -11,8 +11,8 @@ public  class InvitationRequest {
     public void setEmail(String email) { this.email = email; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
-    public String getEntrepriseId() { return entrepriseId; }
-    public void setEntrepriseId(String entrepriseId) { this.entrepriseId = entrepriseId; }
+    public String getEntreprise() { return entreprise; }
+    public void setEntreprise(String entreprise) { this.entreprise = entreprise; }
 
 
     public String getProject() {
