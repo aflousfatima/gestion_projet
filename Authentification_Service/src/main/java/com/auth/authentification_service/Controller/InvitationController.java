@@ -6,6 +6,7 @@ import com.auth.authentification_service.Service.InvitationService;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -17,6 +18,7 @@ public class InvitationController {
     private InvitationService invitationService;
 
     @PostMapping
+    @PreAuthorize("hasRole('MANAGER')")
     public ResponseEntity<String> sendInvitation(@RequestBody InvitationRequest request) {
         try {
             invitationService.createAndSendInvitation(request);
