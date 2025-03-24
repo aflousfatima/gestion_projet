@@ -26,7 +26,7 @@ public class InvitationService {
         Invitation invitation = new Invitation(
                 request.getEmail(),
                 request.getRole(),
-                request.getEntrepriseId(),
+                request.getEntreprise(),
                 request.getProject(),
                 token,
                 System.currentTimeMillis() + 48 * 60 * 60 * 1000 // Expire dans 48h
@@ -37,7 +37,7 @@ public class InvitationService {
         emailService.sendInvitationEmail(
                 request.getEmail(),
                 request.getRole(),
-                "NomEntreprise", // À remplacer par une récupération dynamique plus tard
+                request.getEntreprise(), // À remplacer par une récupération dynamique plus tard
                 request.getProject(),
                 token
         );

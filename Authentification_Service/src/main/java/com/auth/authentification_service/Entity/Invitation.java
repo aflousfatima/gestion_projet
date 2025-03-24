@@ -12,7 +12,7 @@ public class Invitation {
 
     private String email;
     private String role;
-    private String entrepriseId;
+    private String entreprise;
     private String project;
 
     private String token;
@@ -22,10 +22,10 @@ public class Invitation {
     // Constructeurs
     public Invitation() {}
 
-    public Invitation(String email, String role, String entrepriseId,String project, String token, long expiresAt) {
+    public Invitation(String email, String role, String entreprise,String project, String token, long expiresAt) {
         this.email = email;
         this.role = role;
-        this.entrepriseId = entrepriseId;
+        this.entreprise = entreprise;
         this.project=project;
         this.token = token;
         this.expiresAt = expiresAt;
@@ -39,8 +39,8 @@ public class Invitation {
     public void setEmail(String email) { this.email = email; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
-    public String getEntrepriseId() { return entrepriseId; }
-    public void setEntrepriseId(String entrepriseId) { this.entrepriseId = entrepriseId; }
+    public String getEntreprise() { return entreprise; }
+    public void setEntreprise(String entreprise) { this.entreprise = entreprise; }
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
     public long getExpiresAt() { return expiresAt; }

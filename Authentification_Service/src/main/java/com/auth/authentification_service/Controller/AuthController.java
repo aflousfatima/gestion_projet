@@ -85,7 +85,7 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/user-id")
+    @GetMapping("/assign-manager-role")
     public ResponseEntity<String> extractManagerId(@RequestHeader("Authorization") String authorization) {
         try {
             if (authorization == null || !authorization.startsWith("Bearer ")) {
@@ -101,6 +101,32 @@ public class AuthController {
             if (userId != null) {
                 loginService.assignManagerRoleToUser(userId);
                 return ResponseEntity.ok(userId);
+            } else {
+                return ResponseEntity.badRequest().body("Token invalide ou mal formé");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Erreur lors du décodage du token : " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping("/user-id")
+    public ResponseEntity<String> extractUserId(@RequestHeader("Authorization") String authorization) {
+        try {
+            // Vérifier si l'en-tête Authorization est présent et bien formé
+            if (authorization == null || !authorization.startsWith("Bearer ")) {
+                return ResponseEntity.badRequest().body("Token invalide ou mal formé");
+            }
+
+            // Extraction du token en enlevant le "Bearer "
+            String token = authorization.substring(7);
+
+            // Appel au service pour décoder le token et obtenir l'ID utilisateur
+            String userId = loginService.decodeToken(token);
+
+            // Vérifier si l'ID utilisateur a été extrait avec succès
+            if (userId != null) {
+                return ResponseEntity.ok(userId); // Retourner uniquement l'ID utilisateur
             } else {
                 return ResponseEntity.badRequest().body("Token invalide ou mal formé");
             }
