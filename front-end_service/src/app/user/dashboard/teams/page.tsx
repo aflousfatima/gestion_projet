@@ -101,7 +101,11 @@ export default function Teams() {
         role,
         project,
         entreprise: companyName,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
+
       setMessage("Invitation envoyée avec succès !");
       setEmail("");
       setRole("DEVELOPER");

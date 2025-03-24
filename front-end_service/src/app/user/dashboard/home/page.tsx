@@ -52,12 +52,29 @@ const Home = () => {
 
         // Étape 2 : Récupérer les détails de l'utilisateur via GET /api/user-details (optionnel)
         console.log("🔍 Récupération des détails de l'utilisateur...");
-        const userDetailsResponse = await axiosInstance.get(
-          `${AUTH_SERVICE_URL}/api/me`
-        );
-        const userDetails = userDetailsResponse.data;
-        console.log("✅ Détails de l'utilisateur récupérés:", userDetails);
-        setUserName(userDetails.firstName || "User"); // Utiliser le nom de l'utilisateur ou "User" par défaut
+        try {
+          console.log("Access Token envoyé :", accessToken);
+          const userDetailsResponse = await axiosInstance.get(
+            `${AUTH_SERVICE_URL}/api/me`,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+              },
+            }
+          );
+
+          // Traite la réponse ici, par exemple userDetailsResponse.data
+          const userDetails = userDetailsResponse.data;
+          console.log(userDetails); // Exemple d'affichage des informations utilisateur
+          console.log("✅ Détails de l'utilisateur récupérés:", userDetails);
+          setUserName(userDetails.firstName || "User"); // Utiliser le nom de l'utilisateur ou "User" par défaut
+        } catch (error) {
+          console.error(
+            "Erreur lors de la récupération des détails utilisateur:",
+            error
+          );
+          // Gérer l'erreur si nécessaire
+        }
 
         // Étape 3 : Récupérer les projets via GET /api/projects/by-manager
         console.log("🔍 Récupération des projets pour authId:", authId);
