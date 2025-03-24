@@ -207,3 +207,27 @@
             margin: 0;
           }
       
+
+          .projects-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+          }
+          
+          .project-card {
+            background-color: #bdf1fa;
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 50px;
+          }
+          
+          .project-name{
+font-size:smaller;
+font-weight: 1px;
+          }
+          .project-card h3 {
+            margin: 0;
+            font-size: 18px;
+            color: #333;
+          }

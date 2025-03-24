@@ -2,13 +2,11 @@ import { useEffect } from "react";
 import axiosInstance from "../config/axiosInstance";
 import { useAuth } from "../context/AuthContext";
 
-const useAxios = (baseURL: string) => {
+const useAxios = () => {
   const { accessToken } = useAuth();
 
   useEffect(() => {
-    // Appliquer dynamiquement la `baseURL`
-    axiosInstance.defaults.baseURL = baseURL;
-
+    
     // Ajouter un intercepteur pour insérer le token dans chaque requête
     const requestInterceptor = axiosInstance.interceptors.request.use(
       (config) => {
@@ -32,7 +30,7 @@ const useAxios = (baseURL: string) => {
     return () => {
       axiosInstance.interceptors.request.eject(requestInterceptor);
     };
-  }, [accessToken, baseURL]); // ✅ Mise à jour si `accessToken` ou `baseURL` change
+  }, [accessToken]); // ✅ Mise à jour si `accessToken` ou `baseURL` change
 
   return axiosInstance;
 };

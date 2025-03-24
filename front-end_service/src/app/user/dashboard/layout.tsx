@@ -7,6 +7,7 @@ import "../../../styles/UserDashboard.css";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import ProtectedRoute from "../../../components/ProtectedRoute";
 
 export default function DashboardLayout({
   children,
@@ -102,6 +103,7 @@ export default function DashboardLayout({
   if (isLoading) return <div>Chargement...</div>;
 
   return (
+    <ProtectedRoute>
     <div className="container-manager">
       {/* Topbar */}
       <div className="topbar">
@@ -272,11 +274,12 @@ export default function DashboardLayout({
                 }
               >
                 <Link href="/user/dashboard/teams">
-                  <li className="section-title">
-                    <span className="section-title-style">Teams</span>
-                  </li>
+                  <i className="fa fa-users"></i>{" "}
+                  {/* Ajout d'une icône pour la cohérence */}
+                  <span>Teams</span>
                 </Link>
               </li>
+
               <div className="section-invite">
                 <ul>
                   <li>
@@ -347,5 +350,6 @@ export default function DashboardLayout({
         <div className="main-content">{children}</div>
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

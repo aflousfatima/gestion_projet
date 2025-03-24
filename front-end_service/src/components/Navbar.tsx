@@ -25,7 +25,11 @@ const Navbar = () => {
                 </Link>
               </li>
               <li className="nav-item">
-                <Link className="nav-link active" aria-current="page" href="/authentification/signin">
+                <Link
+                  className="nav-link active"
+                  aria-current="page"
+                  href="/authentification/signin"
+                >
                   Product
                 </Link>
               </li>
@@ -43,6 +47,15 @@ const Navbar = () => {
                 <a className="nav-link active" aria-current="page" href="#">
                   Pricing
                 </a>
+              </li>
+              <li className="style-login">
+                <Link
+                  href="/authentification/signup"
+                  className="nav-link active btn"
+                  aria-current="page"
+                >
+                  Log In
+                </Link>
               </li>
               <li className="style-try">
                 <Link

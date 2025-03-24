@@ -3,8 +3,9 @@ import React, { useState } from "react";
 import "../../../styles/Company-registration.css";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import useAxios from "../../../hooks/useAxios";
+import { PROJECT_SERVICE_URL } from "../../../config/useApi";
 const Page = () => {
-  const axiosInstance = useAxios("http://localhost:8085/"); // Remplacez par votre API
+  const axiosInstance = useAxios(); // Remplacez par votre API
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -33,10 +34,12 @@ const Page = () => {
     e.preventDefault();
     console.log(formData);
     try {
-      const response = await axiosInstance.post("/api/create-initial-project", formData);
+      const response = await axiosInstance.post(
+        `${PROJECT_SERVICE_URL}/api/create-initial-project`,
+        formData
+      );
       console.log("Success:", response.data);
       setSuccessMessage("Company created successfully!"); // Affiche le message de succès
-
     } catch (error) {
       console.error("Error submitting form:", error);
     }
@@ -200,8 +203,8 @@ const Page = () => {
             </div>
           </div>
         </section>
-           {/* Success Message */}
-           {successMessage && (
+        {/* Success Message */}
+        {successMessage && (
           <div className="success-message">
             <p>{successMessage}</p>
           </div>
