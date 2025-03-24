@@ -1,6 +1,7 @@
 package com.project.project_service.Service;
 
 import com.project.project_service.DTO.InitialProjectManagementDTO;
+import com.project.project_service.DTO.ProjectResponseDTO;
 import com.project.project_service.Entity.Client;
 import com.project.project_service.Entity.Entreprise;
 import com.project.project_service.Entity.Projet;
@@ -12,6 +13,9 @@ import com.project.project_service.Repository.TeamRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class InitialProjectManagementService {
@@ -79,5 +83,36 @@ public class InitialProjectManagementService {
         project.setCompany(company);  // Lier le projet à l'entreprise
         projectRepository.save(project);
         System.out.println("Projet créé avec succès : " + project.getName());
+    }
+
+
+    public ProjectResponseDTO getProjectsByManager(String authId) {
+        System.out.println("🔍 Récupération des projets pour le manager avec authId: " + authId);
+
+        // Récupérer le client (manager) à partir de l'authId
+        Client manager = clientRepository.findByAuthId(authId);
+        if (manager == null) {
+            System.out.println("❌ Manager non trouvé pour l'authId: " + authId);
+            throw new RuntimeException("Manager non trouvé");
+        }
+        System.out.println("✅ Manager trouvé: " + manager.getId());
+
+        // Récupérer l'entreprise associée au manager
+        Entreprise company = manager.getCompany();
+        if (company == null) {
+            System.out.println("❌ Aucune entreprise associée au manager: " + authId);
+            throw new RuntimeException("Aucune entreprise associée");
+        }
+        System.out.println("✅ Entreprise trouvée: " + company.getName());
+
+        // Récupérer les projets associés à l'entreprise
+        List<Projet> projects = projectRepository.findByCompany(company);
+        List<String> projectNames = projects.stream()
+                .map(Projet::getName)
+                .collect(Collectors.toList());
+        System.out.println("✅ Projets trouvés: " + projectNames);
+
+        // Construire la réponse
+        return new ProjectResponseDTO(company.getName(), projectNames);
     }
 }
