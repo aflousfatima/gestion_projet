@@ -4,12 +4,28 @@ import com.project.project_service.DTO.InitialProjectManagementDTO;
 import com.project.project_service.DTO.ProjectResponseDTO;
 import com.project.project_service.Service.InitialProjectManagementService;
 import com.project.project_service.config.AuthClient;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
+@OpenAPIDefinition(info = @Info(
+        title = "API de Gestion des Projets",
+        version = "1.0",
+        description = "Cette API permet de gérer les projets "
+),
+
+        servers = @Server(
+                url = "http://localhost:8085/"
+        ))
 public class InitialProjectManagementController {
 
     @Autowired
@@ -18,8 +34,16 @@ public class InitialProjectManagementController {
     @Autowired
     private AuthClient authClient;  // Injecter le client Auth pour extraire l'ID de l'utilisateur
 
+
+    @Operation(summary = "Créer un projet initial",
+            description = "Cette méthode permet de créer une entreprise, une équipe et un projet associés à un utilisateur authentifié.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Entreprise, équipe et projet créés avec succès"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors de la création des entités")
+    })
     @PostMapping("/create-initial-project")
     public ResponseEntity<String> CreateInitialProjectManagement(
+            @Parameter(description = "Token d'autorisation JWT", required = true)
             @RequestHeader("Authorization") String authorization,  // Récupérer l'access token depuis l'en-tête
             @RequestBody InitialProjectManagementDTO dto) {
 
@@ -43,9 +67,16 @@ public class InitialProjectManagementController {
         }
     }
 
-
+    @Operation(summary = "Obtenir les projets par manager",
+            description = "Récupère tous les projets associés à un manager spécifique en fonction de son ID d'authentification.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des projets retournée avec succès"),
+            @ApiResponse(responseCode = "400", description = "Erreur lors de la récupération des projets")
+    })
     @GetMapping("/projects/by-manager")
-    public ResponseEntity<ProjectResponseDTO> getProjectsByManager(@RequestParam String authId) {
+    public ResponseEntity<ProjectResponseDTO> getProjectsByManager(
+            @Parameter(description = "ID de l'utilisateur authentifié", required = true)
+            @RequestParam String authId) {
         try {
             ProjectResponseDTO response = initialProjectManagementService.getProjectsByManager(authId);
             return ResponseEntity.ok(response);
