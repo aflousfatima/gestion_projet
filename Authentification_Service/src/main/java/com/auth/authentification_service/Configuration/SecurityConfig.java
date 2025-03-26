@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/signup","/api/login","/api/refresh").permitAll() // Endpoint public pour login
+                        .requestMatchers("/api/signup","/api/login","/api/refresh","/api/logout","/actuator/health").permitAll() // Endpoint public pour login
                         .requestMatchers("/api/invitations").hasRole("MANAGER") // Réservé aux managers
                         .requestMatchers("/api/me","/api/user-id").authenticated() // Accessible aux authentifiés
                         .anyRequest().authenticated()
@@ -39,12 +39,7 @@ public class SecurityConfig {
                         .jwt(jwt -> jwt
                                 .jwtAuthenticationConverter(jwtAuthenticationConverter())
                         )
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            System.out.println("Échec d'authentification : " + authException.getMessage());
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token invalide ou non autorisé");
-                        })
                 );
-
 
         return http.build();
     }
