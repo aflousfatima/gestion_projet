@@ -6,6 +6,11 @@ import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.DTO.UserInfoDto;
 import com.auth.authentification_service.Service.KeycloakService;
 import com.auth.authentification_service.Service.LoginService;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -17,6 +22,11 @@ import java.util.Collections;
 
 @RestController
 @RequestMapping("/api/")
+@OpenAPIDefinition(info = @Info(
+        title = "API d'authentification",
+        version = "1.0",
+        description = "Cette API gère l'authentification des utilisateurs et la gestion des tokens."
+))
 public class AuthController {
     private final KeycloakService keycloakService;
     private  final LoginService loginService;
@@ -25,6 +35,12 @@ public class AuthController {
         this.loginService = loginService;
     }
 
+    @Operation(summary = "Créer un utilisateur",
+            description = "Cette méthode permet de créer un nouvel utilisateur dans Keycloak.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Utilisateur créé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Erreur lors de la création de l'utilisateur")
+    })
     @PostMapping("/signup")
     public ResponseEntity<String> createUser(@RequestBody UserDto userDTO) {
         try {
@@ -33,6 +49,13 @@ public class AuthController {
             return ResponseEntity.status(400).body("Erreur lors de l'inscription : " + e.getMessage());
         }
     }
+
+    @Operation(summary = "Authentification d'un utilisateur",
+            description = "Cette méthode permet d'authentifier un utilisateur et de lui retourner un access token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Authentification réussie"),
+            @ApiResponse(responseCode = "401", description = "Échec de l'authentification")
+    })
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletResponse response) {
         try {
@@ -55,6 +78,13 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Échec de l'authentification");
         }
     }
+
+    @Operation(summary = "Rafraîchir le token d'accès",
+            description = "Cette méthode permet de rafraîchir un token d'accès en utilisant le refresh token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token d'accès rafraîchi avec succès"),
+            @ApiResponse(responseCode = "401", description = "Échec du rafraîchissement du token")
+    })
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshAccessToken(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken) {
         if (refreshToken == null) {
@@ -85,6 +115,13 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "Assigner un rôle de manager",
+            description = "Cette méthode permet d'assigner un rôle de manager à un utilisateur, après avoir extrait son ID depuis le token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Rôle de manager attribué avec succès"),
+            @ApiResponse(responseCode = "400", description = "Token invalide ou mal formé"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors du décodage du token")
+    })
     @GetMapping("/assign-manager-role")
     public ResponseEntity<String> extractManagerId(@RequestHeader("Authorization") String authorization) {
         try {
@@ -110,6 +147,13 @@ public class AuthController {
     }
 
 
+    @Operation(summary = "Extraire l'ID utilisateur",
+            description = "Cette méthode permet d'extraire l'ID de l'utilisateur à partir de son token d'accès.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "ID utilisateur extrait avec succès"),
+            @ApiResponse(responseCode = "400", description = "Token invalide ou mal formé"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors du décodage du token")
+    })
     @GetMapping("/user-id")
     public ResponseEntity<String> extractUserId(@RequestHeader("Authorization") String authorization) {
         try {
@@ -135,6 +179,13 @@ public class AuthController {
         }
     }
 
+
+    @Operation(summary = "Obtenir les informations de l'utilisateur",
+            description = "Cette méthode permet de récupérer les informations d'un utilisateur à partir de son token d'accès.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Informations utilisateur récupérées avec succès"),
+            @ApiResponse(responseCode = "401", description = "Token invalide")
+    })
     @GetMapping("/me")
     public ResponseEntity<?> getUserInfo(@RequestHeader("Authorization") String authorizationHeader) {
         try {
@@ -146,6 +197,14 @@ public class AuthController {
         }
     }
 
+
+    @Operation(summary = "Déconnexion de l'utilisateur",
+            description = "Cette méthode permet de déconnecter l'utilisateur en révoquant son refresh token et supprimant le cookie associé.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Déconnexion réussie"),
+            @ApiResponse(responseCode = "400", description = "Refresh token manquant"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors de la déconnexion")
+    })
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@CookieValue(value = "REFRESH_TOKEN", required = false) String refreshToken, HttpServletResponse response) {
         if (refreshToken == null) {
