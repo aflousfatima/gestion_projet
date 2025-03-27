@@ -58,7 +58,7 @@ export default function DashboardLayout({
     try {
       if (editingProject) {
         await axiosInstance.put(
-          `${PROJECT_SERVICE_URL}/api/projects`,
+          `${PROJECT_SERVICE_URL}/api/modify-project`,
           {
             oldName: editingProject,
             newName: projectData.name,
@@ -123,7 +123,7 @@ export default function DashboardLayout({
     }
 
     try {
-      await axiosInstance.delete(`${PROJECT_SERVICE_URL}/api/projects`, {
+      await axiosInstance.delete(`${PROJECT_SERVICE_URL}/api/delete-project`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },
