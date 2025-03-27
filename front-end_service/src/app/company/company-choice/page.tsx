@@ -31,7 +31,7 @@ export default function ChooseCompanyPage() {
 
         <div
           className="choice-card join-card"
-          onClick={() => router.push("/join-company")}
+          onClick={() => router.push("/user/dashboard/home")}
         >
           <div className="card-content">
             <h2 className="card-title">Join a Company</h2>

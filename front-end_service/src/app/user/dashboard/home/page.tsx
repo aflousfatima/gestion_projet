@@ -140,9 +140,10 @@ const Home = () => {
               <div className="projects-list">
                 {projects.map((project, index) => (
                   <div key={index} className="project-name">
-                    <h3>
-                      <i className="fa fa-list project-card"></i> {project}
-                    </h3>
+                    <span className="project-name">
+                      <i className="fa fa-list project-card custom-icon"></i>{" "}
+                      {project}
+                    </span>
                   </div>
                 ))}
               </div>

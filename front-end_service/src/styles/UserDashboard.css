@@ -123,7 +123,8 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     width: 230px;
     background-color: #2E2E30;
     color: white;
-    padding: 20px 20px 20px 0; /* Padding : haut 20px, droite 20px, bas 20px, gauche 0 */    height: 100vh;
+    padding: 20px 20px 20px 0; /* Padding : haut 20px, droite 20px, bas 20px, gauche 0 */    
+    height: 110vh;
     overflow: visible; /* S'assure que rien n'est masqué */
   }
   
@@ -141,7 +142,7 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     padding: 10px 0px;
     font-size: 0.9rem;
     cursor: pointer;
-    color: #E4E2E2;
+    color: #e2e4e2;
   }
   
   .sidebar nav ul li i {
@@ -156,10 +157,7 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
   .sidebar nav ul li:hover {
     color: #FF584A;
   }
-  
-  .sidebar nav ul li:hover i {
-    color: #FF584A;
-  }
+
   
   .section-title {
     margin-top: 20px;
@@ -365,4 +363,494 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
 
 .dropdown-item span {
   font-weight: 500;
+}
+
+
+
+
+.add-menu {
+  position: absolute;
+  top: 15px;
+  left: 115px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  width: 200px;
+}
+
+.add-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.add-menu-item:hover {
+  background-color: #f5f5f5;
+}
+
+.add-menu-item i {
+  margin-right: 10px;
+  color: #666;
+}
+
+.add-menu-item span {
+  font-size: 14px;
+  color: #333;
+}
+
+
+/* Overlay (fond sombre transparent) */
+.project-modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Fond noir avec 50% d'opacité */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000; /* Assure que l'overlay est au-dessus de tout */
+}
+
+/* Modal (contenu centré) */
+.project-modal {
+  background-color: white;
+  border-radius: 10px;
+  padding: 20px;
+  width: 60%; /* Prend 80% de la largeur de l'écran */
+  max-width: 1000px; /* Limite la largeur maximale */
+  height: 75%; /* Prend 80% de la hauteur de l'écran */
+  max-height: 600px; /* Limite la hauteur maximale */
+  overflow-y: auto; /* Ajoute un défilement si le contenu dépasse */
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Ombre pour un effet de profondeur */
+margin-left: 100px;
+}
+
+/* Style pour le titre du modal */
+.project-modalTitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+/* Style pour le formulaire */
+.project-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Style pour les groupes de formulaire */
+.project-formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.project-formGroup label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a202c;
+}
+
+.project-formGroup input,
+.project-formGroup select {
+  padding: 14px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  color: #1a202c;
+  background-color: #f7fafc;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.project-formGroup input:focus,
+.project-formGroup select:focus {
+  border-color: #007bff;
+}
+
+/* Style pour le message */
+.project-message {
+  font-size: 14px;
+  color: #28a745; /* Vert pour les messages de succès */
+  text-align: center;
+}
+
+/* Style pour les boutons */
+.project-modalActions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.project-submitButton,
+.project-cancelButton {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.project-submitButton {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #f6ad55, #ed8936); /* Dégradé orange */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.project-submitButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(246, 173, 85, 0.4);}
+
+.project-cancelButton,
+.project-cancelButton1 {
+  padding: 12px 28px;
+  background-color: #e2e8f0;
+  color: #1a202c;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.project-cancelButton:hover,
+.project-cancelButton1:hover {
+  background-color: #cbd5e0;
+  transform: translateY(-3px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+} 
+
+.projects1-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+
+.project1-name{
+font-size:15px;
+
+}
+.project1-card h3 {
+  font-size: 18px;
+}
+
+
+  .custom1-icon {
+    font-size: 6px; /* Ajuste la taille */
+  }
+.project-image{
+  width: 25px;
+}
+
+
+
+
+.projects-list-container {
+  margin-top: 20px;
+}
+
+.projects-list {
+  list-style: none;
+  padding: 0;
+}
+
+.project-item li{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  color:#a5a728;
+}
+
+
+
+.project-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.edit-button {
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+
+.delete-button {
+  color: rgb(152, 174, 29);
+  border: none;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+
+.project-listButton {
+  padding: 10px 25px;
+  background: linear-gradient(135deg, #27ba58d2, #36ed9edd); /* Dégradé orange */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  display: inline-block;
+  visibility: visible;
+  margin-left: 530px;
+}
+
+.project-listButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-3px);
+}
+
+.project-createButton {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #37ad5fc0, #36ed9ead); /* Dégradé orange */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  margin-bottom: 15px;
+  margin-left:530px;
+}
+
+.project-createButton:hover {
+  transform: translateY(-3px);
+}
+
+.project-form,
+.projects-list-container {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.project-form {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.projects-list-container {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Ajouter une classe pour l'animation de disparition */
+.fade-out {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+
+.project-list-style{
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+
+/* Couleur spécifique pour l'icône "Home" */
+.sidebar nav ul li i.edit-style {
+  color: #0f66b2; /* Bleu profond */
+  font-size: 15px;
+
+}
+.sidebar nav ul li i.delete-style {
+  color: #e51e1e; /* Bleu profond */
+  font-size: 15px;
+
+}
+
+.sidebar nav ul li.project-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 0px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #000000;
+  font-size: 12px;
+  flex: 1;
+}
+
+
+.project-cancelButton1 {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 80px;
+}
+
+
+
+@media (max-width: 768px) {
+  .projects-table {
+    display: block;
+  }
+
+  .projects-table thead {
+    display: none; /* Cacher les en-têtes sur mobile */
+  }
+
+  .projects-table tbody,
+  .projects-table tr {
+    display: block;
+  }
+
+  .projects-table td {
+    display: block;
+    text-align: left;
+    padding: 10px;
+    border-bottom: 1px solid #E2E8F0;
+  }
+
+  .projects-table td:before {
+    content: attr(data-label); /* Ajouter un label avant chaque cellule */
+    font-weight: 600;
+    display: block;
+    color: #6B7280;
+    margin-bottom: 5px;
+  }
+
+  .projects-table td:last-child {
+    border-bottom: none;
+  }
+}
+
+
+
+/* Style pour le tableau des projets */
+.projects-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 15px;
+  font-family: 'Arial', sans-serif;
+  background-color: #ffffff; /* Fond blanc */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* Ombre légère */
+  border-radius: 8px;
+  overflow: hidden; /* Pour arrondir les coins */
+  border-color: #007bff;
+}
+
+/* Style pour les en-têtes du tableau */
+.projects-table thead {
+  background-color: #33333300; /* Gris clair */
+  color: #333; /* Gris foncé */
+  text-align: left;
+}
+
+.projects-table th {
+  padding: 15px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #33333386; /* Bordure gris clair */
+
+
+}
+
+/* Style pour les lignes du tableau */
+.projects-table tbody tr {
+  border-bottom: 1px solid #ffffff; /* Séparateur gris clair */
+  transition: background-color 0.3s ease;
+
+}
+
+.projects-table tbody tr:hover {
+  background-color: #F7FAFC; /* Gris clair au survol */
+}
+
+/* Style pour les cellules */
+.projects-table td {
+  padding: 15px 20px;
+  font-size: 14px;
+  color: #333333; /* Gris foncé */
+}
+
+/* Style pour la colonne Actions */
+.projects-table td .project-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+}
+
+/* Style pour les boutons Modifier et Supprimer */
+.edit-button {
+  color: #1E88E5;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.edit-button:hover {
+  background-color: #ffffff; /* Bleu plus foncé au survol */
+}
+
+.delete-button {
+  color: #DC3545;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.delete-button:hover {
+  background-color: #f7f7f7; /* Rouge plus foncé au survol */
+}
+
+/* Style pour les icônes */
+.edit-style,
+.delete-style {
+  font-size: 16px;
 }

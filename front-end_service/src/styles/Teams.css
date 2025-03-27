@@ -133,7 +133,7 @@
   background-color: #fff; /* Fond blanc pour le pop-up */
   padding: 40px;
   border-radius: 20px;
-  width: 100%;
+  width: 110%;
   max-width: 600px;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
   z-index: 1001;

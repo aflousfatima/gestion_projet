@@ -36,11 +36,11 @@ export default function SigninPage() {
     try {
       // Log des données envoyées pour l'inscription
       console.log("Données envoyées pour l'inscription:", formData);
-      console.log(process.env.NEXT_PUBLIC_API_GATEWAY_URL);
+      console.log(process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL);
 
       // Envoi de la requête POST au backend Spring Boot
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_GATEWAY_URL}/authentification-service/api/login`,
+        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/login`,
         formData,
         { withCredentials: true }
       );

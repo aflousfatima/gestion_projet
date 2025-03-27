@@ -17,19 +17,6 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
   }, [accessToken, isLoading, router]);
 
-  if (isLoading) {
-    return (
-      <div className="loading-container">
-        {" "}
-        {/* ✅ Applique la classe CSS */}
-        <img
-          src="/logo.png" // Remplace par ton image
-          alt="Chargement..."
-          className="loading-icon" // ✅ Animation CSS
-        ></img>
-      </div>
-    );
-  }
   return accessToken ? <>{children}</> : null;
 };
 
