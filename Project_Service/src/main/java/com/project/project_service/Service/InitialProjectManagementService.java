@@ -1,6 +1,7 @@
 package com.project.project_service.Service;
 
 import com.project.project_service.DTO.InitialProjectManagementDTO;
+import com.project.project_service.DTO.ProjectDTO;
 import com.project.project_service.DTO.ProjectResponseDTO;
 import com.project.project_service.Entity.Client;
 import com.project.project_service.Entity.Entreprise;
@@ -107,12 +108,12 @@ public class InitialProjectManagementService {
 
         // Récupérer les projets associés à l'entreprise
         List<Projet> projects = projectRepository.findByCompany(company);
-        List<String> projectNames = projects.stream()
-                .map(Projet::getName)
+        List<ProjectDTO> projectDTOs = projects.stream()
+                .map(project -> new ProjectDTO(project.getName(), project.getDescription()))
                 .collect(Collectors.toList());
-        System.out.println("✅ Projets trouvés: " + projectNames);
+        System.out.println("✅ Projets trouvés: " + projectDTOs);
 
         // Construire la réponse
-        return new ProjectResponseDTO(company.getName(), projectNames);
+        return new ProjectResponseDTO(company.getName(), projectDTOs);
     }
 }
