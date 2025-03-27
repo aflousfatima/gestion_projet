@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface ProjetRepository extends JpaRepository<Projet, Long> {
     List<Projet> findByCompany(Entreprise company);
+    Projet findByNameAndCompany(String name, Entreprise company);
 }

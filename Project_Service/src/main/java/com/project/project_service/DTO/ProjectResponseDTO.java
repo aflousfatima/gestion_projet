@@ -4,17 +4,13 @@ import java.util.List;
 
 public class ProjectResponseDTO {
     private String companyName;
-    private List<String> projects;
+    private List<ProjectDTO> projects;
 
-    // Constructeurs
-    public ProjectResponseDTO() {}
-
-    public ProjectResponseDTO(String companyName, List<String> projects) {
+    public ProjectResponseDTO(String companyName, List<ProjectDTO> projects) {
         this.companyName = companyName;
         this.projects = projects;
     }
 
-    // Getters et setters
     public String getCompanyName() {
         return companyName;
     }
@@ -23,11 +19,11 @@ public class ProjectResponseDTO {
         this.companyName = companyName;
     }
 
-    public List<String> getProjects() {
+    public List<ProjectDTO> getProjects() {
         return projects;
     }
 
-    public void setProjects(List<String> projects) {
+    public void setProjects(List<ProjectDTO> projects) {
         this.projects = projects;
     }
 }
