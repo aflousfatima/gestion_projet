@@ -1,21 +1,17 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import useAxios from "../../../../hooks/useAxios";
 import { useAuth } from "../../../../context/AuthContext";
-import {
-  AUTH_SERVICE_URL,
-  PROJECT_SERVICE_URL,
-} from "../../../../config/useApi";
+import { AUTH_SERVICE_URL } from "../../../../config/useApi";
 import "../../../../styles/Dashboard-Home.css";
 import ProtectedRoute from "../../../../components/ProtectedRoute";
+import { useProjects } from "../../../../hooks/useProjects"; // Importer useProjects
 
 const Home = () => {
   const { accessToken, isLoading: authLoading } = useAuth();
-  const axiosInstance = useAxios();
+  const { projects, loading: projectsLoading, error: projectsError } = useProjects(); // Utiliser useProjects
 
   const [userName, setUserName] = useState("User"); // Nom par défaut
   const [currentDate, setCurrentDate] = useState("");
-  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Formater la date actuelle (ex: "Wednesday 19 March")
@@ -27,75 +23,46 @@ const Home = () => {
       month: "long",
       year: "numeric",
     } as const;
-    const formattedDate = today.toLocaleDateString("en-US", options); // Ex: "Wednesday 19 March"
+    const formattedDate = today.toLocaleDateString("en-US", options);
     setCurrentDate(formattedDate);
   }, []);
 
-  // Récupérer les détails de l'utilisateur et les projets
+  // Récupérer les détails de l'utilisateur
   useEffect(() => {
-    const fetchUserDetailsAndProjects = async () => {
+    const fetchUserDetails = async () => {
       if (authLoading) return; // Attendre que le token soit prêt
-
       if (!accessToken) {
         setLoading(false);
         return;
       }
 
       try {
-        // Étape 1 : Récupérer l'authId via GET /api/user-id
-        console.log("🔍 Récupération de l'authId...");
-        const authIdResponse = await axiosInstance.get(
-          `${AUTH_SERVICE_URL}/api/user-id`
-        );
-        const authId = authIdResponse.data;
-        console.log("✅ authId récupéré:", authId);
-
-        // Étape 2 : Récupérer les détails de l'utilisateur via GET /api/user-details (optionnel)
         console.log("🔍 Récupération des détails de l'utilisateur...");
-        try {
-          console.log("Access Token envoyé :", accessToken);
-          const userDetailsResponse = await axiosInstance.get(
-            `${AUTH_SERVICE_URL}/api/me`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-              },
-            }
-          );
+        const userDetailsResponse = await fetch(`${AUTH_SERVICE_URL}/api/me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
 
-          // Traite la réponse ici, par exemple userDetailsResponse.data
-          const userDetails = userDetailsResponse.data;
-          console.log(userDetails); // Exemple d'affichage des informations utilisateur
-          console.log("✅ Détails de l'utilisateur récupérés:", userDetails);
-          setUserName(userDetails.firstName || "User"); // Utiliser le nom de l'utilisateur ou "User" par défaut
-        } catch (error) {
-          console.error(
-            "Erreur lors de la récupération des détails utilisateur:",
-            error
-          );
-          // Gérer l'erreur si nécessaire
-        }
-
-        // Étape 3 : Récupérer les projets via GET /api/projects/by-manager
-        console.log("🔍 Récupération des projets pour authId:", authId);
-        const projectsResponse = await axiosInstance.get(
-          `${PROJECT_SERVICE_URL}/api/projects/by-manager?authId=${authId}`
-        );
-        const { projects } = projectsResponse.data;
-        console.log("✅ Projets récupérés:", projects);
-        setProjects(projects);
-      } catch (err) {
-        console.error("❌ Erreur lors de la récupération des données:", err);
+        const userDetails = await userDetailsResponse.json();
+        console.log("✅ Détails de l'utilisateur récupérés:", userDetails);
+        setUserName(userDetails.firstName || "User");
+      } catch (error) {
+        console.error("Erreur lors de la récupération des détails utilisateur:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserDetailsAndProjects();
-  }, [accessToken, authLoading, axiosInstance]);
+    fetchUserDetails();
+  }, [accessToken, authLoading]);
 
-  if (loading) {
+  if (loading || projectsLoading) {
     return <div>Chargement...</div>;
+  }
+
+  if (projectsError) {
+    return <div>Erreur : {projectsError}</div>;
   }
 
   return (
@@ -142,7 +109,7 @@ const Home = () => {
                   <div key={index} className="project-name">
                     <span className="project-name">
                       <i className="fa fa-list project-card custom-icon"></i>{" "}
-                      {project}
+                      {project.name || "Projet sans nom"}
                     </span>
                   </div>
                 ))}

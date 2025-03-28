@@ -4,6 +4,8 @@ import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Utilisez `next/navigation` au lieu de `next/router`
+
 interface FormData {
   firstName: string;
   lastName: string;
@@ -22,6 +24,10 @@ interface InvitationData {
 }
 export default function SignupPage() {
   const searchParams = useSearchParams();
+  const router = useRouter(); // Initialisation de useRouter pour la redirection
+  useEffect(() => {
+    router.prefetch("/company-registration"); // Précharge la page en cache
+  }, []);
   const token = searchParams.get("token"); // Extraire le jeton de l'URL
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -92,6 +98,7 @@ export default function SignupPage() {
 
       if (response.status === 201) {
         alert("Inscription réussie! Vérifiez votre email pour confirmer.");
+        router.replace("/authentification/signin"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
       } else {
         alert(`Erreur : ${response.data.message}`);
       }

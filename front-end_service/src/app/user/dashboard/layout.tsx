@@ -465,7 +465,7 @@ export default function DashboardLayout({
                           className="project-image"
                         />
                         <Link href="/user/dashboard/project">
-                          {project.name}
+                          {project.name ? project.name : "Nom inconnu"}
                         </Link>
                       </li>
                     ))}

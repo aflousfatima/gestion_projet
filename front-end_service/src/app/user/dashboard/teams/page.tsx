@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
 import "../../../../styles/Teams.css";
-import { useAuth } from "../../../../context/AuthContext"; // Importer useAuth
+import { useAuth } from "../../../../context/AuthContext";
 import useAxios from "../../../../hooks/useAxios";
 import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
 } from "../../../../config/useApi";
 import ProtectedRoute from "../../../../components/ProtectedRoute";
+import { useProjects } from "../../../../hooks/useProjects";
 
 // Simuler une liste de membres (à remplacer par une API plus tard)
 const teamMembers = [
@@ -17,7 +18,7 @@ const teamMembers = [
     lastName: "Aflous",
     role: "DevOps",
     project: "Projet C",
-    avatar: "https://ui-avatars.com/api/?name=Fat+Af", // Placeholder pour la photo
+    avatar: "https://ui-avatars.com/api/?name=Fat+Af",
   },
   {
     id: 2,
@@ -25,7 +26,7 @@ const teamMembers = [
     lastName: "Elmekadem",
     role: "Développeur",
     project: "Projet A",
-    avatar: "https://ui-avatars.com/api/?name=Narji+El", // Placeholder pour la photo
+    avatar: "https://ui-avatars.com/api/?name=Narji+El",
   },
   {
     id: 3,
@@ -33,73 +34,93 @@ const teamMembers = [
     lastName: "Smith",
     role: "Testeur",
     project: "Projet B",
-    avatar: "https://ui-avatars.com/api/?name=Khad+Chak", // Placeholder pour la photo
+    avatar: "https://ui-avatars.com/api/?name=Khad+Chak",
   },
 ];
 
 export default function Teams() {
-  const { accessToken, isLoading: authLoading } = useAuth(); // Récupérer le token et l'état de chargement
-  const axiosInstance = useAxios(); // Utiliser useAxios sans baseURL
+  const { accessToken, isLoading: authLoading } = useAuth();
+  const axiosInstance = useAxios();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("DEVELOPER");
-  const [project, setProject] = useState("Project A");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+
   const [message, setMessage] = useState("");
-  // Ajouter les nouveaux états
   const [companyName, setCompanyName] = useState("");
-  const [projects, setProjects] = useState([]);
+
+  // Utiliser le hook useProjects
+  const {
+    projects,
+    loading: projectsLoading,
+    error: projectsError,
+  } = useProjects();
+
   const [loading, setLoading] = useState(true);
-  const [error] = useState(null);
-  // Récupérer l'authId et les projets
+  const [error, setError] = useState<string | null>(null);
+
+  // Mettre à jour les états de chargement et d'erreur
   useEffect(() => {
-    const fetchAuthIdAndProjects = async () => {
-      if (authLoading) return; // Attendre que le token soit prêt
+    setLoading(projectsLoading);
+    setError(projectsError);
 
-      console.log("🔍 Vérification du accessToken:", accessToken);
+    // Log pour vérifier les projets récupérés
+    console.log("📋 Projets récupérés :", projects);
 
-      if (!accessToken) {
-        setLoading(false);
-        return;
-      }
+    // Sélectionner le premier projet par défaut (son id) si disponible
+    if (projects.length > 0) {
+      setSelectedProjectId(projects[0].id.toString());
+      console.log("✅ Projet sélectionné par défaut (ID) :", projects[0].id);
+    } else {
+      console.log("⚠️ Aucun projet disponible, selectedProjectId reste vide.");
+    }
+  }, [projectsLoading, projectsError, projects]);
+
+  // Récupérer le nom de l'entreprise
+  useEffect(() => {
+    const fetchCompanyName = async () => {
+      if (authLoading || !accessToken) return;
 
       try {
-        // Étape 1 : Récupérer l'authId via GET /api/user-id
-        console.log("🔍 Récupération de l'authId...");
         const authIdResponse = await axiosInstance.get(
           `${AUTH_SERVICE_URL}/api/user-id`
         );
         const authId = authIdResponse.data;
-        console.log("✅ authId récupéré:", authId);
+        console.log("🔑 Auth ID récupéré :", authId);
 
-        // Étape 2 : Récupérer les projets et le nom de l'entreprise via GET /api/projects/by-manager
-        console.log("🔍 Récupération des projets pour authId:", authId);
-        const projectsResponse = await axiosInstance.get(
+        const companyResponse = await axiosInstance.get(
           `${PROJECT_SERVICE_URL}/api/projects/by-manager?authId=${authId}`
         );
 
-        const { companyName, projects } = projectsResponse.data;
-        console.log("✅ Données récupérées:", { companyName, projects });
-
+        const { companyName } = companyResponse.data;
+        console.log("🏢 Nom de l'entreprise récupéré :", companyName);
         setCompanyName(companyName);
-        setProjects(projects);
-        setProject(projects.length > 0 ? projects[0] : "");
       } catch (err) {
-        console.error("❌ Erreur lors de la récupération des données:", err);
-      } finally {
-        setLoading(false);
+        console.error(
+          "❌ Erreur lors de la récupération du nom de l'entreprise:",
+          err
+        );
       }
     };
 
-    fetchAuthIdAndProjects();
+    fetchCompanyName();
   }, [accessToken, authLoading, axiosInstance]);
 
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Log des informations qui vont être envoyées
+    console.log("📤 Envoi de l'invitation avec les données suivantes :");
+    console.log("  Email :", email);
+    console.log("  Rôle :", role);
+    console.log("  Project ID :", selectedProjectId);
+    console.log("  Entreprise :", companyName);
+
     try {
       await axiosInstance.post(`${AUTH_SERVICE_URL}/api/invitations`, {
         email,
         role,
-        project,
+        projectId: selectedProjectId,
         entreprise: companyName,
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -110,10 +131,12 @@ export default function Teams() {
       setEmail("");
       setRole("DEVELOPER");
       setIsModalOpen(false);
+      console.log("✅ Invitation envoyée avec succès !");
     } catch (error) {
       setMessage(
         "Erreur lors de l'envoi de l'invitation : " + (error as Error).message
       );
+      console.error("❌ Erreur lors de l'envoi de l'invitation :", error);
     }
   };
 
@@ -198,16 +221,19 @@ export default function Teams() {
                   />
                 </div>
                 <div className="teams-formGroup">
-                  <label htmlFor="project">Project</label>
+                  <label htmlFor="project">Projet</label>
                   <select
                     id="project"
-                    value={project}
-                    onChange={(e) => setProject(e.target.value)}
+                    value={selectedProjectId}
+                    onChange={(e) => {
+                      setSelectedProjectId(e.target.value);
+                      console.log("🔄 Projet sélectionné (ID) :", e.target.value);
+                    }}
                   >
                     {projects.length > 0 ? (
-                      projects.map((proj, index) => (
-                        <option key={index} value={proj}>
-                          {proj}
+                      projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.name}
                         </option>
                       ))
                     ) : (
@@ -220,7 +246,10 @@ export default function Teams() {
                   <select
                     id="role"
                     value={role}
-                    onChange={(e) => setRole(e.target.value)}
+                    onChange={(e) => {
+                      setRole(e.target.value);
+                      console.log("🔄 Rôle sélectionné :", e.target.value);
+                    }}
                   >
                     <option value="DEVELOPER">Développeur</option>
                     <option value="TESTER">Testeur</option>
