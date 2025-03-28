@@ -12,6 +12,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
@@ -105,70 +106,89 @@ public class KeycloakService {
 
         // Créer l'utilisateur dans Keycloak
         System.out.println("📤 Envoi de la requête pour créer l'utilisateur à : " + createUserUrl);
-        ResponseEntity<String> response = restTemplate.postForEntity(createUserUrl, request, String.class);
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(createUserUrl, request, String.class);
 
-        System.out.println("📥 Réponse de Keycloak pour la création : " + response.getStatusCode() + " - " + response.getBody());
+            System.out.println("📥 Réponse de Keycloak pour la création : " + response.getStatusCode() + " - " + response.getBody());
 
-        if (response.getStatusCode() != HttpStatus.CREATED) {
-            throw new RuntimeException("Échec de la création de l'utilisateur : " + response.getBody());
-        }
-
-        // Récupérer l'ID de l'utilisateur créé
-        String locationHeader = response.getHeaders().getFirst(HttpHeaders.LOCATION);
-        System.out.println("📍 En-tête Location : " + locationHeader);
-        String userId = locationHeader.substring(locationHeader.lastIndexOf("/") + 1);
-        System.out.println("🆔 ID de l'utilisateur créé : " + userId);
-
-        // Attribuer un rôle à l'utilisateur
-        String roleToAssign;
-        if (userDto.getToken() != null) {
-            System.out.println("🔑 Jeton d'invitation détecté : " + userDto.getToken());
-            Invitation invitation = invitationRepository.findByToken(userDto.getToken())
-                    .orElseThrow(() -> new RuntimeException("Jeton d'invitation invalide"));
-
-            if (invitation.getExpiresAt() < System.currentTimeMillis()) {
-                throw new RuntimeException("Lien d'invitation expiré");
+            if (response.getStatusCode() != HttpStatus.CREATED) {
+                throw new RuntimeException("Échec de la création de l'utilisateur : " + response.getBody());
             }
 
-            if (invitation.isUsed()) {
-                throw new RuntimeException("L'invitation a déjà été utilisée");
+            // Récupérer l'ID de l'utilisateur créé
+            String locationHeader = response.getHeaders().getFirst(HttpHeaders.LOCATION);
+            System.out.println("📍 En-tête Location : " + locationHeader);
+            String userId = locationHeader.substring(locationHeader.lastIndexOf("/") + 1);
+            System.out.println("🆔 ID de l'utilisateur créé : " + userId);
+
+            // Attribuer un rôle à l'utilisateur
+            String roleToAssign;
+            if (userDto.getToken() != null) {
+                System.out.println("🔑 Jeton d'invitation détecté : " + userDto.getToken());
+                Invitation invitation = invitationRepository.findByToken(userDto.getToken())
+                        .orElseThrow(() -> new RuntimeException("Jeton d'invitation invalide"));
+
+                if (invitation.getExpiresAt() < System.currentTimeMillis()) {
+                    throw new RuntimeException("Lien d'invitation expiré");
+                }
+
+                if (invitation.isUsed()) {
+                    throw new RuntimeException("L'invitation a déjà été utilisée");
+                }
+
+                roleToAssign = invitation.getRole();
+                System.out.println("🎭 Rôle à attribuer (depuis l'invitation) : " + roleToAssign);
+            } else {
+                roleToAssign = "USER";
+                System.out.println("🎭 Rôle par défaut à attribuer : " + roleToAssign);
             }
 
-            roleToAssign = invitation.getRole();
-            System.out.println("🎭 Rôle à attribuer (depuis l'invitation) : " + roleToAssign);
-        } else {
-            roleToAssign = "USER";
-            System.out.println("🎭 Rôle par défaut à attribuer : " + roleToAssign);
-        }
+            // Attribuer le rôle dans Keycloak
+            assignRoleToUser(userId, roleToAssign, accessToken);
 
-        // Attribuer le rôle dans Keycloak
-        assignRoleToUser(userId, roleToAssign, accessToken);
+            // Si un jeton est présent, marquer l'invitation comme utilisée
+            if (userDto.getToken() != null) {
+                System.out.println("✅ Marquage de l'invitation comme utilisée...");
+                Invitation invitation = invitationRepository.findByToken(userDto.getToken()).get();
+                invitation.setUsed(true);
+                invitationRepository.save(invitation);
+                System.out.println("✅ Invitation marquée comme utilisée avec succès");
+                // Vérifier si l'utilisateur est déjà membre du projet
+                if (projectMemberRepository.existsByIdProjectIdAndIdUserId(invitation.getProjectId(), userId)) {
+                    throw new RuntimeException("L'utilisateur est déjà membre de ce projet");
+                }
 
-        // Si un jeton est présent, marquer l'invitation comme utilisée
-        if (userDto.getToken() != null) {
-            System.out.println("✅ Marquage de l'invitation comme utilisée...");
-            Invitation invitation = invitationRepository.findByToken(userDto.getToken()).get();
-            invitation.setUsed(true);
-            invitationRepository.save(invitation);
-            System.out.println("✅ Invitation marquée comme utilisée avec succès");
-            // Vérifier si l'utilisateur est déjà membre du projet
-            if (projectMemberRepository.existsByIdProjectIdAndIdUserId(invitation.getProjectId(), userId)) {
-                throw new RuntimeException("L'utilisateur est déjà membre de ce projet");
+                // Ajouter l'utilisateur à project_members
+                ProjectMember projectMember = new ProjectMember(
+                        invitation.getProjectId(),
+                        userId,
+                        invitation.getRole()
+                );
+                projectMemberRepository.save(projectMember);
+                System.out.println("✅ Utilisateur ajouté à project_members avec project_id=" + invitation.getProjectId() + ", user_id=" + userId);
             }
 
-            // Ajouter l'utilisateur à project_members
-            ProjectMember projectMember = new ProjectMember(
-                    invitation.getProjectId(),
-                    userId,
-                    invitation.getRole()
-            );
-            projectMemberRepository.save(projectMember);
-            System.out.println("✅ Utilisateur ajouté à project_members avec project_id=" + invitation.getProjectId() + ", user_id=" + userId);
+            System.out.println("✅ Utilisateur créé avec succès !");
+            return ResponseEntity.status(HttpStatus.CREATED).body("Utilisateur créé avec succès");
         }
+        catch (HttpClientErrorException e) {
+            // Gérer les erreurs de Keycloak
+            if (e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                String responseBody = e.getResponseBodyAsString();
+                System.out.println("❌ Erreur de Keycloak : " + responseBody);
 
-        System.out.println("✅ Utilisateur créé avec succès !");
-        return ResponseEntity.status(HttpStatus.CREATED).body("Utilisateur créé avec succès");
-    }
+                // Vérifier si l'erreur est due à un username ou email déjà pris
+                if (responseBody.contains("userName") && responseBody.contains("already exists")) {
+                    throw new RuntimeException("Le nom d'utilisateur est déjà pris. Veuillez en choisir un autre.");
+                } else if (responseBody.contains("email") && responseBody.contains("already exists")) {
+                    throw new RuntimeException("L'email est déjà utilisé. Veuillez utiliser un autre email.");
+                } else {
+                    throw new RuntimeException("Erreur lors de la création de l'utilisateur dans Keycloak : " + responseBody);
+                }
+            }
+            throw e; // Relancer l'exception si ce n'est pas une erreur 400
+        }
+        }
 
     private void assignRoleToUser(String userId, String roleName, String accessToken) {
         System.out.println("🔄 Attribution du rôle " + roleName + " à l'utilisateur : " + userId);

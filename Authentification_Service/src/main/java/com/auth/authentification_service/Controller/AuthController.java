@@ -45,8 +45,13 @@ public class AuthController {
     public ResponseEntity<String> createUser(@RequestBody UserDto userDTO) {
         try {
             return keycloakService.createUser(userDTO);
-        }catch (Exception e) {
-            return ResponseEntity.status(400).body("Erreur lors de l'inscription : " + e.getMessage());
+        }catch (RuntimeException e) {
+            System.out.println("❌ Erreur lors de la création de l'utilisateur : " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        } catch (Exception e) {
+            System.out.println("❌ Erreur inattendue lors de la création de l'utilisateur : " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur serveur : " + e.getMessage());
         }
     }
 
