@@ -13,7 +13,8 @@ public class Invitation {
     private String email;
     private String role;
     private String entreprise;
-    private String project;
+    @Column(name = "project_id", nullable = false)
+    private Long projectId; // Remplacer "project" par "projectId"
 
     private String token;
     private long expiresAt;
@@ -22,11 +23,11 @@ public class Invitation {
     // Constructeurs
     public Invitation() {}
 
-    public Invitation(String email, String role, String entreprise,String project, String token, long expiresAt) {
+    public Invitation(String email, String role, String entreprise,Long projectId, String token, long expiresAt) {
         this.email = email;
         this.role = role;
         this.entreprise = entreprise;
-        this.project=project;
+        this.projectId=projectId;
         this.token = token;
         this.expiresAt = expiresAt;
         this.used = false;
@@ -48,11 +49,12 @@ public class Invitation {
     public boolean isUsed() { return used; }
     public void setUsed(boolean used) { this.used = used; }
 
-    public String getProject() {
-        return project;
+
+    public Long getProjectId() {
+        return projectId;
     }
 
-    public void setProject(String project) {
-        this.project = project;
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
     }
 }
