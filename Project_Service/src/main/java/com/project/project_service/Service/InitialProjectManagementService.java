@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -82,6 +83,7 @@ public class InitialProjectManagementService {
         project.setName(dto.getProjectName());
         project.setDescription(dto.getProjectDescription());
         project.setCompany(company);  // Lier le projet à l'entreprise
+        project.setCreationDate(LocalDateTime.now()); // Ajout de la date de création
         projectRepository.save(project);
         System.out.println("Projet créé avec succès : " + project.getName());
     }
@@ -109,7 +111,7 @@ public class InitialProjectManagementService {
         // Récupérer les projets associés à l'entreprise
         List<Projet> projects = projectRepository.findByCompany(company);
         List<ProjectDTO> projectDTOs = projects.stream()
-                .map(project -> new ProjectDTO(project.getName(), project.getDescription()))
+                .map(project -> new ProjectDTO(project.getId(),project.getName(), project.getDescription()))
                 .collect(Collectors.toList());
         System.out.println("✅ Projets trouvés: " + projectDTOs);
 
