@@ -27,7 +27,7 @@ public class InvitationService {
                 request.getEmail(),
                 request.getRole(),
                 request.getEntreprise(),
-                request.getProject(),
+                request.getProjectId() ,
                 token,
                 System.currentTimeMillis() + 48 * 60 * 60 * 1000 // Expire dans 48h
         );
@@ -38,7 +38,7 @@ public class InvitationService {
                 request.getEmail(),
                 request.getRole(),
                 request.getEntreprise(), // À remplacer par une récupération dynamique plus tard
-                request.getProject(),
+                request.getProjectId() ,
                 token
         );
     }

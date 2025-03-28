@@ -4,8 +4,7 @@ public  class InvitationRequest {
     private String email;
     private String role;
     private String entreprise;
-    private String project;
-
+    private Long projectId; // Remplacer "project" par "projectId"
     // Getters et setters
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
@@ -15,12 +14,12 @@ public  class InvitationRequest {
     public void setEntreprise(String entreprise) { this.entreprise = entreprise; }
 
 
-    public String getProject() {
-        return project;
+    public Long getProjectId() {
+        return projectId;
     }
 
-    public void setProject(String project) {
-        this.project = project;
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
     }
 }
 

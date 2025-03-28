@@ -2,7 +2,9 @@ package com.auth.authentification_service.Service;
 
 import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.Entity.Invitation;
+import com.auth.authentification_service.Entity.ProjectMember;
 import com.auth.authentification_service.Repository.InvitationRepository;
+import com.auth.authentification_service.Repository.ProjectMemberRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,11 +31,14 @@ public class KeycloakService {
     private final VaultService vaultService;
     private final RestTemplate restTemplate;
     private final InvitationRepository invitationRepository;
+    private final ProjectMemberRepository projectMemberRepository;
 
-    public KeycloakService(VaultService vaultService, RestTemplate restTemplate , InvitationRepository invitationRepository) {
+
+    public KeycloakService(VaultService vaultService, RestTemplate restTemplate , InvitationRepository invitationRepository,ProjectMemberRepository projectMemberRepository) {
         this.vaultService = vaultService;
         this.restTemplate = restTemplate;
         this.invitationRepository = invitationRepository;
+        this.projectMemberRepository=projectMemberRepository;
     }
 
     public String getAdminToken() {
@@ -146,6 +151,19 @@ public class KeycloakService {
             invitation.setUsed(true);
             invitationRepository.save(invitation);
             System.out.println("✅ Invitation marquée comme utilisée avec succès");
+            // Vérifier si l'utilisateur est déjà membre du projet
+            if (projectMemberRepository.existsByIdProjectIdAndIdUserId(invitation.getProjectId(), userId)) {
+                throw new RuntimeException("L'utilisateur est déjà membre de ce projet");
+            }
+
+            // Ajouter l'utilisateur à project_members
+            ProjectMember projectMember = new ProjectMember(
+                    invitation.getProjectId(),
+                    userId,
+                    invitation.getRole()
+            );
+            projectMemberRepository.save(projectMember);
+            System.out.println("✅ Utilisateur ajouté à project_members avec project_id=" + invitation.getProjectId() + ", user_id=" + userId);
         }
 
         System.out.println("✅ Utilisateur créé avec succès !");
