@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 @Service
 public class ProjectService {
     @Autowired
@@ -36,6 +38,7 @@ public class ProjectService {
         project.setName(name);
         project.setDescription(description);
         project.setCompany(company); // Lier le projet à l'entreprise
+        project.setCreationDate(LocalDateTime.now()); // Ajout de la date de création
         projectRepository.save(project);
 
         System.out.println("Projet créé avec succès : " + project.getName());

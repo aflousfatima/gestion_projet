@@ -3,6 +3,8 @@ package com.project.project_service.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 
 @NoArgsConstructor
@@ -18,6 +20,9 @@ public class Projet {
     @ManyToOne(cascade = CascadeType.ALL) // Ou un autre type de cascade selon les besoins
     @JoinColumn(name = "company_id")
     private Entreprise company;
+    // Nouveau champ pour la date de création
+    @Column(name = "creation_date")
+    private LocalDateTime creationDate;
 
     public Long getId() {
         return id;
@@ -49,5 +54,13 @@ public class Projet {
 
     public void setCompany(Entreprise company) {
         this.company = company;
+    }
+
+    public LocalDateTime getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(LocalDateTime creationDate) {
+        this.creationDate = creationDate;
     }
 }
