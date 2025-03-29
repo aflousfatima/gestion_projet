@@ -1,7 +1,7 @@
 "use client";
 import "../../../styles/Signup.css";
 import { useState, ChangeEvent, FormEvent, useEffect } from "react";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // Utilisez `next/navigation` au lieu de `next/router`
@@ -102,9 +102,23 @@ export default function SignupPage() {
       } else {
         alert(`Erreur : ${response.data.message}`);
       }
-    } catch (error) {
-      console.error("Erreur lors de l'inscription :", error);
-      alert("Erreur dans l'inscription. Veuillez réessayer.");
+    } catch (err: unknown) {
+      // Utiliser "unknown" au lieu de "AxiosError"
+      // Vérifier si l'erreur est une instance de AxiosError
+      if (err instanceof AxiosError) {
+        console.error("❌ Erreur lors de l'inscription :", err);
+        if (err.response && err.response.data) {
+          setError(err.response.data as string); // Typage explicite du message d'erreur
+        } else {
+          setError(
+            "Une erreur est survenue lors de l'inscription. Veuillez réessayer."
+          );
+        }
+      } else {
+        // Gérer les autres types d'erreurs (non-Axios)
+        console.error("❌ Erreur inattendue :", err);
+        setError("Une erreur inattendue est survenue. Veuillez réessayer.");
+      }
     }
   };
   if (error) {

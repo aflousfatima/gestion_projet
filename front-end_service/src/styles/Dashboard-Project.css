@@ -1,0 +1,415 @@
+/* styles/Dashboard-Project.css */
+.project-container {
+  padding: 10px 20px;
+    font-family: "Arial", sans-serif;
+    background-color: #ffffff;
+    min-height: 100vh;
+    width:105%;
+    margin-top: -20px;
+  }
+  
+  .tasks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    border-bottom: 1px solid #ccc; /* Cette règle ajoutera une ligne horizontale */
+  }
+  
+  .tasks-title-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Distribue l'espace entre le titre et la team-list */
+    width: 100%; /* Assure que la largeur de la container prend toute la largeur disponible */
+    gap: 10px;
+  }
+ 
+  .team-list {
+    margin-left: auto; /* Pousse l'élément à droite */
+  }
+  
+  
+  .tasks-icon {
+    font-size: 20px;
+  }
+  
+  .tasks-title {
+    font-size:17px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .tasks-tabs {
+    display: flex;
+    gap: -20px;
+  }
+  
+  .tasks-tab {
+    padding: 8px 16px;
+    background-color: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: background-color 0.3s;
+  }
+  
+  .tasks-tab.active {
+    border-bottom: 2px solid #ff4d4f;
+    color: #ff4d4f;
+    font-weight:lighter;
+    border-radius: 0px;
+  }
+  
+  .tasks-tab:hover {
+    color: #ff4d4f;
+  }
+  
+  .tasks-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+  }
+  
+  .tasks-add-button {
+    padding: 1px 10px;
+    background-color: #ffffff;
+    color: #6D6E6F;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s;
+  }
+  .second-button{
+    border-left:1px solid #ccc;
+    padding:4px;
+    color: #6D6E6F;
+
+    }
+
+  
+  .tasks-options {
+    display: flex;
+    gap: -20px;
+  }
+  
+  .tasks-option {
+    padding: 8px 16px;
+    background-color: transparent;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: background-color 0.3s;
+
+  }
+  
+  .tasks-option:hover {
+    background-color: #e0e0e0;
+  }
+  
+  .tasks-list-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e0e0e0;
+    border-top: 1px solid #e0e0e0;
+    border-right:1px solid #e0e0e0;
+    font-size: 12px;
+    font-weight:ighter;
+    color: #666;
+    margin-top: 10px;
+    width: 100%; /* Assure que la largeur est prise sur toute la ligne */
+    padding: 1px 10px;
+
+  }
+  .tasks-list-header-item,
+  .tasks-list-header-item-principal {
+    text-align: left;
+    padding: 5px; /* Optionnel pour ajouter un peu de padding à l'intérieur des éléments */
+    border-right: 1px solid #ccc; /* Bordure droite */
+  }
+  
+  .tasks-list-header-item:last-child,
+  .tasks-list-header-item-principal:last-child {
+    border-right: none; /* Enlève la bordure à droite du dernier élément */
+  }
+  
+  .tasks-list-header-item-principal {
+    flex: 3; /* Le principal prend plus d'espace */
+  }
+  
+  .tasks-list-header-item {
+    flex: 1; /* Les autres éléments prennent moins d'espace */
+  }
+  
+  .tasks-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background-color: #ffffff;
+  }
+  
+  
+/* Styles pour la section */
+.dashboard-task-section {
+  padding: 1px 10px;
+}
+
+.dashboard-task-section-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+  
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid #e0e0e0; /* Bordure supérieure pour chaque ligne */
+}
+  
+  .task-checkbox {
+    flex: 3;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .task-checkbox input {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .task-checkbox span {
+    font-size: 14px;
+    color: #333;
+  }
+  
+  .task-details {
+    flex: 4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #666;
+    border-left: none; /* Supprimer la bordure à gauche */
+  }
+  
+  .task-responsible {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    position: relative; /* Pour ajouter une bordure verticale via un pseudo-élément */
+  }
+  
+  .task-responsible::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 20%;
+    bottom: 20%;
+    width: 1px;
+    background-color: #e0e0e0; /* Bordure verticale subtile */
+  }
+
+  .responsible-circle {
+    width: 20px;
+    height: 20px;
+    background-color: #f0c14b;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+  }
+  
+  .responsible-circle.empty {
+    background-color: #e0e0e0;
+    color: #666;
+  }
+  
+.task-due-date {
+  flex: 1;
+  color: #666;
+  position: relative;
+}
+
+.task-due-date::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  background-color: #e0e0e0; /* Bordure verticale subtile */
+}
+  
+.task-priority {
+  flex: 1;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  text-align: center;
+  position: relative;
+}
+
+.task-priority::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  background-color: #e0e0e0; /* Bordure verticale subtile */
+}
+  
+  .priority-Faible {
+    background-color: #d1ecf1;
+    color: #0c5460;
+  }
+  
+  .priority-Moyenne {
+    background-color: #fff3cd;
+    color: #856404;
+  }
+  
+  .priority-Élevée {
+    background-color: #f8d7da;
+    color: #721c24;
+  }
+  
+  .task-status {
+    flex: 1;
+    color: #28a745;
+    border-right: none; /* Pas de bordure à droite de Statut */
+  }
+  
+  /* Ajuster les styles existants pour correspondre à l'image */
+  .task-status-delayed {
+    color: #dc3545;
+  }
+  
+  .tasks-add-subtask {
+    background: none;
+    border: none;
+    color: #007bff;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 10px;
+  }
+  
+  .tasks-add-subtask:hover {
+    text-decoration: underline;
+  }
+  
+  .tasks-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .tasks-modal {
+    background-color: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 400px;
+  }
+  
+  .tasks-modal-title {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 20px;
+  }
+  
+  .tasks-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .tasks-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .tasks-form-group label {
+    font-size: 14px;
+    color: #333;
+  }
+  
+  .tasks-form-group input,
+  .tasks-form-group select {
+    padding: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+  
+  .tasks-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  
+  .tasks-submit-button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .tasks-submit-button:hover {
+    background-color: #0056b3;
+  }
+  
+  .tasks-cancel-button {
+    padding: 10px 20px;
+    background-color: #e0e0e0;
+    color: #666;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+  
+  .tasks-cancel-button:hover {
+    background-color: #d0d0d0;
+  }
+
+
+
+
+
+  .project-icon-card{
+    background-color: #bdf1fa;
+    padding: 8px;
+    border-radius: 8px;
+    width: 35px;
+    font-size: 16px; /* Ajuste la taille */
+
+  }
+    

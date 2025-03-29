@@ -9,34 +9,17 @@ import {
 } from "../../../../config/useApi";
 import ProtectedRoute from "../../../../components/ProtectedRoute";
 import { useProjects } from "../../../../hooks/useProjects";
+import { AxiosError } from "axios";
 
-// Simuler une liste de membres (à remplacer par une API plus tard)
-const teamMembers = [
-  {
-    id: 1,
-    firstName: "Fatima",
-    lastName: "Aflous",
-    role: "DevOps",
-    project: "Projet C",
-    avatar: "https://ui-avatars.com/api/?name=Fat+Af",
-  },
-  {
-    id: 2,
-    firstName: "Narjiss",
-    lastName: "Elmekadem",
-    role: "Développeur",
-    project: "Projet A",
-    avatar: "https://ui-avatars.com/api/?name=Narji+El",
-  },
-  {
-    id: 3,
-    firstName: "Khadija Chakkour",
-    lastName: "Smith",
-    role: "Testeur",
-    project: "Projet B",
-    avatar: "https://ui-avatars.com/api/?name=Khad+Chak",
-  },
-];
+// Interface pour les membres de l'équipe
+interface TeamMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  project: string;
+  avatar: string;
+}
 
 export default function Teams() {
   const { accessToken, isLoading: authLoading } = useAuth();
@@ -49,6 +32,11 @@ export default function Teams() {
   const [message, setMessage] = useState("");
   const [companyName, setCompanyName] = useState("");
 
+  // État pour les membres de l'équipe
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamLoading, setTeamLoading] = useState(true);
+  const [teamError, setTeamError] = useState<string | null>(null);
+
   // Utiliser le hook useProjects
   const {
     projects,
@@ -59,15 +47,13 @@ export default function Teams() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Mettre à jour les états de chargement et d'erreur
+  // Mettre à jour les états de chargement et d'erreur pour les projets
   useEffect(() => {
     setLoading(projectsLoading);
     setError(projectsError);
 
-    // Log pour vérifier les projets récupérés
     console.log("📋 Projets récupérés :", projects);
 
-    // Sélectionner le premier projet par défaut (son id) si disponible
     if (projects.length > 0) {
       setSelectedProjectId(projects[0].id.toString());
       console.log("✅ Projet sélectionné par défaut (ID) :", projects[0].id);
@@ -106,10 +92,45 @@ export default function Teams() {
     fetchCompanyName();
   }, [accessToken, authLoading, axiosInstance]);
 
+  // Récupérer les membres de l'équipe
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      if (authLoading || !accessToken) return;
+
+      setTeamLoading(true);
+      setTeamError(null);
+
+      try {
+        const response = await axiosInstance.get(
+          `${AUTH_SERVICE_URL}/api/team-members`
+        );
+        console.log("👥 Membres de l'équipe récupérés :", response.data);
+        setTeamMembers(response.data);
+      } catch (err: unknown) {
+        if (err instanceof AxiosError) {
+          console.error(
+            "❌ Erreur lors de la récupération des membres de l'équipe :",
+            err
+          );
+          setTeamError(
+            err.response?.data ||
+              "Erreur lors de la récupération des membres de l'équipe."
+          );
+        } else {
+          console.error("❌ Erreur inattendue :", err);
+          setTeamError("Une erreur inattendue est survenue.");
+        }
+      } finally {
+        setTeamLoading(false);
+      }
+    };
+
+    fetchTeamMembers();
+  }, [accessToken, authLoading, axiosInstance]);
+
   const handleInvite = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Log des informations qui vont être envoyées
     console.log("📤 Envoi de l'invitation avec les données suivantes :");
     console.log("  Email :", email);
     console.log("  Rôle :", role);
@@ -132,11 +153,25 @@ export default function Teams() {
       setRole("DEVELOPER");
       setIsModalOpen(false);
       console.log("✅ Invitation envoyée avec succès !");
-    } catch (error) {
-      setMessage(
-        "Erreur lors de l'envoi de l'invitation : " + (error as Error).message
+
+      // Rafraîchir la liste des membres après une invitation réussie
+      const response = await axiosInstance.get(
+        `${AUTH_SERVICE_URL}/api/team-members`
       );
-      console.error("❌ Erreur lors de l'envoi de l'invitation :", error);
+      setTeamMembers(response.data);
+    } catch (err: unknown) {
+      if (err instanceof AxiosError) {
+        setMessage(
+          "Erreur lors de l'envoi de l'invitation : " +
+            (err.response?.data || err.message)
+        );
+        console.error("❌ Erreur lors de l'envoi de l'invitation :", err);
+      } else {
+        setMessage(
+          "Une erreur inattendue est survenue lors de l'envoi de l'invitation."
+        );
+        console.error("❌ Erreur inattendue :", err);
+      }
     }
   };
 
@@ -147,7 +182,7 @@ export default function Teams() {
   };
 
   if (loading) {
-    return <div>Chargement...</div>;
+    return <div>Chargement des projets...</div>;
   }
 
   if (error) {
@@ -185,23 +220,33 @@ export default function Teams() {
         </div>
 
         <div className="teams-teamList">
-          {teamMembers.map((member) => (
-            <div key={member.id} className="teams-teamMemberCard">
-              <div className="teams-memberAvatar">
-                <img
-                  src={member.avatar}
-                  alt={`${member.firstName} ${member.lastName}`}
-                />
+          {teamLoading ? (
+            <p>Chargement des membres...</p>
+          ) : teamError ? (
+            <p style={{ color: "red" }}>{teamError}</p>
+          ) : teamMembers.length > 0 ? (
+            teamMembers.map((member) => (
+              <div key={member.id} className="teams-teamMemberCard">
+                <div className="teams-memberAvatar">
+                  <img
+                    src={member.avatar}
+                    alt={`${member.firstName} ${member.lastName}`}
+                  />
+                </div>
+                <div className="teams-memberInfo">
+                  <h3 className="teams-memberName">
+                    {member.firstName} {member.lastName}
+                  </h3>
+                  <p className="teams-memberRole">Rôle : {member.role}</p>
+                  <p className="teams-memberProject">
+                    Projet : {member.project}
+                  </p>
+                </div>
               </div>
-              <div className="teams-memberInfo">
-                <h3 className="teams-memberName">
-                  {member.firstName} {member.lastName}
-                </h3>
-                <p className="teams-memberRole">Rôle : {member.role}</p>
-                <p className="teams-memberProject">Projet : {member.project}</p>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p>Aucun membre d équipe trouvé.</p>
+          )}
         </div>
 
         {isModalOpen && (
@@ -227,7 +272,10 @@ export default function Teams() {
                     value={selectedProjectId}
                     onChange={(e) => {
                       setSelectedProjectId(e.target.value);
-                      console.log("🔄 Projet sélectionné (ID) :", e.target.value);
+                      console.log(
+                        "🔄 Projet sélectionné (ID) :",
+                        e.target.value
+                      );
                     }}
                   >
                     {projects.length > 0 ? (

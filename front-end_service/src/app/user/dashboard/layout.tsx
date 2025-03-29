@@ -73,7 +73,7 @@ export default function DashboardLayout({
 
         const updatedProjects = projects.map((p) =>
           p.name === editingProject
-            ? { name: projectData.name, description: projectData.description }
+            ? {name: projectData.name, description: projectData.description }
             : p
         );
         setProjects(updatedProjects);
