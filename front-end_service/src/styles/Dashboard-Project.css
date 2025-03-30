@@ -156,6 +156,105 @@
   
   
 /* Styles pour la section */
+/* styles/Dashboard-Project.css */
+
+/* ... (autres styles inchangés) ... */
+/* styles/Dashboard-Project.css */
+
+/* ... (autres styles inchangés) ... */
+/* styles/Dashboard-Project.css */
+
+/* ... (autres styles inchangés) ... */
+/* styles/Dashboard-Project.css */
+
+/* ... (autres styles inchangés) ... */
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch; /* S'assurer que les enfants s'étendent sur toute la hauteur */
+  border-top: 1px solid #e0e0e0; /* Bordure horizontale pour chaque ligne */
+  min-height: 40px; /* Hauteur minimale pour s'assurer que les bordures s'étendent */
+}
+
+/* Colonne "Nom de la tâche" */
+.task-checkbox {
+  flex: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0; /* Déplacer le padding ici */
+  border-right: 1px solid #e0e0e0; /* Bordure entre "Nom de la tâche" et "Responsable" */
+}
+
+.task-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.task-checkbox span {
+  font-size: 14px;
+  color: #333;
+}
+
+/* Conteneur des détails */
+.task-details {
+  flex: 4.17;
+  display: flex;
+  justify-content: space-between;
+  align-items: stretch; /* S'étendre sur toute la hauteur */
+  font-size: 12px;
+  color: #666;
+}
+
+/* Ajuster les colonnes avec des bordures verticales sur toute la hauteur */
+.task-responsible {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 10px 0; /* Déplacer le padding ici */
+  border-right: 1px solid #e0e0e0; /* Bordure entre "Responsable" et "Échéance" */
+}
+
+.task-due-date {
+  flex: 1;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 10px 0; /* Déplacer le padding ici */
+  border-right: 1px solid #e0e0e0; /* Bordure entre "Échéance" et "Priorité" */
+}
+
+.task-priority {
+  flex: 1;
+  padding: 10px 0; /* Déplacer le padding ici */
+  font-size: 12px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #e0e0e0; /* Bordure entre "Priorité" et "Statut" */
+}
+
+.task-status {
+  flex: 1;
+  color: #28a745;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0; /* Déplacer le padding ici */
+  border-right: none; /* Pas de bordure à droite de "Statut" */
+}
+
+.task-status-delayed {
+  color: #dc3545;
+}
+
+/* Styles pour la section */
 .dashboard-task-section {
   padding: 1px 10px;
 }
@@ -171,239 +270,74 @@
   cursor: pointer;
   margin-top: 20px;
 }
-  
-.task-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
-  border-top: 1px solid #e0e0e0; /* Bordure supérieure pour chaque ligne */
-}
-  
-  .task-checkbox {
-    flex: 3;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  
-  .task-checkbox input {
-    width: 16px;
-    height: 16px;
-  }
-  
-  .task-checkbox span {
-    font-size: 14px;
-    color: #333;
-  }
-  
-  .task-details {
-    flex: 4;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 12px;
-    color: #666;
-    border-left: none; /* Supprimer la bordure à gauche */
-  }
-  
-  .task-responsible {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    position: relative; /* Pour ajouter une bordure verticale via un pseudo-élément */
-  }
-  
-  .task-responsible::after {
-    content: "";
-    position: absolute;
-    right: 0;
-    top: 20%;
-    bottom: 20%;
-    width: 1px;
-    background-color: #e0e0e0; /* Bordure verticale subtile */
-  }
 
-  .responsible-circle {
-    width: 20px;
-    height: 20px;
-    background-color: #f0c14b;
-    color: white;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-  }
-  
-  .responsible-circle.empty {
-    background-color: #e0e0e0;
-    color: #666;
-  }
-  
-.task-due-date {
-  flex: 1;
+/* ... (autres styles inchangés) ... */
+
+/* ... (autres styles inchangés) ... */
+/* ... (autres styles inchangés) ... */
+/* ... (autres styles inchangés) ... */
+
+
+.priority-Faible {
+  background-color: #d1ecf1;
+  color: #0c5460;
+}
+
+.priority-Moyenne {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.priority-Élevée {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+
+.tasks-submit-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.tasks-submit-button:hover {
+  background-color: #0056b3;
+}
+
+.tasks-cancel-button {
+  padding: 10px 20px;
+  background-color: #e0e0e0;
   color: #666;
-  position: relative;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
 }
 
-.task-due-date::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 20%;
-  bottom: 20%;
-  width: 1px;
-  background-color: #e0e0e0; /* Bordure verticale subtile */
+.tasks-cancel-button:hover {
+  background-color: #d0d0d0;
 }
-  
-.task-priority {
-  flex: 1;
-  padding: 2px 8px;
-  border-radius: 12px;
+
+.responsible-circle {
+  width: 20px;
+  height: 20px;
+  background-color: #f0c14b;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 12px;
-  text-align: center;
-  position: relative;
 }
 
-.task-priority::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  top: 20%;
-  bottom: 20%;
-  width: 1px;
-  background-color: #e0e0e0; /* Bordure verticale subtile */
+.responsible-circle.empty {
+  background-color: #e0e0e0;
+  color: #666;
 }
-  
-  .priority-Faible {
-    background-color: #d1ecf1;
-    color: #0c5460;
-  }
-  
-  .priority-Moyenne {
-    background-color: #fff3cd;
-    color: #856404;
-  }
-  
-  .priority-Élevée {
-    background-color: #f8d7da;
-    color: #721c24;
-  }
-  
-  .task-status {
-    flex: 1;
-    color: #28a745;
-    border-right: none; /* Pas de bordure à droite de Statut */
-  }
-  
-  /* Ajuster les styles existants pour correspondre à l'image */
-  .task-status-delayed {
-    color: #dc3545;
-  }
-  
-  .tasks-add-subtask {
-    background: none;
-    border: none;
-    color: #007bff;
-    cursor: pointer;
-    font-size: 14px;
-    margin-top: 10px;
-  }
-  
-  .tasks-add-subtask:hover {
-    text-decoration: underline;
-  }
-  
-  .tasks-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-  
-  .tasks-modal {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    width: 400px;
-  }
-  
-  .tasks-modal-title {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 20px;
-  }
-  
-  .tasks-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-  }
-  
-  .tasks-form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-  }
-  
-  .tasks-form-group label {
-    font-size: 14px;
-    color: #333;
-  }
-  
-  .tasks-form-group input,
-  .tasks-form-group select {
-    padding: 8px;
-    border: 1px solid #e0e0e0;
-    border-radius: 5px;
-    font-size: 14px;
-  }
-  
-  .tasks-modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-  }
-  
-  .tasks-submit-button {
-    padding: 10px 20px;
-    background-color: #007bff;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  
-  .tasks-submit-button:hover {
-    background-color: #0056b3;
-  }
-  
-  .tasks-cancel-button {
-    padding: 10px 20px;
-    background-color: #e0e0e0;
-    color: #666;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-  
-  .tasks-cancel-button:hover {
-    background-color: #d0d0d0;
-  }
-
-
-
-
-
   .project-icon-card{
     background-color: #bdf1fa;
     padding: 8px;
