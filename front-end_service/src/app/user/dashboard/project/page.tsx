@@ -293,114 +293,11 @@ export default function Tasks() {
                   {task.responsible || "Non assigné"}
                 </span>
                 <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="task-status">Dans les délais</span>
-              </div>
-            </div>
-          ))}
-          <button
-            className="tasks-add-subtask"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Ajouter une tâche...
-          </button>
-        </div>
-        {/* Section Sprint */}
-        <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">Sprint</h2>
-          {getTasksByStatus("Sprint").map((task) => (
-            <div key={task.id} className="task-row">
-              <div className="task-checkbox">
-                <input type="checkbox" />
-                <span>{task.name}</span>
-              </div>
-              <div className="task-details">
-                <span className="task-responsible">
-                  {task.responsible ? (
-                    <span className="responsible-circle">
-                      {task.responsible.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="responsible-circle empty">?</span>
-                  )}
-                  {task.responsible || "Non assigné"}
-                </span>
-                <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="task-status">Dans les délais</span>
-              </div>
-            </div>
-          ))}
-          <button
-            className="tasks-add-subtask"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Ajouter une tâche...
-          </button>
-        </div>
-        {/* Section Backlog */}
-        <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">Backlog</h2>
-          {getTasksByStatus("Backlog").map((task) => (
-            <div key={task.id} className="task-row">
-              <div className="task-checkbox">
-                <input type="checkbox" />
-                <span>{task.name}</span>
-              </div>
-              <div className="task-details">
-                <span className="task-responsible">
-                  {task.responsible ? (
-                    <span className="responsible-circle">
-                      {task.responsible.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="responsible-circle empty">?</span>
-                  )}
-                  {task.responsible || "Non assigné"}
-                </span>
-                <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="task-status">Dans les délais</span>
-              </div>
-            </div>
-          ))}
-          <button
-            className="tasks-add-subtask"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Ajouter une tâche...
-          </button>
-        </div>
-        {/* Section User Story */}
-        <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">User Story</h2>
-          {getTasksByStatus("User Story").map((task) => (
-            <div key={task.id} className="task-row">
-              <div className="task-checkbox">
-                <input type="checkbox" />
-                <span>{task.name}</span>
-              </div>
-              <div className="task-details">
-                <span className="task-responsible">
-                  {task.responsible ? (
-                    <span className="responsible-circle">
-                      {task.responsible.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="responsible-circle empty">?</span>
-                  )}
-                  {task.responsible || "Non assigné"}
-                </span>
-                <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
+                <div className="task-priority">
+                  <span className={`priority-${task.priority}`}>
+                    {task.priority}
+                  </span>
+                </div>
                 <span className="task-status">Dans les délais</span>
               </div>
             </div>

@@ -156,25 +156,14 @@
   
   
 /* Styles pour la section */
-/* styles/Dashboard-Project.css */
 
-/* ... (autres styles inchangés) ... */
-/* styles/Dashboard-Project.css */
-
-/* ... (autres styles inchangés) ... */
-/* styles/Dashboard-Project.css */
-
-/* ... (autres styles inchangés) ... */
-/* styles/Dashboard-Project.css */
-
-/* ... (autres styles inchangés) ... */
 
 .task-row {
   display: flex;
   justify-content: space-between;
   align-items: stretch; /* S'assurer que les enfants s'étendent sur toute la hauteur */
   border-top: 1px solid #e0e0e0; /* Bordure horizontale pour chaque ligne */
-  min-height: 40px; /* Hauteur minimale pour s'assurer que les bordures s'étendent */
+  min-height: 10px; /* Hauteur minimale pour s'assurer que les bordures s'étendent */
 }
 
 /* Colonne "Nom de la tâche" */
@@ -228,18 +217,82 @@
   padding: 10px 0; /* Déplacer le padding ici */
   border-right: 1px solid #e0e0e0; /* Bordure entre "Échéance" et "Priorité" */
 }
-
 .task-priority {
   flex: 1;
-  padding: 10px 0; /* Déplacer le padding ici */
   font-size: 12px;
   text-align: center;
+  border-right: 1px solid #e0e0e0;
   display: flex;
-  align-items: center;
   justify-content: center;
-  border-right: 1px solid #e0e0e0; /* Bordure entre "Priorité" et "Statut" */
+  align-items: center;
+  padding: 8px;
+  background-color: transparent !important;
 }
 
+.task-priority span {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  border-radius: 16px;
+  white-space: nowrap;
+  border: none;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-priority span:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+}
+
+.task-priority span::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+.task-priority span.priority-Faible,
+.task-priority span.priority-faible {
+  background: linear-gradient(135deg, #b3e5fc, #81d4fa);
+  color: #027373;
+}
+
+.task-priority span.priority-Faible::before,
+.task-priority span.priority-faible::before {
+  background-color: #027373;
+}
+
+.task-priority span.priority-Moyenne,
+.task-priority span.priority-moyenne {
+  background: linear-gradient(135deg, #ffcc80, #ffb74d);
+  color: #856404;
+}
+
+.task-priority span.priority-Moyenne::before,
+.task-priority span.priority-moyenne::before {
+  background-color: #856404;
+}
+
+.task-priority span.priority-Élevée,
+.task-priority span.priority-élevée,
+.task-priority span.priority-Elevée,
+.task-priority span.priority-elevée {
+  background: linear-gradient(135deg, #ce93d8, #ba68c8);
+  color: #721c24;
+}
+
+.task-priority span.priority-Élevée::before,
+.task-priority span.priority-élevée::before,
+.task-priority span.priority-Elevée::before,
+.task-priority span.priority-elevée::before {
+  background-color: #721c24;
+}
 .task-status {
   flex: 1;
   color: #28a745;
@@ -276,23 +329,6 @@
 /* ... (autres styles inchangés) ... */
 /* ... (autres styles inchangés) ... */
 /* ... (autres styles inchangés) ... */
-
-
-.priority-Faible {
-  background-color: #d1ecf1;
-  color: #0c5460;
-}
-
-.priority-Moyenne {
-  background-color: #fff3cd;
-  color: #856404;
-}
-
-.priority-Élevée {
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
 
 .tasks-submit-button {
   padding: 10px 20px;
