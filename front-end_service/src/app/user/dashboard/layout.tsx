@@ -73,7 +73,7 @@ export default function DashboardLayout({
 
         const updatedProjects = projects.map((p) =>
           p.name === editingProject
-            ? {name: projectData.name, description: projectData.description }
+            ? { name: projectData.name, description: projectData.description }
             : p
         );
         setProjects(updatedProjects);
@@ -464,7 +464,8 @@ export default function DashboardLayout({
                           alt="logo"
                           className="project-image"
                         />
-                        <Link href="/user/dashboard/project">
+                        <Link href={`/user/dashboard/project/${project.id}`}>
+                          {" "}
                           {project.name ? project.name : "Nom inconnu"}
                         </Link>
                       </li>

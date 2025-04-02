@@ -1,8 +1,14 @@
 // pages/index.tsx
 "use client";
-import React, { useState } from "react";
-import "../../styles/Dashboard-Project.css";
-
+import React, { useState, useEffect } from "react";
+import "../../../../../styles/Dashboard-Project.css";
+import { useAuth } from "../../../../../context/AuthContext";
+import useAxios from "../../../../../hooks/useAxios";
+import {
+  AUTH_SERVICE_URL,
+  PROJECT_SERVICE_URL,
+} from "../../../../../config/useApi";
+import { useParams } from "next/navigation"; // Use useParams instead of useRouter
 interface NewTask {
   name: string;
   responsible: string | null;
@@ -37,7 +43,7 @@ const initialTasks: Task[] = [
     id: 3,
     name: "Partager la chronologie avec mes collègues",
     responsible: null,
-    dueDate: "6 - 10 fév",
+    dueDate: "6 - 10 avril",
     priority: "Élevée",
     status: "À faire",
   },
@@ -45,7 +51,7 @@ const initialTasks: Task[] = [
     id: 4,
     name: "Analyser les besoins des utilisateurs",
     responsible: "Ahmed",
-    dueDate: "10 - 12 fév",
+    dueDate: "10 - 12 avril",
     priority: "Moyenne",
     status: "Backlog",
   },
@@ -53,7 +59,7 @@ const initialTasks: Task[] = [
     id: 5,
     name: "Créer un wireframe initial",
     responsible: "Sara",
-    dueDate: "12 - 15 fév",
+    dueDate: "12 - 15 avril",
     priority: "Élevée",
     status: "User Story",
   },
@@ -68,6 +74,10 @@ const initialTasks: Task[] = [
 ];
 
 export default function Tasks() {
+  const { accessToken, isLoading: authLoading } = useAuth();
+  const axiosInstance = useAxios();
+  const params = useParams(); // Use useParams to get the dynamic route parameter
+  const projectId = params.projectId; // Extract projectId from the route params
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState<NewTask>({
@@ -77,6 +87,35 @@ export default function Tasks() {
     priority: "",
     status: "À faire",
   });
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [projectName, setProjectName] = useState<string>("Projet 1"); // To display the project name dynamically
+
+  // Fetch project details (e.g., name) and team members for the specific project
+  useEffect(() => {
+    const fetchProjectDetailsAndTeamMembers = async () => {
+      if (authLoading || !accessToken || !projectId) return;
+
+      try {
+        // Fetch project details to get the project name (optional, if you want to display the name dynamically)
+        const projectResponse = await axiosInstance.get(
+          `${PROJECT_SERVICE_URL}/api/projects/${projectId}`
+        );
+        setProjectName(projectResponse.data.name || "Projet inconnu");
+
+        // Fetch team members for the project
+        const teamResponse = await axiosInstance.get(
+          `${AUTH_SERVICE_URL}/api/team-members/${projectId}`
+        );
+        setTeamMembers(teamResponse.data);
+      } catch (err) {
+        console.error("❌ Erreur lors de la récupération des données :", err);
+      }
+    };
+
+    fetchProjectDetailsAndTeamMembers();
+  }, [accessToken, authLoading, axiosInstance, projectId]);
+
   const handleAddTask = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const task: Task = {
@@ -119,8 +158,42 @@ export default function Tasks() {
         <span className="icon-projet">
           <i className="fa fa-list project-icon-card custom-project-icon"></i>{" "}
         </span>{" "}
-        <h1 className="tasks-title">Projet 1</h1>
-        <div className="team-list">jhhh</div>
+        <h1 className="tasks-title">{projectName}</h1>
+        <div className="team-list">
+          {teamMembers.length > 0 ? (
+            <div className="team-members-display">
+              {/* Display the first member */}
+              <div className="team-member-initial">
+                {teamMembers[0].firstName.charAt(0) +
+                  teamMembers[0].lastName.charAt(0)}
+              </div>
+              {/* If there are more members, show the "..." button */}
+              {teamMembers.length > 1 && (
+                <div
+                  className="team-member-more"
+                  onClick={() => setShowAllMembers(!showAllMembers)}
+                >
+                  ...
+                </div>
+              )}
+              {/* Show all members if "..." is clicked */}
+              {showAllMembers && teamMembers.length > 1 && (
+                <div className="team-members-expanded">
+                  {teamMembers.slice(1).map((member) => (
+                    <div key={member.id} className="team-member-expanded-item">
+                      {member.firstName} {member.lastName} ({member.role})
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p>Aucun membre déquipe trouvé.</p>
+          )}
+          <button className="buton-share-style">
+            <i className="fa fa-building"></i> partager
+          </button>
+        </div>
       </div>
       <div className="tasks-header">
         <div className="tasks-tabs">
@@ -195,7 +268,7 @@ export default function Tasks() {
         {/* Section À faire */}
         <div className="dashboard-task-section">
           <h2 className="dashboard-task-section-title">
-            À faire <i className="fa fa-caret-down"></i>
+            <i className="fa fa-caret-down"></i> À faire
           </h2>
           {getTasksByStatus("À faire").map((task) => (
             <div key={task.id} className="task-row">
@@ -235,8 +308,8 @@ export default function Tasks() {
         </div>
         {/* Section En cours */}
         <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">
-            En cours <i className="fa fa-caret-down"></i>
+          <h2 className="dashboard-task-section-title section-encours">
+            <i className="fa fa-caret-down"></i> En cours
           </h2>
           {getTasksByStatus("En cours").map((task) => (
             <div key={task.id} className="task-row">
@@ -272,8 +345,8 @@ export default function Tasks() {
         </div>
         {/* Section Terminé */}
         <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">
-            Terminé <i className="fa fa-caret-down"></i>
+          <h2 className="dashboard-task-section-title section-encours">
+            <i className="fa fa-caret-down"></i> Terminé
           </h2>
           {getTasksByStatus("Terminé").map((task) => (
             <div key={task.id} className="task-row">
@@ -293,114 +366,11 @@ export default function Tasks() {
                   {task.responsible || "Non assigné"}
                 </span>
                 <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="task-status">Dans les délais</span>
-              </div>
-            </div>
-          ))}
-          <button
-            className="tasks-add-subtask"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Ajouter une tâche...
-          </button>
-        </div>
-        {/* Section Sprint */}
-        <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">Sprint</h2>
-          {getTasksByStatus("Sprint").map((task) => (
-            <div key={task.id} className="task-row">
-              <div className="task-checkbox">
-                <input type="checkbox" />
-                <span>{task.name}</span>
-              </div>
-              <div className="task-details">
-                <span className="task-responsible">
-                  {task.responsible ? (
-                    <span className="responsible-circle">
-                      {task.responsible.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="responsible-circle empty">?</span>
-                  )}
-                  {task.responsible || "Non assigné"}
-                </span>
-                <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="task-status">Dans les délais</span>
-              </div>
-            </div>
-          ))}
-          <button
-            className="tasks-add-subtask"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Ajouter une tâche...
-          </button>
-        </div>
-        {/* Section Backlog */}
-        <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">Backlog</h2>
-          {getTasksByStatus("Backlog").map((task) => (
-            <div key={task.id} className="task-row">
-              <div className="task-checkbox">
-                <input type="checkbox" />
-                <span>{task.name}</span>
-              </div>
-              <div className="task-details">
-                <span className="task-responsible">
-                  {task.responsible ? (
-                    <span className="responsible-circle">
-                      {task.responsible.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="responsible-circle empty">?</span>
-                  )}
-                  {task.responsible || "Non assigné"}
-                </span>
-                <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
-                <span className="task-status">Dans les délais</span>
-              </div>
-            </div>
-          ))}
-          <button
-            className="tasks-add-subtask"
-            onClick={() => setIsModalOpen(true)}
-          >
-            Ajouter une tâche...
-          </button>
-        </div>
-        {/* Section User Story */}
-        <div className="dashboard-task-section">
-          <h2 className="dashboard-task-section-title">User Story</h2>
-          {getTasksByStatus("User Story").map((task) => (
-            <div key={task.id} className="task-row">
-              <div className="task-checkbox">
-                <input type="checkbox" />
-                <span>{task.name}</span>
-              </div>
-              <div className="task-details">
-                <span className="task-responsible">
-                  {task.responsible ? (
-                    <span className="responsible-circle">
-                      {task.responsible.charAt(0)}
-                    </span>
-                  ) : (
-                    <span className="responsible-circle empty">?</span>
-                  )}
-                  {task.responsible || "Non assigné"}
-                </span>
-                <span className="task-due-date">{task.dueDate}</span>
-                <span className={`task-priority priority-${task.priority}`}>
-                  {task.priority}
-                </span>
+                <div className="task-priority">
+                  <span className={`priority-${task.priority}`}>
+                    {task.priority}
+                  </span>
+                </div>
                 <span className="task-status">Dans les délais</span>
               </div>
             </div>

@@ -3,7 +3,7 @@
   padding: 10px 20px;
     font-family: "Arial", sans-serif;
     background-color: #ffffff;
-    min-height: 100vh;
+    min-height: 110vh;
     width:105%;
     margin-top: -20px;
   }
@@ -322,6 +322,7 @@
   gap: 5px;
   cursor: pointer;
   margin-top: 20px;
+
 }
 
 /* ... (autres styles inchangés) ... */
@@ -383,3 +384,22 @@
 
   }
     
+
+  .tasks-add-subtask{
+    color: #6e6d6d;
+    font-size: 13px;
+    margin-left:30px;
+  }
+
+  .section-encours{
+    border-bottom: 1px solid #e0e0e0; /* Bordure horizontale pour chaque ligne */
+  }
+  .buton-share-style{
+    background-color: #4573D2;
+    padding: 8px 13px;
+    border-radius: 10px;
+    color:#ffffff;
+    font-size: 13px;
+  }
+
+  
