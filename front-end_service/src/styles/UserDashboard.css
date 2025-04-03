@@ -236,7 +236,7 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     font-family: "Arial", sans-serif;
     cursor: pointer;
     right: 20px; /* Place à l'extrémité droite */
-    
+    gap:8px;
   }
 
   .user-icon {

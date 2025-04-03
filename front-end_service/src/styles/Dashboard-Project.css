@@ -396,10 +396,165 @@
   }
   .buton-share-style{
     background-color: #4573D2;
-    padding: 8px 13px;
+    padding: 9px 14px;
     border-radius: 10px;
     color:#ffffff;
     font-size: 13px;
   }
 
-  
+
+/* Align team members and "Partager" button on the same line */
+.team-list {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* Space between team members and the button */
+}
+
+/* Style for the team members display (first member + "..." button) */
+.team-members-display {
+  display: flex;
+  align-items: center;
+  position: relative; /* For positioning the dropdown */
+}
+
+/* Style for the first member's initials */
+.team-member-initial {
+  width: 30px;
+  height: 30px;
+  background-color: #F1BD6C; /* Orange color like in the image */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+
+}
+
+/* Style for the "..." button (now showing the number of additional members) */
+.team-member-more {
+  width: 22px;
+  height: 22px;
+  background-color: #e0e0e0; /* Light gray color */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Style for the "Partager" button */
+.buton-share-style {
+  background-color: #4573d2;
+  padding: 8px 13px;
+  border-radius: 10px;
+  color: #ffffff;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Style for the expanded members dropdown */
+.team-members-expanded {
+  position: absolute;
+  top: 30px; /* Position below the "..." button */
+  right: 0;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  width: 300px; /* Adjust width to match the image */
+}
+
+/* Style for the search bar */
+.team-members-search {
+  margin-bottom: 10px;
+}
+
+.team-members-search-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  font-size: 14px;
+  outline: none;
+}
+
+.team-members-search-input::placeholder {
+  color: #999;
+}
+
+/* Style for the expanded members list */
+.team-members-expanded-list {
+  max-height: 300px; /* Limit height and add scroll if needed */
+  overflow-y: auto;
+}
+
+/* Style for section titles ("Membres de l'espace de travail" and "Invités") */
+.team-members-expanded-title {
+  font-size: 14px;
+  color: #333;
+  margin: 10px 0 5px;
+}
+
+.team-members-expanded-firsttitle{
+  font-size: 14px;
+  color: #333;
+  text-align: center;
+}
+/* Style for each section (Membres and Invités) */
+.team-members-expanded-section {
+  margin-bottom: 10px;
+}
+
+/* Style for each member in the expanded list */
+.team-member-expanded-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  font-size: 14px;
+}
+
+/* Style for the member's initials in the expanded list */
+.team-member-expanded-initial {
+  width: 30px;
+  height: 30px;
+  background-color: #F1BD6C; /* Orange color, you can randomize colors if needed */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.team-member-expanded-initial-manager {
+  width: 30px;
+  height: 30px;
+  background-color: #ff4d4f; /* Orange color, you can randomize colors if needed */
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+/* Style for the member's name and role */
+.team-member-expanded-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.team-member-expanded-role {
+  color: #999;
+  font-size: 12px;
+}

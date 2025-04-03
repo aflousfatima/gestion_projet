@@ -1,4 +1,3 @@
-// pages/index.tsx
 "use client";
 import React, { useState, useEffect } from "react";
 import "../../../../../styles/Dashboard-Project.css";
@@ -8,7 +7,43 @@ import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
 } from "../../../../../config/useApi";
-import { useParams } from "next/navigation"; // Use useParams instead of useRouter
+import { useParams } from "next/navigation";
+
+// Interface for tasks
+interface Task {
+  id: number;
+  name: string;
+  responsible: string | null;
+  dueDate: string;
+  priority: "Faible" | "Moyenne" | "Élevée" | "";
+  status:
+    | "À faire"
+    | "En cours"
+    | "Terminé"
+    | "Sprint"
+    | "Backlog"
+    | "User Story";
+}
+
+// Interface for team members
+interface TeamMember {
+  id: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  project: string;
+  avatar: string;
+}
+
+// Interface for the manager
+interface Manager {
+  id: string;
+  authId?: string;
+  firstName: string;
+  lastName: string;
+}
+
+// Interface for a new task
 interface NewTask {
   name: string;
   responsible: string | null;
@@ -22,12 +57,13 @@ interface NewTask {
     | "Backlog"
     | "User Story";
 }
+
 const initialTasks: Task[] = [
   {
     id: 1,
     name: "Rédiger un brief de projet",
     responsible: "Fatima",
-    dueDate: "Aujourd'hui - 6 fév",
+    dueDate: "Aujourd'hui - 6 avril",
     priority: "Faible",
     status: "À faire",
   },
@@ -35,7 +71,7 @@ const initialTasks: Task[] = [
     id: 2,
     name: "Planifier la réunion de lancement",
     responsible: "Fatima",
-    dueDate: "5 - 7 fév",
+    dueDate: "5 - 7 avril",
     priority: "Moyenne",
     status: "À faire",
   },
@@ -67,7 +103,7 @@ const initialTasks: Task[] = [
     id: 6,
     name: "Préparer le sprint planning",
     responsible: "Mohamed",
-    dueDate: "8 - 9 fév",
+    dueDate: "8 - 9 avril",
     priority: "Moyenne",
     status: "Sprint",
   },
@@ -76,32 +112,69 @@ const initialTasks: Task[] = [
 export default function Tasks() {
   const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
-  const params = useParams(); // Use useParams to get the dynamic route parameter
-  const projectId = params.projectId; // Extract projectId from the route params
+  const params = useParams();
+  const projectId = params.projectId as string;
+
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTask, setNewTask] = useState<NewTask>({
     name: "",
-    responsible: "",
+    responsible: null,
     dueDate: "",
     priority: "",
     status: "À faire",
   });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [manager, setManager] = useState<Manager | null>(null);
   const [showAllMembers, setShowAllMembers] = useState(false);
-  const [projectName, setProjectName] = useState<string>("Projet 1"); // To display the project name dynamically
+  const [projectName, setProjectName] = useState<string>("Projet 1");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch project details (e.g., name) and team members for the specific project
+  // Fetch project details (including the manager) and team members
   useEffect(() => {
     const fetchProjectDetailsAndTeamMembers = async () => {
       if (authLoading || !accessToken || !projectId) return;
 
       try {
-        // Fetch project details to get the project name (optional, if you want to display the name dynamically)
+        setLoading(true);
+        setError(null);
+
+        // Fetch project details (including the manager's authId)
         const projectResponse = await axiosInstance.get(
           `${PROJECT_SERVICE_URL}/api/projects/${projectId}`
         );
+        console.log("Project Response:", projectResponse);
+
+        // Set project name
         setProjectName(projectResponse.data.name || "Projet inconnu");
+
+        // Fetch manager details if authId is available
+        if (
+          projectResponse.data.manager &&
+          projectResponse.data.manager.authId
+        ) {
+          try {
+            const managerResponse = await axiosInstance.get(
+              `${AUTH_SERVICE_URL}/api/auth/users/${projectResponse.data.manager.authId}`
+            );
+            setManager({
+              id: projectResponse.data.manager.id,
+              authId: projectResponse.data.manager.authId,
+              firstName: managerResponse.data.firstName,
+              lastName: managerResponse.data.lastName,
+            });
+          } catch (managerErr) {
+            console.error(
+              "❌ Erreur lors de la récupération des détails du manager :",
+              managerErr
+            );
+            setManager(null);
+          }
+        } else {
+          console.warn("No manager or authId found for this project");
+          setManager(null);
+        }
 
         // Fetch team members for the project
         const teamResponse = await axiosInstance.get(
@@ -110,11 +183,33 @@ export default function Tasks() {
         setTeamMembers(teamResponse.data);
       } catch (err) {
         console.error("❌ Erreur lors de la récupération des données :", err);
+        setError("Impossible de charger les données du projet.");
+        setManager(null);
+        setProjectName("Projet inconnu");
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchProjectDetailsAndTeamMembers();
   }, [accessToken, authLoading, axiosInstance, projectId]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".team-members-display")) {
+        setShowAllMembers(false);
+      }
+    };
+
+    if (showAllMembers) {
+      document.addEventListener("click", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [showAllMembers]);
 
   const handleAddTask = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -126,7 +221,7 @@ export default function Tasks() {
     setIsModalOpen(false);
     setNewTask({
       name: "",
-      responsible: "",
+      responsible: null,
       dueDate: "",
       priority: "",
       status: "À faire",
@@ -151,6 +246,14 @@ export default function Tasks() {
     return tasks.filter((task) => task.status === status);
   };
 
+  if (loading) {
+    return <p>Chargement...</p>;
+  }
+
+  if (error) {
+    return <p>{error}</p>;
+  }
+
   return (
     <div className="project-container">
       {/* En-tête */}
@@ -173,17 +276,63 @@ export default function Tasks() {
                   className="team-member-more"
                   onClick={() => setShowAllMembers(!showAllMembers)}
                 >
-                  ...
+                  +{teamMembers.length - 1}..
                 </div>
               )}
               {/* Show all members if "..." is clicked */}
               {showAllMembers && teamMembers.length > 1 && (
                 <div className="team-members-expanded">
-                  {teamMembers.slice(1).map((member) => (
-                    <div key={member.id} className="team-member-expanded-item">
-                      {member.firstName} {member.lastName} ({member.role})
+                  <h5 className="team-members-expanded-firsttitle">
+                    Membres du projet
+                  </h5>
+
+                  {/* Search bar */}
+                  <div className="team-members-search">
+                    <input
+                      type="text"
+                      placeholder="Rechercher des membres"
+                      className="team-members-search-input"
+                    />
+                  </div>
+                  {/* List of members */}
+                  <div className="team-members-expanded-list">
+                    <h5 className="team-members-expanded-title">Manager</h5>
+                    <div className="team-members-expanded-section">
+                      {manager ? (
+                        <div className="team-member-expanded-item">
+                          <div className="team-member-expanded-initial-manager">
+                            {manager.firstName.charAt(0) +
+                              manager.lastName.charAt(0)}
+                          </div>
+                          <div className="team-member-expanded-info">
+                            {manager.firstName} {manager.lastName}
+                          </div>
+                        </div>
+                      ) : (
+                        <p>Aucun manager trouvé.</p>
+                      )}
                     </div>
-                  ))}
+                    <h4 className="team-members-expanded-title">Invités</h4>
+                    <div className="team-members-expanded-section">
+                      {teamMembers.slice(0).map((member) => (
+                        <div
+                          key={member.id}
+                          className="team-member-expanded-item"
+                        >
+                          <div className="team-member-expanded-initial">
+                            {member.firstName.charAt(0) +
+                              member.lastName.charAt(0)}
+                          </div>
+                          <div className="team-member-expanded-info">
+                            {member.firstName} {member.lastName}
+                            <span className="team-member-expanded-role">
+                              ({member.role})
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -191,7 +340,7 @@ export default function Tasks() {
             <p>Aucun membre déquipe trouvé.</p>
           )}
           <button className="buton-share-style">
-            <i className="fa fa-building"></i> partager
+            <i className="fa fa-building"></i> Partager
           </button>
         </div>
       </div>
