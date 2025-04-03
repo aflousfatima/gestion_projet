@@ -20,6 +20,11 @@ public class Projet {
     @ManyToOne(cascade = CascadeType.ALL) // Ou un autre type de cascade selon les besoins
     @JoinColumn(name = "company_id")
     private Entreprise company;
+
+    @ManyToOne
+    @JoinColumn(name = "manager_id")
+    private Client manager; // Add this field to store the manager
+
     // Nouveau champ pour la date de création
     @Column(name = "creation_date")
     private LocalDateTime creationDate;
@@ -62,5 +67,13 @@ public class Projet {
 
     public void setCreationDate(LocalDateTime creationDate) {
         this.creationDate = creationDate;
+    }
+
+    public Client getManager() {
+        return manager;
+    }
+
+    public void setManager(Client manager) {
+        this.manager = manager;
     }
 }
