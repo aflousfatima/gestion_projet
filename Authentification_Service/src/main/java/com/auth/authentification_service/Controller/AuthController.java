@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/")
@@ -234,5 +236,43 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "recuperation des membres de tous les projets de l'entreprise",
+            description = "Cette méthode permet de recuperer lesutilisateur qui sont accompagner et affilier a l'un des projets de l'entreprise.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "recuperation réussie"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors de la recupertion")
+    })
+    @GetMapping("/team-members")
+    public ResponseEntity<?> getTeamMembers(@RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            String accessToken = authorizationHeader.replace("Bearer ", "");
+            List<Map<String, Object>> teamMembers = keycloakService.getTeamMembers(accessToken);
+            return ResponseEntity.ok(teamMembers);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token invalide ou erreur lors de la récupération des membres de l'équipe");
+        }
+    }
 
+    @Operation(summary = "recuperation des membres de l'un des projets de l'entreprise",
+            description = "Cette méthode permet de recuperer lesutilisateur qui sont accompagner et affilier a l'un des projets de l'entreprise.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "recuperation réussie"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors de la recupertion")
+    })
+    @GetMapping("/team-members/{projectId}")
+    public List<Map<String, Object>> getTeamMembersbyProject(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @PathVariable String projectId) {
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+        return keycloakService.getTeamMembersbyProject(accessToken, projectId);
+    }
+
+    @GetMapping("/auth/users/{authId}")
+    public ResponseEntity<Map<String, Object>> getUserDetailsByAuthId(
+            @PathVariable String authId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        String adminToken = authorizationHeader.replace("Bearer ", "");
+        Map<String, Object> userDetails = keycloakService.getUserDetailsByAuthId(authId, adminToken);
+        return ResponseEntity.ok(userDetails);
+    }
 }
