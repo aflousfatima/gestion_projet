@@ -83,6 +83,7 @@ public class InitialProjectManagementService {
         project.setName(dto.getProjectName());
         project.setDescription(dto.getProjectDescription());
         project.setCompany(company);  // Lier le projet à l'entreprise
+        project.setManager(manager); // Set the manager of the project
         project.setCreationDate(LocalDateTime.now()); // Ajout de la date de création
         projectRepository.save(project);
         System.out.println("Projet créé avec succès : " + project.getName());
@@ -111,7 +112,7 @@ public class InitialProjectManagementService {
         // Récupérer les projets associés à l'entreprise
         List<Projet> projects = projectRepository.findByCompany(company);
         List<ProjectDTO> projectDTOs = projects.stream()
-                .map(project -> new ProjectDTO(project.getId(),project.getName(), project.getDescription()))
+                .map(project -> new ProjectDTO(project.getId(),project.getName(), project.getDescription() , null))
                 .collect(Collectors.toList());
         System.out.println("✅ Projets trouvés: " + projectDTOs);
 

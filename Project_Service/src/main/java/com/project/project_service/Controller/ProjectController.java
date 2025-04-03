@@ -1,5 +1,10 @@
 package com.project.project_service.Controller;
 
+import com.project.project_service.DTO.ManagerDTO;
+import com.project.project_service.DTO.ProjectDTO;
+import com.project.project_service.DTO.ProjectDetailsDTO;
+import com.project.project_service.Entity.Client;
+import com.project.project_service.Entity.Projet;
 import com.project.project_service.Service.ProjectService;
 import com.project.project_service.config.AuthClient;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -108,5 +113,43 @@ public class ProjectController {
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(errorResponse);
         }
+    }
+
+    @GetMapping("/projects/{projectId}")
+    public ResponseEntity<ProjectDTO> getProjectById(@PathVariable Long projectId) {
+        try {
+            Projet project = projectService.getProjectById(projectId);
+            Client manager = project.getManager();
+
+            ManagerDTO managerDTO = null;
+            if (manager != null) {
+                managerDTO = new ManagerDTO(
+                        manager.getId(),
+                        manager.getAuthId(),
+                        null, // firstName, à récupérer via le service d'auth si nécessaire
+                        null, // lastName, à récupérer via le service d'auth si nécessaire
+                        manager.getRole()
+                );
+            }
+
+            ProjectDTO projetDTO = new ProjectDTO(
+                    project.getId(),
+                    project.getName(),
+                    project.getDescription(),
+                    managerDTO
+            );
+            return ResponseEntity.ok(projetDTO);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(null);
+        }
+    }
+    @GetMapping("/manager/{projectId}")
+    public ResponseEntity<ProjectDetailsDTO> getProjectDetails(
+            @PathVariable Long projectId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        // Extraire le token (enlever "Bearer " du header)
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+        ProjectDetailsDTO projectDetails = projectService.getProjectDetails(projectId, accessToken);
+        return ResponseEntity.ok(projectDetails);
     }
 }

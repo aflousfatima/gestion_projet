@@ -1,19 +1,27 @@
 package com.project.project_service.DTO;
 
-public class ProjectDTO {
+public class ProjectDetailsDTO {
     private Long id;
     private String name;
     private String description;
-    private ManagerDTO manager; // Ajouter ce champ
-    // Constructeur
-    public ProjectDTO(Long id , String name, String description , ManagerDTO manager) {
+    private ManagerDTO manager;
+
+    public ProjectDetailsDTO(Long id, String name, String description, ManagerDTO manager) {
+        this.id = id;
         this.name = name;
         this.description = description;
-        this.id = id;
-        this.manager=manager;
+        this.manager = manager;
     }
 
-    // Getters et setters
+    // Getters and setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public String getName() {
         return name;
     }
@@ -30,14 +38,6 @@ public class ProjectDTO {
         this.description = description;
     }
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public ManagerDTO getManager() {
         return manager;
     }
@@ -46,3 +46,6 @@ public class ProjectDTO {
         this.manager = manager;
     }
 }
+
+
+
