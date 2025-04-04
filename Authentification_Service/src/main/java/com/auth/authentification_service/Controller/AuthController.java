@@ -275,4 +275,25 @@ public class AuthController {
         Map<String, Object> userDetails = keycloakService.getUserDetailsByAuthId(authId, adminToken);
         return ResponseEntity.ok(userDetails);
     }
+
+    @GetMapping("/auth/decode-token")
+    public ResponseEntity<?> decodeToken(@RequestHeader("Authorization") String authorization) {
+        try {
+            if (authorization == null || !authorization.startsWith("Bearer ")) {
+                return ResponseEntity
+                        .badRequest()
+                        .body("Le token est manquant ou mal formaté.");
+            }
+
+            String token = authorization.replace("Bearer ", "");
+            String result = loginService.decodeToken(token);
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur lors du décodage du token : " + e.getMessage());
+        }
+    }
+
 }
