@@ -15,7 +15,7 @@ interface Task {
   name: string;
   responsible: string | null;
   dueDate: string;
-  priority: "LOW" | "MEDUIM" | "HIGH" | "";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "";
   status: "TO DO" | "IN PROGRESS" | "DONE";
   sprintId?: number;
   userStoryId?: number;
@@ -41,7 +41,7 @@ interface UserStory {
   id: number;
   name: string;
   description: string;
-  priority: "LOW" | "MEDUIM" | "HIGH" | "";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "";
   effortPoints: number;
   sprintId?: number;
 }
@@ -71,39 +71,29 @@ const initialTasks: Task[] = [
     name: "Planifier réunion",
     responsible: "Fatima",
     dueDate: "7 avril",
-    priority: "MEDUIM",
+    priority: "MEDIUM",
     status: "TO DO",
     sprintId: 1,
     userStoryId: 1,
   },
 ];
 
-const initialUserStories: UserStory[] = [
-  {
-    id: 1,
-    name: "Implémenter auth",
-    description: "Connexion sécurisée",
-    priority: "MEDUIM",
-    effortPoints: 8,
-    sprintId: 1,
-  },
-  {
-    id: 2,
-    name: "Créer page profil",
-    description: "Afficher infos utilisateur",
-    priority: "HIGH",
-    effortPoints: 5,
-  },
-];
-
 export default function Tasks() {
-  const { accessToken, isLoading: authLoading, user } = useAuth();
+  const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
   const params = useParams();
   const projectId = params.projectId as string;
 
+  // Ajout d'un état pour gérer l'édition
+  const [editingUserStory, setEditingUserStory] = useState<UserStory | null>(
+    null
+  );
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(
+    "backlog"
+  );
   const [newTask, setNewTask] = useState<Task>({
     id: 0,
     name: "",
@@ -119,10 +109,20 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterMyTasks, setFilterMyTasks] = useState(false);
-
+  const [sprint, setSprint] = useState<Sprint>({
+    id: 0,
+    name: "",
+    startDate: "",
+    endDate: "",
+    capacity: 0,
+    userStories: [],
+  });
+  // Added sprints state
+  const [sprints, setSprints] = useState<Sprint[]>([]);
   // États pour Agile
   const [isAgilePanelOpen, setIsAgilePanelOpen] = useState(false);
-  const [backlog, setBacklog] = useState<UserStory[]>(initialUserStories);
+  const [backlog, setBacklog] = useState<UserStory[]>([]);
+
   const [newUserStory, setNewUserStory] = useState<UserStory>({
     id: 0,
     name: "",
@@ -130,17 +130,58 @@ export default function Tasks() {
     priority: "",
     effortPoints: 0,
   });
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>({
-    id: 1,
-    name: "Sprint 1",
-    startDate: "5 avril",
-    endDate: "12 avril",
-    capacity: 20,
-    userStories: initialUserStories.filter((us) => us.sprintId === 1),
-  });
+  const [activeSprint, setActiveSprint] = useState<Sprint | null>();
   const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(
     null
   ); // Pour le mini-modal
+
+  // Fonction pour éditer une User Story
+  const handleEditUserStory = (story: UserStory) => {
+    setEditingUserStory(story); // Pré-remplit le formulaire avec les données de la User Story
+  };
+
+  // Fonction pour éditer un Sprint
+  const handleEditSprint = (sprint: Sprint) => {
+    setEditingSprint(sprint); // Pré-remplit le formulaire avec les données du Sprint
+  };
+
+  // Fonction pour soumettre les modifications d'un Sprint
+  const handleUpdateSprint = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingSprint) return;
+
+    try {
+      const response = await axiosInstance.put(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${editingSprint.id}`,
+        {
+          name: editingSprint.name,
+          startDate: editingSprint.startDate,
+          endDate: editingSprint.endDate,
+          capacity: editingSprint.capacity,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const updatedSprint = response.data;
+      if (activeSprint && activeSprint.id === updatedSprint.id) {
+        setActiveSprint({
+          ...activeSprint,
+          name: updatedSprint.name,
+          startDate: updatedSprint.startDate,
+          endDate: updatedSprint.endDate,
+          capacity: updatedSprint.capacity,
+        });
+      }
+      setEditingSprint(null); // Ferme le formulaire d'édition
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du Sprint :", error);
+      alert("Erreur lors de la mise à jour du Sprint.");
+    }
+  };
 
   // Fetch project details
   useEffect(() => {
@@ -192,7 +233,7 @@ export default function Tasks() {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest(".team-members-display")) setShowAllMembers(false);
-      if (!target.closest(".agile-panel") && !target.closest(".agile-toggle"))
+      if (!target.closest(".agile-sidebar") && !target.closest(".agile-toggle"))
         setIsAgilePanelOpen(false);
     };
     if (showAllMembers || isAgilePanelOpen)
@@ -206,8 +247,8 @@ export default function Tasks() {
   ) => {
     e.preventDefault();
     const task: Task = {
-      id: tasks.length + 1,
       ...newTask,
+      id: tasks.length + 1,
       sprintId: activeSprint?.id,
       userStoryId,
     };
@@ -274,16 +315,229 @@ export default function Tasks() {
     }
   };
 
-  const handleAddToSprint = (story: UserStory) => {
-    if (activeSprint && activeSprint.capacity >= story.effortPoints) {
-      const updatedStory = { ...story, sprintId: activeSprint.id };
-      setBacklog(backlog.filter((us) => us.id !== story.id));
-      setActiveSprint({
-        ...activeSprint,
-        userStories: [...activeSprint.userStories, updatedStory],
-      });
-    } else {
-      alert("Capacité du Sprint insuffisante !");
+  // Fetch user stories from backend
+  useEffect(() => {
+    const fetchUserStories = async () => {
+      if (authLoading || !accessToken || !projectId) return;
+      try {
+        const response = await axiosInstance.get(
+          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        const userStories = response.data.map((us: any) => ({
+          id: us.id,
+          name: us.title,
+          description: us.description,
+          priority: us.priority,
+          effortPoints: us.effortPoints,
+          sprintId: us.sprintId, // Assuming this might be included in the response
+        }));
+        setBacklog(userStories);
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération des User Stories :",
+          error
+        );
+        alert("Erreur lors du chargement des User Stories.");
+      }
+    };
+    fetchUserStories();
+  }, [accessToken, authLoading, axiosInstance, projectId]);
+
+  // Update user story
+  const handleUpdateUserStory = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingUserStory) return;
+
+    try {
+      const response = await axiosInstance.put(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${editingUserStory.id}`,
+        {
+          title: editingUserStory.name,
+          description: editingUserStory.description,
+          priority: editingUserStory.priority,
+          effortPoints: editingUserStory.effortPoints,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const updatedStory = response.data;
+      setBacklog(
+        backlog.map((us) =>
+          us.id === updatedStory.id
+            ? {
+                ...us,
+                name: updatedStory.title,
+                description: updatedStory.description,
+                priority: updatedStory.priority,
+                effortPoints: updatedStory.effortPoints,
+              }
+            : us
+        )
+      );
+
+      if (
+        activeSprint &&
+        activeSprint.userStories.some((us) => us.id === updatedStory.id)
+      ) {
+        setActiveSprint({
+          ...activeSprint,
+          userStories: activeSprint.userStories.map((us) =>
+            us.id === updatedStory.id
+              ? {
+                  ...us,
+                  name: updatedStory.title,
+                  description: updatedStory.description,
+                  priority: updatedStory.priority,
+                  effortPoints: updatedStory.effortPoints,
+                }
+              : us
+          ),
+        });
+      }
+
+      setEditingUserStory(null); // Close the edit form
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la User Story :", error);
+      alert("Erreur lors de la mise à jour de la User Story.");
+    }
+  };
+
+  // Delete user story
+  const handleDeleteUserStory = async (id: number) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette User Story ?")) return;
+
+    try {
+      await axiosInstance.delete(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      setBacklog(backlog.filter((us) => us.id !== id));
+      if (activeSprint) {
+        setActiveSprint({
+          ...activeSprint,
+          userStories: activeSprint.userStories.filter((us) => us.id !== id),
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la User Story :", error);
+      alert("Erreur lors de la suppression de la User Story.");
+    }
+  };
+
+  // Fetch sprints from backend
+  useEffect(() => {
+    const fetchSprints = async () => {
+      if (authLoading || !accessToken || !projectId) return;
+      try {
+        const response = await axiosInstance.get(
+          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        const fetchedSprints = response.data.map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          startDate: s.startDate,
+          endDate: s.endDate,
+          capacity: s.capacity || 0, // Assuming goal is repurposed as capacity
+          userStories: s.userStories.map((us: any) => ({
+            id: us.id,
+            name: us.title,
+            description: us.description,
+            priority: us.priority,
+            effortPoints: us.effortPoints,
+            sprintId: us.sprintId,
+          })),
+        }));
+        setSprints(fetchedSprints);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des Sprints :", error);
+        alert("Erreur lors du chargement des Sprints.");
+      }
+    };
+    fetchSprints();
+  }, [accessToken, authLoading, axiosInstance, projectId]);
+
+  // Create or update sprint
+  const handleSprintSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const sprintData = {
+      name: (form.elements.namedItem("name") as HTMLInputElement).value,
+      startDate: (form.elements.namedItem("startDate") as HTMLInputElement)
+        .value,
+      endDate: (form.elements.namedItem("endDate") as HTMLInputElement).value,
+      capacity:
+        parseInt(
+          (form.elements.namedItem("capacity") as HTMLInputElement).value
+        ) || 0,
+    };
+
+    try {
+      if (editingSprint) {
+        // Update sprint
+        const response = await axiosInstance.put(
+          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${editingSprint.id}`,
+          sprintData,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const updatedSprint = {
+          ...response.data,
+          userStories: editingSprint.userStories,
+        };
+        setSprints(
+          sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s))
+        );
+        if (activeSprint?.id === updatedSprint.id)
+          setActiveSprint(updatedSprint);
+        setEditingSprint(null);
+      } else {
+        // Create sprint
+        const response = await axiosInstance.post(
+          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
+          sprintData,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        const newSprint = { ...response.data, userStories: [] };
+        setSprints([...sprints, newSprint]);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la gestion du Sprint :", error);
+      alert(
+        `Erreur lors de la ${
+          editingSprint ? "mise à jour" : "création"
+        } du Sprint.`
+      );
+    }
+  };
+
+  // Delete sprint
+  const handleDeleteSprint = async (id: number) => {
+    if (!confirm("Voulez-vous vraiment supprimer ce Sprint ?")) return;
+    try {
+      await axiosInstance.delete(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${id}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setSprints(sprints.filter((s) => s.id !== id));
+      if (activeSprint?.id === id) setActiveSprint(null);
+    } catch (error) {
+      console.error("Erreur lors de la suppression du Sprint :", error);
+      alert("Erreur lors de la suppression du Sprint.");
     }
   };
 
@@ -297,10 +551,9 @@ export default function Tasks() {
           (task) => task.sprintId === activeSprint.id && task.status === status
         )
       : tasks.filter((task) => task.status === status);
-    if (filterMyTasks && user) {
-      filteredTasks = filteredTasks.filter(
-        (task) => task.responsible === user.firstName
-      );
+    if (filterMyTasks) {
+      // Since 'user' is removed, we'll skip filtering by user for now
+      // You can reintroduce this logic if you add user data back to AuthContext
     }
     return filteredTasks;
   };
@@ -581,7 +834,7 @@ export default function Tasks() {
                       ...newTask,
                       priority: e.target.value as
                         | "LOW"
-                        | "MEDUIM"
+                        | "MEDIUM"
                         | "HIGH"
                         | "",
                     })
@@ -589,7 +842,7 @@ export default function Tasks() {
                 >
                   <option value="">Selecy a priority</option>
                   <option value="LOW">LOW</option>
-                  <option value="MEDUIM">MEDUIM</option>
+                  <option value="MEDIUM">MEDIUM</option>
                   <option value="HIGH">HIGH</option>
                 </select>
               </div>
@@ -631,308 +884,618 @@ export default function Tasks() {
       )}
 
       {isAgilePanelOpen && (
-        <div className="agile-panel">
-          <div className="agile-panel-header">
-            <h3>Agile Management</h3>
+        <div className="agile-sidebar" onClick={(e) => e.stopPropagation()}>
+          <div className="sidebar-header">
+            <h2>Agile Flow</h2>
             <button
-              className="agile-panel-close"
+              className="sidebar-close"
               onClick={() => setIsAgilePanelOpen(false)}
             >
               <i className="fa fa-times"></i>
             </button>
           </div>
-          <div className="agile-panel-content">
-            <div className="agile-sections-container">
-              {/* Section 1 : Créer une User Story */}
-              <div className="agile-section">
-                <h4 className="agile-section-title">New User Story</h4>
-                <form onSubmit={handleAddUserStory} className="modern-form">
-                  <input
-                    type="text"
-                    placeholder="Title of the User Story"
-                    value={newUserStory.name}
-                    onChange={(e) =>
-                      setNewUserStory({ ...newUserStory, name: e.target.value })
-                    }
-                    required
-                  />
-                  <textarea
-                    placeholder="Description"
-                    value={newUserStory.description}
-                    onChange={(e) =>
-                      setNewUserStory({
-                        ...newUserStory,
-                        description: e.target.value,
-                      })
-                    }
-                  />
-                  <div className="form-row">
-                    <select
-                      value={newUserStory.priority}
-                      onChange={(e) =>
-                        setNewUserStory({
-                          ...newUserStory,
-                          priority: e.target.value as
-                            | "LOW"
-                            | "MEDUIM"
-                            | "HIGH"
-                            | "",
-                        })
-                      }
-                    >
-                      <option value="">Priority</option>
-                      <option value="LOW">LOW</option>
-                      <option value="MEDUIM">MEDUIM</option>
-                      <option value="HIGH">HIGH</option>
-                    </select>
-                    <input
-                      type="number"
-                      placeholder="Effort (pts)"
-                      value={newUserStory.effortPoints || ""}
-                      onChange={(e) =>
-                        setNewUserStory({
-                          ...newUserStory,
-                          effortPoints: parseInt(e.target.value) || 0,
-                        })
-                      }
-                      min="0"
-                    />
-                  </div>
-                  <button type="submit" className="modern-button">
-                    Add to Backlog
-                  </button>
-                </form>
-              </div>
 
-              {/* Section 2 : Créer un Sprint */}
-              <div className="agile-section">
-                <h4 className="agile-section-title">New Sprint</h4>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    const newSprint: Sprint = {
-                      id: activeSprint ? activeSprint.id + 1 : 1,
-                      name: `Sprint ${activeSprint ? activeSprint.id + 1 : 1}`,
-                      startDate: prompt("Date de début (ex: 5 avril)") || "",
-                      endDate: prompt("Date de fin (ex: 12 avril)") || "",
-                      capacity:
-                        parseInt(prompt("Capacité (pts)") || "20") || 20,
-                      userStories: [],
-                    };
-                    setActiveSprint(newSprint);
-                  }}
-                  className="modern-form"
+          {/* Mini-Dashboard en haut */}
+          <div className="sidebar-dashboard">
+            <div className="dashboard-card-sprint">
+              <i className="fa fa-calendar"></i>
+              <span>Sprints: {sprints.length}</span>
+            </div>
+            <div className="dashboard-card-backlog">
+              <i className="fa fa-tasks"></i>
+              <span>
+                Backlog: {backlog.filter((us) => !us.sprintId).length}
+              </span>
+            </div>
+            <div className="dashboard-card-task">
+              <i className="fa fa-clock"></i>
+              <span>Tâches: {tasks.length}</span>
+            </div>
+          </div>
+
+          <div className="sidebar-content">
+            {/* Section 1 : Backlog & Stories */}
+            <div className="sidebar-section">
+              <div
+                className="section-card"
+                onClick={() =>
+                  setExpandedSection(
+                    expandedSection === "backlog" ? null : "backlog"
+                  )
+                }
+              >
+                <div className="section-icon">
+                  <i className="fa fa-book"></i>
+                </div>
+                <div className="section-info">
+                  <h3>Backlog & Stories</h3>
+                  <p>{backlog.filter((us) => !us.sprintId).length} items</p>
+                </div>
+                <span
+                  className={`chevron ${
+                    expandedSection === "backlog" ? "open" : ""
+                  }`}
                 >
-                  <input type="text" placeholder="Nom du Sprint" required />
-                  <input
-                    type="text"
-                    placeholder="Date de début (ex: 5 avril)"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Date de fin (ex: 12 avril)"
-                    required
-                  />
-                  <input
-                    type="number"
-                    placeholder="Capacité (pts)"
-                    min="0"
-                    required
-                  />
-                  <button type="submit" className="modern-button">
-                    Créer Sprint
-                  </button>
-                </form>
+                  ▼
+                </span>
               </div>
-
-              {/* Section 3 : Backlog */}
-              <div className="agile-section">
-                <h4 className="agile-section-title">Backlog</h4>
-                <div className="section-content">
-                  {backlog.filter((us) => !us.sprintId).length > 0 ? (
-                    backlog
-                      .filter((us) => !us.sprintId)
-                      .map((story) => (
-                        <div
-                          key={story.id}
-                          className="user-story-card modern-card"
+              {expandedSection === "backlog" && (
+                <div className="section-body">
+                  {/* Formulaire */}
+                  <div className="story-form">
+                    <h4>{editingUserStory ? "Edit Story" : "New Story"}</h4>
+                    <form
+                      onSubmit={
+                        editingUserStory
+                          ? handleUpdateUserStory
+                          : handleAddUserStory
+                      }
+                      className="modern-form"
+                    >
+                      <input
+                        type="text"
+                        placeholder="Story Title"
+                        value={
+                          editingUserStory
+                            ? editingUserStory.name
+                            : newUserStory.name
+                        }
+                        onChange={(e) =>
+                          editingUserStory
+                            ? setEditingUserStory({
+                                ...editingUserStory,
+                                name: e.target.value,
+                              })
+                            : setNewUserStory({
+                                ...newUserStory,
+                                name: e.target.value,
+                              })
+                        }
+                        required
+                      />
+                      <textarea
+                        placeholder="Description (optional)"
+                        value={
+                          editingUserStory
+                            ? editingUserStory.description
+                            : newUserStory.description
+                        }
+                        onChange={(e) =>
+                          editingUserStory
+                            ? setEditingUserStory({
+                                ...editingUserStory,
+                                description: e.target.value,
+                              })
+                            : setNewUserStory({
+                                ...newUserStory,
+                                description: e.target.value,
+                              })
+                        }
+                      />
+                      <div className="form-row">
+                        <select
+                          value={
+                            editingUserStory
+                              ? editingUserStory.priority
+                              : newUserStory.priority
+                          }
+                          onChange={(e) =>
+                            editingUserStory
+                              ? setEditingUserStory({
+                                  ...editingUserStory,
+                                  priority: e.target.value as
+                                    | "LOW"
+                                    | "MEDIUM"
+                                    | "HIGH"
+                                    | "",
+                                })
+                              : setNewUserStory({
+                                  ...newUserStory,
+                                  priority: e.target.value as
+                                    | "LOW"
+                                    | "MEDIUM"
+                                    | "HIGH"
+                                    | "",
+                                })
+                          }
                         >
-                          <div className="user-story-content">
-                            <strong>{story.name}</strong>
-                            <p>{story.description || "Pas de description"}</p>
-                            <div className="user-story-meta">
-                              <span
-                                className={`task-priority priority-${story.priority}`}
-                              >
-                                {story.priority}
-                              </span>
-                              <span>Effort : {story.effortPoints} pts</span>
-                            </div>
-                          </div>
-                          {activeSprint && (
-                            <button
-                              className="add-to-sprint-btn modern-button"
-                              onClick={() => handleAddToSprint(story)}
-                            >
-                              Add to Sprint
-                            </button>
-                          )}
-                        </div>
-                      ))
-                  ) : (
-                    <p className="empty-message">
-                      No User Story in the Backlog.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Section 4 : Sprint Actif */}
-              <div className="agile-section">
-                <h4 className="agile-section-title">Actif Sprint</h4>
-                <div className="section-content">
-                  {activeSprint ? (
-                    <>
-                      <div className="sprint-info modern-card">
-                        <h5>{activeSprint.name}</h5>
-                        <p>
-                          {activeSprint.startDate} - {activeSprint.endDate}
-                        </p>
-                        <p>Capacité : {activeSprint.capacity} pts</p>
+                          <option value="">Priority</option>
+                          <option value="LOW">Low</option>
+                          <option value="MEDIUM">Medium</option>
+                          <option value="HIGH">High</option>
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="Effort (pts)"
+                          value={
+                            editingUserStory
+                              ? editingUserStory.effortPoints
+                              : newUserStory.effortPoints || ""
+                          }
+                          onChange={(e) =>
+                            editingUserStory
+                              ? setEditingUserStory({
+                                  ...editingUserStory,
+                                  effortPoints: parseInt(e.target.value) || 0,
+                                })
+                              : setNewUserStory({
+                                  ...newUserStory,
+                                  effortPoints: parseInt(e.target.value) || 0,
+                                })
+                          }
+                          min="0"
+                        />
                       </div>
-                      <h5 className="sub-section-title">User Stories</h5>
-                      {activeSprint.userStories.map((story) => (
-                        <div
-                          key={story.id}
-                          className="user-story-card modern-card"
+                      <button type="submit" className="action-btn primary">
+                        {editingUserStory ? "Update" : "Add"}
+                      </button>
+                      {editingUserStory && (
+                        <button
+                          type="button"
+                          className="action-btn secondary"
+                          onClick={() => setEditingUserStory(null)}
                         >
-                          <div className="user-story-content">
-                            <strong>{story.name}</strong>
-                            <p>{story.description || "Pas de description"}</p>
-                            <div className="user-story-meta">
-                              <span
-                                className={`task-priority priority-${story.priority}`}
-                              >
-                                {story.priority}
-                              </span>
-                              <span>Effort : {story.effortPoints} pts</span>
-                              <span>
-                                Tasks :{" "}
-                                {
-                                  tasks.filter(
-                                    (t) => t.userStoryId === story.id
-                                  ).length
-                                }
-                              </span>
-                            </div>
-                          </div>
-                          <button
-                            className="add-task-btn modern-button"
-                            onClick={() => setSelectedUserStoryId(story.id)}
-                          >
-                            Add Task
-                          </button>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <p className="empty-message">No Actif Sprint .</p>
-                  )}
+                          Cancel
+                        </button>
+                      )}
+                    </form>
+                  </div>
+
+                  {/* Séparateur et Liste */}
+                  <div className="section-divider">
+                    <span>Stories List</span>
+                  </div>
+                  <div className="story-list">
+                    {backlog.filter((us) => !us.sprintId).length > 0 ? (
+                      <table className="story-table">
+                        <thead>
+                          <tr>
+                            <th>Title</th>
+                            <th>Priority</th>
+                            <th>Effort</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {backlog
+                            .filter((us) => !us.sprintId)
+                            .map((story) => (
+                              <tr key={story.id}>
+                                <td>{story.name}</td>
+                                <td
+                                  className={`priority-${story.priority.toLowerCase()}`}
+                                >
+                                  {story.priority}
+                                </td>
+                                <td>{story.effortPoints} pts</td>
+                                <td className="action-cell">
+                                  <button
+                                    onClick={() => handleEditUserStory(story)}
+                                    className="icon-btn edit"
+                                  >
+                                    <i className="fa fa-edit"></i>
+                                  </button>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteUserStory(story.id)
+                                    }
+                                    className="icon-btn delete"
+                                  >
+                                    <i className="fa fa-trash"></i>
+                                  </button>
+                                  <select
+                                    onChange={(e) => {
+                                      const sprintId = parseInt(e.target.value);
+                                      if (sprintId) {
+                                        const sprint = sprints.find(
+                                          (s) => s.id === sprintId
+                                        );
+                                        if (
+                                          sprint &&
+                                          sprint.capacity >= story.effortPoints
+                                        ) {
+                                          const updatedStory = {
+                                            ...story,
+                                            sprintId,
+                                          };
+                                          setBacklog(
+                                            backlog.map((us) =>
+                                              us.id === story.id
+                                                ? updatedStory
+                                                : us
+                                            )
+                                          );
+                                          setSprints(
+                                            sprints.map((s) =>
+                                              s.id === sprintId
+                                                ? {
+                                                    ...s,
+                                                    userStories: [
+                                                      ...s.userStories,
+                                                      updatedStory,
+                                                    ],
+                                                  }
+                                                : s
+                                            )
+                                          );
+                                        } else {
+                                          alert(
+                                            "Sprint capacity insufficient!"
+                                          );
+                                        }
+                                      }
+                                    }}
+                                    value=""
+                                    className="sprint-select"
+                                  >
+                                    <option value="">To Sprint</option>
+                                    {sprints.map((sprint) => (
+                                      <option key={sprint.id} value={sprint.id}>
+                                        {sprint.name}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="empty-text">
+                        No stories yet. Add one to get started!
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Mini-modal pour ajouter une tâche */}
-            {selectedUserStoryId && (
+            {/* Section 2 : Sprints & Tasks */}
+            <div className="sidebar-section">
               <div
-                className="mini-modal-overlay"
-                onClick={() => setSelectedUserStoryId(null)}
+                className="section-card"
+                onClick={() =>
+                  setExpandedSection(
+                    expandedSection === "sprints" ? null : "sprints"
+                  )
+                }
               >
-                <div
-                  className="mini-modal"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <form
-                    onSubmit={(e) => handleAddTask(e, selectedUserStoryId)}
-                    className="mini-form"
-                  >
-                    <input
-                      type="text"
-                      placeholder="Nom de la tâche"
-                      value={newTask.name}
-                      onChange={(e) =>
-                        setNewTask({ ...newTask, name: e.target.value })
-                      }
-                      required
-                    />
-                    <input
-                      type="text"
-                      placeholder="Responsable"
-                      value={newTask.responsible || ""}
-                      onChange={(e) =>
-                        setNewTask({ ...newTask, responsible: e.target.value })
-                      }
-                    />
-                    <input
-                      type="text"
-                      placeholder="Échéance (ex: 5 avril)"
-                      value={newTask.dueDate}
-                      onChange={(e) =>
-                        setNewTask({ ...newTask, dueDate: e.target.value })
-                      }
-                    />
-                    <select
-                      value={newTask.priority}
-                      onChange={(e) =>
-                        setNewTask({
-                          ...newTask,
-                          priority: e.target.value as
-                            | "LOW"
-                            | "MEDUIM"
-                            | "HIGH"
-                            | "",
-                        })
-                      }
-                    >
-                      <option value="">Priority</option>
-                      <option value="LOW">LOW</option>
-                      <option value="MEDUIM">MEDUIM</option>
-                      <option value="HIGH">HIGH</option>
-                    </select>
-                    <select
-                      value={newTask.status}
-                      onChange={(e) =>
-                        setNewTask({
-                          ...newTask,
-                          status: e.target.value as
-                            | "TO DO"
-                            | "IN PROGRESS"
-                            | "DONE",
-                        })
-                      }
-                    >
-                      <option value="TO DO">TO DO</option>
-                      <option value="IN PROGRESS">IN PROGRESS</option>
-                      <option value="DONE">DONE</option>
-                    </select>
-                    <div className="mini-modal-actions">
-                      <button type="submit" className="mini-button">
-                        Add
-                      </button>
-                      <button
-                        type="button"
-                        className="mini-button cancel"
-                        onClick={() => setSelectedUserStoryId(null)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
+                <div className="section-icon">
+                  <i className="fa fa-rocket"></i>
                 </div>
+                <div className="section-info">
+                  <h3>Sprints & Tasks</h3>
+                  <p>{sprints.length} sprints</p>
+                </div>
+                <span
+                  className={`chevron ${
+                    expandedSection === "sprints" ? "open" : ""
+                  }`}
+                >
+                  ▼
+                </span>
               </div>
-            )}
+              {expandedSection === "sprints" && (
+                <div className="section-body">
+                  {/* Formulaire */}
+                  <div className="sprint-form">
+                    <h4>{editingSprint ? "Edit Sprint" : "New Sprint"}</h4>
+                    <form onSubmit={handleSprintSubmit} className="modern-form">
+                      <input
+                        type="text"
+                        name="name"
+                        placeholder="Sprint Name"
+                        value={editingSprint ? editingSprint.name : ""}
+                        onChange={(e) =>
+                          editingSprint &&
+                          setEditingSprint({
+                            ...editingSprint,
+                            name: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                      <input
+                        type="date"
+                        name="startDate"
+                        value={editingSprint ? editingSprint.startDate : ""}
+                        onChange={(e) =>
+                          editingSprint &&
+                          setEditingSprint({
+                            ...editingSprint,
+                            startDate: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                      <input
+                        type="date"
+                        name="endDate"
+                        value={editingSprint ? editingSprint.endDate : ""}
+                        onChange={(e) =>
+                          editingSprint &&
+                          setEditingSprint({
+                            ...editingSprint,
+                            endDate: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                      <input
+                        type="number"
+                        name="capacity"
+                        placeholder="Capacity (pts)"
+                        value={editingSprint ? editingSprint.capacity : ""}
+                        onChange={(e) =>
+                          editingSprint &&
+                          setEditingSprint({
+                            ...editingSprint,
+                            capacity: parseInt(e.target.value) || 0,
+                          })
+                        }
+                        min="0"
+                        required
+                      />
+                      <button type="submit" className="action-btn primary">
+                        {editingSprint ? "Update" : "Create"}
+                      </button>
+                      {editingSprint && (
+                        <button
+                          type="button"
+                          className="action-btn secondary"
+                          onClick={() => setEditingSprint(null)}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </form>
+                  </div>
+
+                  {/* Séparateur et Liste */}
+                  <div className="section-divider">
+                    <span>Sprints List</span>
+                  </div>
+                  <div className="sprint-list">
+                    {sprints.length > 0 ? (
+                      <table className="sprint-table">
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Dates</th>
+                            <th>Capacity</th>
+                            <th>Stories</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sprints.map((sprint) => (
+                            <tr key={sprint.id}>
+                              <td>{sprint.name}</td>
+                              <td>
+                                {new Date(sprint.startDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "2-digit",
+                                  }
+                                )}{" "}
+                                -{" "}
+                                {new Date(sprint.endDate).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    month: "short",
+                                    day: "2-digit",
+                                  }
+                                )}
+                              </td>
+                              <td>{sprint.capacity} pts</td>
+                              <td>{sprint.userStories.length}</td>
+                              <td className="action-cell">
+                                <button
+                                  onClick={() => handleEditSprint(sprint)}
+                                  className="icon-btn edit"
+                                >
+                                  <i className="fa fa-edit"></i>
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSprint(sprint.id)}
+                                  className="icon-btn delete"
+                                >
+                                  <i className="fa fa-trash"></i>
+                                </button>
+                                <button
+                                  onClick={() => setActiveSprint(sprint)}
+                                  className={`icon-btn activate ${
+                                    activeSprint?.id === sprint.id
+                                      ? "active"
+                                      : ""
+                                  }`}
+                                >
+                                  <i className="fa fa-play"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="empty-text">
+                        No sprints yet. Create one to start planning!
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Sprint Actif */}
+                  {activeSprint && (
+                    <div className="active-sprint">
+                      <h4>Active Sprint: {activeSprint.name}</h4>
+                      <div className="progress-bar">
+                        <div
+                          className="progress"
+                          style={{
+                            width: `${
+                              (activeSprint.userStories.length /
+                                activeSprint.capacity) *
+                              100
+                            }%`,
+                          }}
+                        ></div>
+                      </div>
+                      <div className="story-list">
+                        {activeSprint.userStories.map((story) => (
+                          <div key={story.id} className="story-card">
+                            <div className="story-info">
+                              <span className="story-title">{story.name}</span>
+                              <span className="effort">
+                                {story.effortPoints} pts
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => setSelectedUserStoryId(story.id)}
+                              className="action-btn task"
+                            >
+                              + Task
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Section 3 : Quick Actions */}
+            <div className="sidebar-section quick-actions">
+              <h3>Quick Actions</h3>
+              <button
+                className="action-btn primary-sprint"
+                onClick={() => setExpandedSection("sprints")}
+              >
+                New Sprint
+              </button>
+              <button
+                className="action-btn primary-backlog"
+                onClick={() => setExpandedSection("backlog")}
+              >
+                Add Story
+              </button>
+
+              <button className="action-btn secondary">Export Data</button>
+            </div>
           </div>
+
+          {/* Mini-modal pour ajouter une tâche */}
+          {selectedUserStoryId && (
+            <div
+              className="modal-overlay"
+              onClick={() => setSelectedUserStoryId(null)}
+            >
+              <div
+                className="modal-content"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h4>Add Task</h4>
+                <form
+                  onSubmit={(e) => handleAddTask(e, selectedUserStoryId)}
+                  className="modern-form"
+                >
+                  <input
+                    type="text"
+                    placeholder="Task Name"
+                    value={newTask.name}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, name: e.target.value })
+                    }
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Responsible"
+                    value={newTask.responsible || ""}
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, responsible: e.target.value })
+                    }
+                  />
+                  <input
+                    type="date"
+                    id="dueDate"
+                    value={newTask.dueDate} // garder la date brute ici
+                    onChange={(e) =>
+                      setNewTask({ ...newTask, dueDate: e.target.value })
+                    }
+                  />
+
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) =>
+                      setNewTask({
+                        ...newTask,
+                        priority: e.target.value as
+                          | "LOW"
+                          | "MEDIUM"
+                          | "HIGH"
+                          | "",
+                      })
+                    }
+                  >
+                    <option value="">Priority</option>
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </select>
+                  <select
+                    value={newTask.status}
+                    onChange={(e) =>
+                      setNewTask({
+                        ...newTask,
+                        status: e.target.value as
+                          | "TO DO"
+                          | "IN PROGRESS"
+                          | "DONE",
+                      })
+                    }
+                  >
+                    <option value="TO DO">To Do</option>
+                    <option value="IN PROGRESS">In Progress</option>
+                    <option value="DONE">Done</option>
+                  </select>
+                  <div className="modal-actions">
+                    <button type="submit" className="action-btn primary">
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="action-btn secondary"
+                      onClick={() => setSelectedUserStoryId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
