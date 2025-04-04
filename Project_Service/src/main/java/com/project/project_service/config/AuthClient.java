@@ -17,5 +17,9 @@ public interface AuthClient {
             @PathVariable("authId") String authId,
             @RequestHeader("Authorization") String authorization
     );
+
+    // Nouvelle méthode pour décoder le token
+    @GetMapping("/api/auth/decode-token")
+    String decodeToken(@RequestHeader("Authorization") String authorization);
 }
 
