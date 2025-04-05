@@ -1,5 +1,11 @@
 "use client";
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import axios from "axios";
 
 interface AuthContextType {
@@ -46,6 +52,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   useEffect(() => {
     refreshAccessToken();
+    const interval = setInterval(() => {
+      refreshAccessToken(); // auto-refresh every 5 min
+    }, 5 * 60 * 1000); // 5 minutes in ms
+
+    return () => clearInterval(interval); // cleanup on unmount
   }, []);
 
   const login = (token: string) => {

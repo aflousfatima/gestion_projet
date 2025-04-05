@@ -41,6 +41,7 @@ interface UserStory {
   id: number;
   name: string;
   description: string;
+  status: "BACKLOG" | "IN_SPRINT" | "DONE" | "";
   priority: "LOW" | "MEDIUM" | "HIGH" | "";
   effortPoints: number;
   sprintId?: number;
@@ -83,8 +84,53 @@ export default function Tasks() {
   const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
   const params = useParams();
+  const [backlog, setBacklog] = useState<UserStory[]>([]);
   const projectId = params.projectId as string;
+  const [currentPage, setCurrentPage] = useState(1); // État pour la page actuelle
+  const itemsPerPage = 3; // Nombre d'éléments par page
 
+  // Calculer les éléments à afficher pour la page actuelle
+  const filteredBacklog = backlog.filter((us) => !us.sprintId); // Stories sans sprint
+  const totalItems = filteredBacklog.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage); // Nombre total de pages
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentStories = filteredBacklog.slice(startIndex, endIndex); // Stories pour la page actuelle
+
+  // Handlers pour la pagination
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [currentSprintPage, setCurrentSprintPage] = useState(1); // État pour la page actuelle des sprints
+
+  // Calculer les sprints à afficher pour la page actuelle
+  const totalSprintItems = sprints.length;
+  const totalSprintPages = Math.ceil(totalSprintItems / itemsPerPage); // Nombre total de pages
+  const sprintStartIndex = (currentSprintPage - 1) * itemsPerPage;
+  const sprintEndIndex = sprintStartIndex + itemsPerPage;
+  const currentSprints = sprints.slice(sprintStartIndex, sprintEndIndex); // Sprints pour la page actuelle
+
+  // Handlers pour la pagination des sprints
+  const goToNextSprintPage = () => {
+    if (currentSprintPage < totalSprintPages) {
+      setCurrentSprintPage(currentSprintPage + 1);
+    }
+  };
+
+  const goToPreviousSprintPage = () => {
+    if (currentSprintPage > 1) {
+      setCurrentSprintPage(currentSprintPage - 1);
+    }
+  };
   // Ajout d'un état pour gérer l'édition
   const [editingUserStory, setEditingUserStory] = useState<UserStory | null>(
     null
@@ -109,19 +155,20 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterMyTasks, setFilterMyTasks] = useState(false);
-
+  const [expandedSprintStories, setExpandedSprintStories] = useState<
+    number | null
+  >(null);
   // États pour Agile
   const [isAgilePanelOpen, setIsAgilePanelOpen] = useState(false);
-  const [backlog, setBacklog] = useState<UserStory[]>([]);
 
   const [newUserStory, setNewUserStory] = useState<UserStory>({
     id: 0,
     name: "",
     description: "",
+    status: "BACKLOG",
     priority: "",
     effortPoints: 0,
   });
-  const [sprints, setSprints] = useState<Sprint[]>([]);
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [newSprint, setNewSprint] = useState<Sprint>({
     id: 0,
@@ -256,20 +303,13 @@ export default function Tasks() {
     e.preventDefault();
 
     try {
-      // Ajout du console.log pour afficher les données envoyées
-      console.log("Données envoyées dans la requête POST :", {
-        title: newUserStory.name,
-        description: newUserStory.description,
-        priority: newUserStory.priority,
-        effortPoints: newUserStory.effortPoints,
-      });
-
       const response = await axiosInstance.post(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
         {
           title: newUserStory.name,
           description: newUserStory.description,
           priority: newUserStory.priority,
+          status: "BACKLOG", // Toujours "BACKLOG" pour une nouvelle user story
           effortPoints: newUserStory.effortPoints,
         },
         {
@@ -286,6 +326,7 @@ export default function Tasks() {
           id: createdUserStory.id,
           name: createdUserStory.title,
           description: createdUserStory.description,
+          status: createdUserStory.status, // Récupérer depuis la réponse
           priority: createdUserStory.priority,
           effortPoints: createdUserStory.effortPoints,
         },
@@ -294,6 +335,7 @@ export default function Tasks() {
         id: 0,
         name: "",
         description: "",
+        status: "BACKLOG",
         priority: "",
         effortPoints: 0,
       });
@@ -306,7 +348,11 @@ export default function Tasks() {
   useEffect(() => {
     const fetchUserStories = async () => {
       if (authLoading || !accessToken || !projectId) {
-        console.log("Conditions non remplies : ", { authLoading, accessToken, projectId });
+        console.log("Conditions non remplies : ", {
+          authLoading,
+          accessToken,
+          projectId,
+        });
         return;
       }
       const url = `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`;
@@ -328,7 +374,10 @@ export default function Tasks() {
         }));
         setBacklog(userStories);
       } catch (error) {
-        console.error("Erreur lors de la récupération des User Stories :", error);
+        console.error(
+          "Erreur lors de la récupération des User Stories :",
+          error
+        );
         alert("Erreur lors du chargement des User Stories.");
       }
     };
@@ -347,6 +396,7 @@ export default function Tasks() {
           description: editingUserStory.description,
           priority: editingUserStory.priority,
           effortPoints: editingUserStory.effortPoints,
+          // Ne pas inclure status ici, il reste inchangé sauf via assign/remove
         },
         {
           headers: {
@@ -365,6 +415,7 @@ export default function Tasks() {
                 description: updatedStory.description,
                 priority: updatedStory.priority,
                 effortPoints: updatedStory.effortPoints,
+                status: updatedStory.status, // Récupérer depuis la réponse
               }
             : us
         )
@@ -384,13 +435,14 @@ export default function Tasks() {
                   description: updatedStory.description,
                   priority: updatedStory.priority,
                   effortPoints: updatedStory.effortPoints,
+                  status: updatedStory.status,
                 }
               : us
           ),
         });
       }
 
-      setEditingUserStory(null); // Close the edit form
+      setEditingUserStory(null);
     } catch (error) {
       console.error("Erreur lors de la mise à jour de la User Story :", error);
       alert("Erreur lors de la mise à jour de la User Story.");
@@ -1039,20 +1091,20 @@ export default function Tasks() {
                     <span>Stories List</span>
                   </div>
                   <div className="story-list">
-                    {backlog.filter((us) => !us.sprintId).length > 0 ? (
-                      <table className="story-table">
-                        <thead>
-                          <tr>
-                            <th>Title</th>
-                            <th>Priority</th>
-                            <th>Effort</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {backlog
-                            .filter((us) => !us.sprintId)
-                            .map((story) => (
+                    {filteredBacklog.length > 0 ? (
+                      <>
+                        <table className="story-table">
+                          <thead>
+                            <tr>
+                              <th>Title</th>
+                              <th>Priority</th>
+                              <th>Effort</th>
+                              <th>Status</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentStories.map((story) => (
                               <tr key={story.id}>
                                 <td>{story.name}</td>
                                 <td
@@ -1061,6 +1113,7 @@ export default function Tasks() {
                                   {story.priority}
                                 </td>
                                 <td>{story.effortPoints} pts</td>
+                                <td>{story.status || "BACKLOG"}</td>
                                 <td className="action-cell">
                                   <button
                                     onClick={() => handleEditUserStory(story)}
@@ -1096,19 +1149,19 @@ export default function Tasks() {
                                             sprint.capacity
                                           ) {
                                             try {
-                                              const response =
-                                                await axiosInstance.put(
-                                                  `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
-                                                  {},
-                                                  {
-                                                    headers: {
-                                                      Authorization: `Bearer ${accessToken}`,
-                                                    },
-                                                  }
-                                                );
-                                              const updatedStory = {
+                                              await axiosInstance.put(
+                                                `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
+                                                {},
+                                                {
+                                                  headers: {
+                                                    Authorization: `Bearer ${accessToken}`,
+                                                  },
+                                                }
+                                              );
+                                              const updatedStory: UserStory = {
                                                 ...story,
                                                 sprintId,
+                                                status: "IN_SPRINT",
                                               };
                                               setBacklog(
                                                 backlog.map((us) =>
@@ -1160,8 +1213,32 @@ export default function Tasks() {
                                 </td>
                               </tr>
                             ))}
-                        </tbody>
-                      </table>
+                          </tbody>
+                        </table>
+
+                        {/* Pagination */}
+                        {totalItems > itemsPerPage && (
+                          <div className="pagination-container">
+                            <button
+                              onClick={goToPreviousPage}
+                              disabled={currentPage === 1}
+                              className="pagination-btn"
+                            >
+                              <i className="fa fa-arrow-left"></i> Previous
+                            </button>
+                            <span className="pagination-info">
+                              Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                              onClick={goToNextPage}
+                              disabled={currentPage === totalPages}
+                              className="pagination-btn"
+                            >
+                              Next <i className="fa fa-arrow-right"></i>
+                            </button>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <p className="empty-text">
                         No stories yet. Add one to get started!
@@ -1329,122 +1406,271 @@ export default function Tasks() {
                     <span>Sprints List</span>
                   </div>
                   <div className="sprint-list">
-                    {sprints.length > 0 ? (
-                      <table className="sprint-table">
+      {sprints.length > 0 ? (
+        <>
+          <table className="sprint-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Dates</th>
+                <th>Goal</th>
+                <th>Capacity</th>
+                <th>Stories</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentSprints.map((sprint) => (
+                <React.Fragment key={sprint.id}>
+                  <tr>
+                    <td>{sprint.name}</td>
+                    <td>
+                      {new Date(sprint.startDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "2-digit",
+                      })}{" "}
+                      -{" "}
+                      {new Date(sprint.endDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "2-digit",
+                      })}
+                    </td>
+                    <td>{sprint.goal || "No goal set"}</td>
+                    <td>{sprint.capacity} pts</td>
+                    <td>
+                      <button
+                        className="story-count-btn"
+                        onClick={() =>
+                          setExpandedSprintStories(
+                            expandedSprintStories === sprint.id ? null : sprint.id
+                          )
+                        }
+                      >
+                        {sprint.userStories.length}{" "}
+                        <i
+                          className={`fa ${
+                            expandedSprintStories === sprint.id
+                              ? "fa-chevron-up"
+                              : "fa-chevron-down"
+                          }`}
+                        ></i>
+                      </button>
+                    </td>
+                    <td className="action-cell">
+                      <button
+                        onClick={() => handleEditSprint(sprint)}
+                        className="icon-btn edit"
+                      >
+                        <i className="fa fa-edit"></i>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteSprint(sprint.id)}
+                        className="icon-btn delete"
+                      >
+                        <i className="fa fa-trash"></i>
+                      </button>
+                      <div className="tooltip-container">
+                        <button
+                          onClick={() => setActiveSprint(sprint)}
+                          className={`icon-btn activate ${
+                            activeSprint?.id === sprint.id ? "active" : ""
+                          }`}
+                        >
+                          <i className="fa fa-play"></i>
+                        </button>
+                        <span className="tooltip-text">Activer ce sprint</span>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Afficher les user stories si le sprint est "expanded" */}
+                  {expandedSprintStories === sprint.id && (
+                    <tr>
+                      <td colSpan={6}>
+                        <div className="sprint-stories-list">
+                          {sprint.userStories.length > 0 ? (
+                            <table className="inner-story-table">
+                              <thead>
+                                <tr>
+                                  <th>Name</th>
+                                  <th>Effort (pts)</th>
+                                  <th>Status</th>
+                                  <th>Action</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {sprint.userStories.map((story) => (
+                                  <tr key={story.id}>
+                                    <td>{story.name}</td>
+                                    <td>{story.effortPoints}</td>
+                                    <td>{story.status || "IN_SPRINT"}</td>
+                                    <td>
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            await axiosInstance.put(
+                                              `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/remove-sprint`,
+                                              {},
+                                              {
+                                                headers: {
+                                                  Authorization: `Bearer ${accessToken}`,
+                                                },
+                                              }
+                                            );
+                                            const updatedStory: UserStory = {
+                                              ...story,
+                                              sprintId: undefined,
+                                              status: "BACKLOG",
+                                            };
+                                            setBacklog([...backlog, updatedStory]);
+                                            setSprints(
+                                              sprints.map((s) =>
+                                                s.id === sprint.id
+                                                  ? {
+                                                      ...s,
+                                                      userStories:
+                                                        s.userStories.filter(
+                                                          (us) => us.id !== story.id
+                                                        ),
+                                                    }
+                                                  : s
+                                              )
+                                            );
+                                            if (activeSprint?.id === sprint.id) {
+                                              setActiveSprint({
+                                                ...activeSprint,
+                                                userStories:
+                                                  activeSprint.userStories.filter(
+                                                    (us) => us.id !== story.id
+                                                  ),
+                                              });
+                                            }
+                                          } catch (error) {
+                                            console.error(
+                                              "Erreur lors du retrait du Sprint :",
+                                              error
+                                            );
+                                            alert(
+                                              "Erreur lors du retrait de la User Story du Sprint."
+                                            );
+                                          }
+                                        }}
+                                        className="icon-btn delete"
+                                      >
+                                        <i className="fa fa-times"></i>
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <p>No user stories assigned to this sprint.</p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              ))}
+            </tbody>
+          </table>
+
+          {/* Pagination pour les sprints */}
+          {totalSprintItems > itemsPerPage && (
+            <div className="pagination-container">
+              <button
+                onClick={goToPreviousSprintPage}
+                disabled={currentSprintPage === 1}
+                className="pagination-btn"
+              >
+                <i className="fa fa-arrow-left"></i> Prev
+              </button>
+              <span className="pagination-info">
+                Page {currentSprintPage} of {totalSprintPages}
+              </span>
+              <button
+                onClick={goToNextSprintPage}
+                disabled={currentSprintPage === totalSprintPages}
+                className="pagination-btn"
+              >
+                Next <i className="fa fa-arrow-right"></i>
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <p className="empty-text">No sprints yet. Create one to start planning!</p>
+      )}
+    </div>
+
+                  {activeSprint && (
+                    <div className="active-sprint">
+                      <h4>
+                        <i className="fa fa-rocket"></i> Sprint actif :{" "}
+                        {activeSprint.name}
+                      </h4>
+                      <p className="sprint-goal">
+                        Objectif :{" "}
+                        <strong>
+                          {activeSprint.goal || "Aucun objectif défini"}
+                        </strong>
+                      </p>
+
+                      <div className="sprint-progress">
+                        <div className="progress-bar">
+                          <div
+                            className="progress"
+                            style={{
+                              width: `${
+                                (activeSprint.userStories.reduce(
+                                  (sum, us) => sum + us.effortPoints,
+                                  0
+                                ) /
+                                  activeSprint.capacity) *
+                                100
+                              }%`,
+                            }}
+                          ></div>
+                        </div>
+                        <p className="capacity-info">
+                          <i className="fas fa-sync-alt"></i> Used Capacity :{" "}
+                          <strong>
+                            {activeSprint.userStories.reduce(
+                              (sum, us) => sum + us.effortPoints,
+                              0
+                            )}
+                          </strong>{" "}
+                          / {activeSprint.capacity} pts
+                        </p>
+                      </div>
+
+                      <table className="story-table">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Dates</th>
-                            <th>Goal</th>
-                            <th>Capacity</th>
-                            <th>Stories</th>
-                            <th>Actions</th>
+                            <th>User Story</th>
+                            <th>Effort (pts)</th>
+                            <th>Action</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {sprints.map((sprint) => (
-                            <tr key={sprint.id}>
-                              <td>{sprint.name}</td>
+                          {activeSprint.userStories.map((story) => (
+                            <tr key={story.id}>
+                              <td>{story.name}</td>
+                              <td>{story.effortPoints}</td>
                               <td>
-                                {new Date(sprint.startDate).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "2-digit",
+                                <button
+                                  onClick={() =>
+                                    setSelectedUserStoryId(story.id)
                                   }
-                                )}{" "}
-                                -{" "}
-                                {new Date(sprint.endDate).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "2-digit",
-                                  }
-                                )}
-                              </td>
-                              <td>{sprint.goal || "No goal set"}</td>
-                              <td>{sprint.capacity} pts</td>
-                              <td>{sprint.userStories.length}</td>
-                              <td className="action-cell">
-                                <button
-                                  onClick={() => handleEditSprint(sprint)}
-                                  className="icon-btn edit"
+                                  className="btn-add-task"
                                 >
-                                  <i className="fa fa-edit"></i>
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteSprint(sprint.id)}
-                                  className="icon-btn delete"
-                                >
-                                  <i className="fa fa-trash"></i>
-                                </button>
-                                <button
-                                  onClick={() => setActiveSprint(sprint)}
-                                  className={`icon-btn activate ${
-                                    activeSprint?.id === sprint.id
-                                      ? "active"
-                                      : ""
-                                  }`}
-                                >
-                                  <i className="fa fa-play"></i>
+                                  + Task
                                 </button>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
-                    ) : (
-                      <p className="empty-text">
-                        No sprints yet. Create one to start planning!
-                      </p>
-                    )}
-                  </div>
-
-                  {activeSprint && (
-                    <div className="active-sprint">
-                      <h4>Active Sprint: {activeSprint.name}</h4>
-                      <p>Goal: {activeSprint.goal || "No goal set"}</p>
-                      <div className="progress-bar">
-                        <div
-                          className="progress"
-                          style={{
-                            width: `${
-                              (activeSprint.userStories.reduce(
-                                (sum, us) => sum + us.effortPoints,
-                                0
-                              ) /
-                                activeSprint.capacity) *
-                              100
-                            }%`,
-                          }}
-                        ></div>
-                      </div>
-                      <p>
-                        Capacity:{" "}
-                        {activeSprint.userStories.reduce(
-                          (sum, us) => sum + us.effortPoints,
-                          0
-                        )}{" "}
-                        / {activeSprint.capacity} pts
-                      </p>
-                      <div className="story-list">
-                        {activeSprint.userStories.map((story) => (
-                          <div key={story.id} className="story-card">
-                            <div className="story-info">
-                              <span className="story-title">{story.name}</span>
-                              <span className="effort">
-                                {story.effortPoints} pts
-                              </span>
-                            </div>
-                            <button
-                              onClick={() => setSelectedUserStoryId(story.id)}
-                              className="action-btn task"
-                            >
-                              + Task
-                            </button>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>
