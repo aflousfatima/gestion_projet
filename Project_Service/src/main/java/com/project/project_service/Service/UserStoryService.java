@@ -35,35 +35,25 @@ public class UserStoryService {
         System.out.println("Données reçues: " + request);
 
         String userIdStr = authClient.decodeToken(token);
-        System.out.println("UserId extrait du token: " + userIdStr);
         if (userIdStr == null) {
             throw new IllegalArgumentException("Token invalide ou utilisateur non identifié");
         }
 
         Projet projet = projetRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
-        System.out.println("Projet trouvé: " + projet.getName());
 
         UserStory userStory = new UserStory();
         userStory.setProject(projet);
         userStory.setTitle(request.title());
         userStory.setDescription(request.description());
-        try {
-            userStory.setPriority(Priority.valueOf(request.priority()));
-        } catch (IllegalArgumentException e) {
-            System.out.println("Erreur: Priorité invalide - " + request.priority());
-            throw e;
-        }
+        userStory.setPriority(Priority.valueOf(request.priority()));
         userStory.setEffortPoints(request.effortPoints());
         userStory.setCreatedBy(userIdStr);
-        userStory.setStatus(Status.BACKLOG);
+        userStory.setStatus(Status.valueOf(request.status())); // Utiliser la valeur envoyée par le frontend
 
         UserStory savedStory = userStoryRepository.save(userStory);
-        System.out.println("User Story sauvegardée: " + savedStory.getId());
         return new UserStoryDTO(savedStory);
     }
-
-
     // New method to update a user story
     public UserStoryDTO updateUserStory(Long projectId, Long userStoryId, UserStoryRequest request, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -83,16 +73,13 @@ public class UserStoryService {
 
         userStory.setTitle(request.title());
         userStory.setDescription(request.description());
-        try {
-            userStory.setPriority(Priority.valueOf(request.priority()));
-        } catch (IllegalArgumentException e) {
-            System.out.println("Erreur: Priorité invalide - " + request.priority());
-            throw e;
-        }
+        userStory.setPriority(Priority.valueOf(request.priority()));
         userStory.setEffortPoints(request.effortPoints());
+        // Ne pas modifier status ici
 
         UserStory updatedStory = userStoryRepository.save(userStory);
-        return new UserStoryDTO(updatedStory);    }
+        return new UserStoryDTO(updatedStory);
+    }
     // New method to fetch all user stories for a project
     public List<UserStoryDTO> getUserStoriesByProjectId(Long projectId) {
         Projet projet = projetRepository.findById(projectId)
@@ -122,7 +109,6 @@ public class UserStoryService {
 
         Projet projet = projetRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
-
         UserStory userStory = userStoryRepository.findById(userStoryId)
                 .orElseThrow(() -> new RuntimeException("User Story non trouvée avec l'ID: " + userStoryId));
 
@@ -145,6 +131,30 @@ public class UserStoryService {
         }
 
         userStory.setSprint(sprint);
+        userStory.setStatus(Status.IN_SPRINT); // Changer à IN PROGRESS lorsqu’assignée
+        UserStory updatedUserStory = userStoryRepository.save(userStory);
+        return new UserStoryDTO(updatedUserStory);
+    }
+
+    // Nouvelle méthode pour retirer une user story d'un sprint
+    public UserStoryDTO removeUserStoryFromSprint(Long projectId, Long userStoryId, String token) {
+        String userIdStr = authClient.decodeToken(token);
+        if (userIdStr == null) {
+            throw new IllegalArgumentException("Token invalide ou utilisateur non identifié");
+        }
+
+        Projet projet = projetRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
+        UserStory userStory = userStoryRepository.findById(userStoryId)
+                .orElseThrow(() -> new RuntimeException("User Story non trouvée avec l'ID: " + userStoryId));
+
+        if (!userStory.getProject().getId().equals(projectId)) {
+            throw new RuntimeException("La User Story n'appartient pas à ce projet");
+        }
+
+        // Retirer le sprint (mettre à null)
+        userStory.setSprint(null);
+        userStory.setStatus(Status.BACKLOG); // Remettre à "BACKLOG" lorsqu'elle est retirée
         UserStory updatedUserStory = userStoryRepository.save(userStory);
         return new UserStoryDTO(updatedUserStory);
     }

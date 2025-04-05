@@ -92,4 +92,19 @@ public class UserStoryController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
     }
+
+    @PutMapping("/{projectId}/user-stories/{userStoryId}/remove-sprint")
+    public ResponseEntity<UserStoryDTO> removeUserStoryFromSprint(
+            @PathVariable Long projectId,
+            @PathVariable Long userStoryId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            UserStoryDTO updatedUserStory = userStoryService.removeUserStoryFromSprint(projectId, userStoryId, authorizationHeader);
+            return ResponseEntity.ok(updatedUserStory);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
 }
