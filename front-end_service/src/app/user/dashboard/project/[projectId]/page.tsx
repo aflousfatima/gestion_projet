@@ -52,6 +52,7 @@ interface Sprint {
   startDate: string;
   endDate: string;
   capacity: number;
+  goal: string;
   userStories: UserStory[];
 }
 
@@ -88,7 +89,6 @@ export default function Tasks() {
   const [editingUserStory, setEditingUserStory] = useState<UserStory | null>(
     null
   );
-  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(
@@ -109,16 +109,7 @@ export default function Tasks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterMyTasks, setFilterMyTasks] = useState(false);
-  const [sprint, setSprint] = useState<Sprint>({
-    id: 0,
-    name: "",
-    startDate: "",
-    endDate: "",
-    capacity: 0,
-    userStories: [],
-  });
-  // Added sprints state
-  const [sprints, setSprints] = useState<Sprint[]>([]);
+
   // États pour Agile
   const [isAgilePanelOpen, setIsAgilePanelOpen] = useState(false);
   const [backlog, setBacklog] = useState<UserStory[]>([]);
@@ -130,7 +121,18 @@ export default function Tasks() {
     priority: "",
     effortPoints: 0,
   });
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>();
+  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
+  const [newSprint, setNewSprint] = useState<Sprint>({
+    id: 0,
+    name: "",
+    startDate: "",
+    endDate: "",
+    goal: "",
+    capacity: 0,
+    userStories: [],
+  });
+  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
   const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(
     null
   ); // Pour le mini-modal
@@ -145,20 +147,13 @@ export default function Tasks() {
     setEditingSprint(sprint); // Pré-remplit le formulaire avec les données du Sprint
   };
 
-  // Fonction pour soumettre les modifications d'un Sprint
-  const handleUpdateSprint = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!editingSprint) return;
+  // Fonction pour supprimer un Sprint
+  const handleDeleteSprint = async (id: number) => {
+    if (!confirm("Voulez-vous vraiment supprimer ce Sprint ?")) return;
 
     try {
-      const response = await axiosInstance.put(
-        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${editingSprint.id}`,
-        {
-          name: editingSprint.name,
-          startDate: editingSprint.startDate,
-          endDate: editingSprint.endDate,
-          capacity: editingSprint.capacity,
-        },
+      await axiosInstance.delete(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${id}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -166,20 +161,13 @@ export default function Tasks() {
         }
       );
 
-      const updatedSprint = response.data;
-      if (activeSprint && activeSprint.id === updatedSprint.id) {
-        setActiveSprint({
-          ...activeSprint,
-          name: updatedSprint.name,
-          startDate: updatedSprint.startDate,
-          endDate: updatedSprint.endDate,
-          capacity: updatedSprint.capacity,
-        });
+      if (activeSprint && activeSprint.id === id) {
+        setActiveSprint(null);
       }
-      setEditingSprint(null); // Ferme le formulaire d'édition
+      // Si vous avez une liste de sprints, mettez-la à jour ici
     } catch (error) {
-      console.error("Erreur lors de la mise à jour du Sprint :", error);
-      alert("Erreur lors de la mise à jour du Sprint.");
+      console.error("Erreur lors de la suppression du Sprint :", error);
+      alert("Erreur lors de la suppression du Sprint.");
     }
   };
 
@@ -315,39 +303,37 @@ export default function Tasks() {
     }
   };
 
-  // Fetch user stories from backend
   useEffect(() => {
     const fetchUserStories = async () => {
-      if (authLoading || !accessToken || !projectId) return;
+      if (authLoading || !accessToken || !projectId) {
+        console.log("Conditions non remplies : ", { authLoading, accessToken, projectId });
+        return;
+      }
+      const url = `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`;
+      console.log("Appel de l’API User Stories avec URL :", url);
       try {
-        const response = await axiosInstance.get(
-          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
+        const response = await axiosInstance.get(url, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        console.log("Réponse de l’API :", response.data);
         const userStories = response.data.map((us: any) => ({
           id: us.id,
           name: us.title,
           description: us.description,
           priority: us.priority,
           effortPoints: us.effortPoints,
-          sprintId: us.sprintId, // Assuming this might be included in the response
+          sprintId: us.sprintId,
         }));
         setBacklog(userStories);
       } catch (error) {
-        console.error(
-          "Erreur lors de la récupération des User Stories :",
-          error
-        );
+        console.error("Erreur lors de la récupération des User Stories :", error);
         alert("Erreur lors du chargement des User Stories.");
       }
     };
     fetchUserStories();
   }, [accessToken, authLoading, axiosInstance, projectId]);
-
   // Update user story
   const handleUpdateUserStory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -437,31 +423,26 @@ export default function Tasks() {
     }
   };
 
-  // Fetch sprints from backend
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) setIsModalOpen(false);
+  };
+
   useEffect(() => {
     const fetchSprints = async () => {
       if (authLoading || !accessToken || !projectId) return;
       try {
         const response = await axiosInstance.get(
           `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
+          { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         const fetchedSprints = response.data.map((s: any) => ({
           id: s.id,
           name: s.name,
           startDate: s.startDate,
           endDate: s.endDate,
-          capacity: s.capacity || 0, // Assuming goal is repurposed as capacity
-          userStories: s.userStories.map((us: any) => ({
-            id: us.id,
-            name: us.title,
-            description: us.description,
-            priority: us.priority,
-            effortPoints: us.effortPoints,
-            sprintId: us.sprintId,
-          })),
+          goal: s.goal,
+          capacity: s.capacity,
+          userStories: [], // À remplir si l'API renvoie les user stories
         }));
         setSprints(fetchedSprints);
       } catch (error) {
@@ -472,77 +453,67 @@ export default function Tasks() {
     fetchSprints();
   }, [accessToken, authLoading, axiosInstance, projectId]);
 
-  // Create or update sprint
-  const handleSprintSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Gestionnaire pour ajouter un sprint
+  const handleAddSprint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const sprintData = {
-      name: (form.elements.namedItem("name") as HTMLInputElement).value,
-      startDate: (form.elements.namedItem("startDate") as HTMLInputElement)
-        .value,
-      endDate: (form.elements.namedItem("endDate") as HTMLInputElement).value,
-      capacity:
-        parseInt(
-          (form.elements.namedItem("capacity") as HTMLInputElement).value
-        ) || 0,
-    };
-
     try {
-      if (editingSprint) {
-        // Update sprint
-        const response = await axiosInstance.put(
-          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${editingSprint.id}`,
-          sprintData,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const updatedSprint = {
-          ...response.data,
-          userStories: editingSprint.userStories,
-        };
-        setSprints(
-          sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s))
-        );
-        if (activeSprint?.id === updatedSprint.id)
-          setActiveSprint(updatedSprint);
-        setEditingSprint(null);
-      } else {
-        // Create sprint
-        const response = await axiosInstance.post(
-          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
-          sprintData,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        const newSprint = { ...response.data, userStories: [] };
-        setSprints([...sprints, newSprint]);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la gestion du Sprint :", error);
-      alert(
-        `Erreur lors de la ${
-          editingSprint ? "mise à jour" : "création"
-        } du Sprint.`
-      );
-    }
-  };
-
-  // Delete sprint
-  const handleDeleteSprint = async (id: number) => {
-    if (!confirm("Voulez-vous vraiment supprimer ce Sprint ?")) return;
-    try {
-      await axiosInstance.delete(
-        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${id}`,
+      const response = await axiosInstance.post(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
+        {
+          name: newSprint.name,
+          startDate: newSprint.startDate,
+          endDate: newSprint.endDate,
+          goal: newSprint.goal,
+          capacity: newSprint.capacity,
+        },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      setSprints(sprints.filter((s) => s.id !== id));
-      if (activeSprint?.id === id) setActiveSprint(null);
+      const createdSprint = { ...response.data, userStories: [] };
+      setSprints([...sprints, createdSprint]);
+      setNewSprint({
+        id: 0,
+        name: "",
+        startDate: "",
+        endDate: "",
+        goal: "",
+        capacity: 0,
+        userStories: [],
+      }); // Réinitialiser après création
     } catch (error) {
-      console.error("Erreur lors de la suppression du Sprint :", error);
-      alert("Erreur lors de la suppression du Sprint.");
+      console.error("Erreur lors de la création du Sprint :", error);
+      alert("Erreur lors de la création du Sprint.");
     }
   };
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) setIsModalOpen(false);
+  // Gestionnaire pour mettre à jour un sprint
+  const handleUpdateSprint = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingSprint) return;
+    try {
+      const response = await axiosInstance.put(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${editingSprint.id}`,
+        {
+          name: editingSprint.name,
+          startDate: editingSprint.startDate,
+          endDate: editingSprint.endDate,
+          goal: editingSprint.goal,
+          capacity: editingSprint.capacity,
+        },
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const updatedSprint = {
+        ...response.data,
+        userStories: editingSprint.userStories,
+      };
+      setSprints(
+        sprints.map((s) => (s.id === updatedSprint.id ? updatedSprint : s))
+      );
+      if (activeSprint?.id === updatedSprint.id) setActiveSprint(updatedSprint);
+      setEditingSprint(null); // Fermer le formulaire après mise à jour
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du Sprint :", error);
+      alert("Erreur lors de la mise à jour du Sprint.");
+    }
   };
 
   const getTasksByStatus = (status: "TO DO" | "IN PROGRESS" | "DONE") => {
@@ -1046,18 +1017,20 @@ export default function Tasks() {
                           min="0"
                         />
                       </div>
-                      <button type="submit" className="action-btn primary">
-                        {editingUserStory ? "Update" : "Add"}
-                      </button>
-                      {editingUserStory && (
-                        <button
-                          type="button"
-                          className="action-btn secondary"
-                          onClick={() => setEditingUserStory(null)}
-                        >
-                          Cancel
+                      <div className="twobuttons">
+                        <button type="submit" className="action-btn primary">
+                          {editingUserStory ? "Update" : "Add"}
                         </button>
-                      )}
+                        {editingUserStory && (
+                          <button
+                            type="button"
+                            className="action-btn secondary-cancel"
+                            onClick={() => setEditingUserStory(null)}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </form>
                   </div>
 
@@ -1104,44 +1077,73 @@ export default function Tasks() {
                                     <i className="fa fa-trash"></i>
                                   </button>
                                   <select
-                                    onChange={(e) => {
+                                    onChange={async (e) => {
                                       const sprintId = parseInt(e.target.value);
                                       if (sprintId) {
                                         const sprint = sprints.find(
                                           (s) => s.id === sprintId
                                         );
-                                        if (
-                                          sprint &&
-                                          sprint.capacity >= story.effortPoints
-                                        ) {
-                                          const updatedStory = {
-                                            ...story,
-                                            sprintId,
-                                          };
-                                          setBacklog(
-                                            backlog.map((us) =>
-                                              us.id === story.id
-                                                ? updatedStory
-                                                : us
-                                            )
-                                          );
-                                          setSprints(
-                                            sprints.map((s) =>
-                                              s.id === sprintId
-                                                ? {
-                                                    ...s,
-                                                    userStories: [
-                                                      ...s.userStories,
-                                                      updatedStory,
-                                                    ],
+                                        if (sprint) {
+                                          const currentEffort =
+                                            sprint.userStories.reduce(
+                                              (sum, us) =>
+                                                sum + us.effortPoints,
+                                              0
+                                            );
+                                          if (
+                                            currentEffort +
+                                              story.effortPoints <=
+                                            sprint.capacity
+                                          ) {
+                                            try {
+                                              const response =
+                                                await axiosInstance.put(
+                                                  `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
+                                                  {},
+                                                  {
+                                                    headers: {
+                                                      Authorization: `Bearer ${accessToken}`,
+                                                    },
                                                   }
-                                                : s
-                                            )
-                                          );
-                                        } else {
-                                          alert(
-                                            "Sprint capacity insufficient!"
-                                          );
+                                                );
+                                              const updatedStory = {
+                                                ...story,
+                                                sprintId,
+                                              };
+                                              setBacklog(
+                                                backlog.map((us) =>
+                                                  us.id === story.id
+                                                    ? updatedStory
+                                                    : us
+                                                )
+                                              );
+                                              setSprints(
+                                                sprints.map((s) =>
+                                                  s.id === sprintId
+                                                    ? {
+                                                        ...s,
+                                                        userStories: [
+                                                          ...s.userStories,
+                                                          updatedStory,
+                                                        ],
+                                                      }
+                                                    : s
+                                                )
+                                              );
+                                            } catch (error) {
+                                              console.error(
+                                                "Erreur lors de l'assignation au Sprint :",
+                                                error
+                                              );
+                                              alert(
+                                                "Erreur lors de l'assignation de la User Story au Sprint."
+                                              );
+                                            }
+                                          } else {
+                                            alert(
+                                              "Sprint capacity insufficient!"
+                                            );
+                                          }
                                         }
                                       }
                                     }}
@@ -1197,61 +1199,113 @@ export default function Tasks() {
               </div>
               {expandedSection === "sprints" && (
                 <div className="section-body">
-                  {/* Formulaire */}
                   <div className="sprint-form">
                     <h4>{editingSprint ? "Edit Sprint" : "New Sprint"}</h4>
-                    <form onSubmit={handleSprintSubmit} className="modern-form">
+                    <form
+                      onSubmit={
+                        editingSprint ? handleUpdateSprint : handleAddSprint
+                      }
+                      className="modern-form"
+                    >
                       <input
                         type="text"
                         name="name"
                         placeholder="Sprint Name"
-                        value={editingSprint ? editingSprint.name : ""}
+                        value={
+                          editingSprint ? editingSprint.name : newSprint.name
+                        }
                         onChange={(e) =>
-                          editingSprint &&
-                          setEditingSprint({
-                            ...editingSprint,
-                            name: e.target.value,
-                          })
+                          editingSprint
+                            ? setEditingSprint({
+                                ...editingSprint,
+                                name: e.target.value,
+                              })
+                            : setNewSprint({
+                                ...newSprint,
+                                name: e.target.value,
+                              })
                         }
                         required
                       />
                       <input
                         type="date"
                         name="startDate"
-                        value={editingSprint ? editingSprint.startDate : ""}
+                        value={
+                          editingSprint
+                            ? editingSprint.startDate
+                            : newSprint.startDate
+                        }
                         onChange={(e) =>
-                          editingSprint &&
-                          setEditingSprint({
-                            ...editingSprint,
-                            startDate: e.target.value,
-                          })
+                          editingSprint
+                            ? setEditingSprint({
+                                ...editingSprint,
+                                startDate: e.target.value,
+                              })
+                            : setNewSprint({
+                                ...newSprint,
+                                startDate: e.target.value,
+                              })
                         }
                         required
                       />
                       <input
                         type="date"
                         name="endDate"
-                        value={editingSprint ? editingSprint.endDate : ""}
+                        value={
+                          editingSprint
+                            ? editingSprint.endDate
+                            : newSprint.endDate
+                        }
                         onChange={(e) =>
-                          editingSprint &&
-                          setEditingSprint({
-                            ...editingSprint,
-                            endDate: e.target.value,
-                          })
+                          editingSprint
+                            ? setEditingSprint({
+                                ...editingSprint,
+                                endDate: e.target.value,
+                              })
+                            : setNewSprint({
+                                ...newSprint,
+                                endDate: e.target.value,
+                              })
                         }
                         required
+                      />
+                      <textarea
+                        name="goal"
+                        placeholder="Sprint| Sprint Goal"
+                        value={
+                          editingSprint ? editingSprint.goal : newSprint.goal
+                        }
+                        onChange={(e) =>
+                          editingSprint
+                            ? setEditingSprint({
+                                ...editingSprint,
+                                goal: e.target.value,
+                              })
+                            : setNewSprint({
+                                ...newSprint,
+                                goal: e.target.value,
+                              })
+                        }
                       />
                       <input
                         type="number"
                         name="capacity"
                         placeholder="Capacity (pts)"
-                        value={editingSprint ? editingSprint.capacity : ""}
+                        value={
+                          editingSprint
+                            ? editingSprint.capacity
+                            : newSprint.capacity
+                        }
                         onChange={(e) =>
-                          editingSprint &&
-                          setEditingSprint({
-                            ...editingSprint,
-                            capacity: parseInt(e.target.value) || 0,
-                          })
+                          editingSprint
+                            ? setEditingSprint({
+                                ...editingSprint,
+                                capacity: parseInt(e.target.value) || 0,
+                              })
+                            : setNewSprint({
+                                ...newSprint,
+                                capacity: parseInt(e.target.value) || 0,
+                              })
                         }
                         min="0"
                         required
@@ -1271,7 +1325,6 @@ export default function Tasks() {
                     </form>
                   </div>
 
-                  {/* Séparateur et Liste */}
                   <div className="section-divider">
                     <span>Sprints List</span>
                   </div>
@@ -1282,6 +1335,7 @@ export default function Tasks() {
                           <tr>
                             <th>Name</th>
                             <th>Dates</th>
+                            <th>Goal</th>
                             <th>Capacity</th>
                             <th>Stories</th>
                             <th>Actions</th>
@@ -1308,6 +1362,7 @@ export default function Tasks() {
                                   }
                                 )}
                               </td>
+                              <td>{sprint.goal || "No goal set"}</td>
                               <td>{sprint.capacity} pts</td>
                               <td>{sprint.userStories.length}</td>
                               <td className="action-cell">
@@ -1345,22 +1400,33 @@ export default function Tasks() {
                     )}
                   </div>
 
-                  {/* Sprint Actif */}
                   {activeSprint && (
                     <div className="active-sprint">
                       <h4>Active Sprint: {activeSprint.name}</h4>
+                      <p>Goal: {activeSprint.goal || "No goal set"}</p>
                       <div className="progress-bar">
                         <div
                           className="progress"
                           style={{
                             width: `${
-                              (activeSprint.userStories.length /
+                              (activeSprint.userStories.reduce(
+                                (sum, us) => sum + us.effortPoints,
+                                0
+                              ) /
                                 activeSprint.capacity) *
                               100
                             }%`,
                           }}
                         ></div>
                       </div>
+                      <p>
+                        Capacity:{" "}
+                        {activeSprint.userStories.reduce(
+                          (sum, us) => sum + us.effortPoints,
+                          0
+                        )}{" "}
+                        / {activeSprint.capacity} pts
+                      </p>
                       <div className="story-list">
                         {activeSprint.userStories.map((story) => (
                           <div key={story.id} className="story-card">

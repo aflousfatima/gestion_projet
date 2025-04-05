@@ -932,15 +932,31 @@ padding: 1px 10px;
   transform: translateY(-2px);
 }
 
-.action-btn.secondary {
+.action-btn.secondary-cancel {
   background: rgb(163, 159, 155);
   color: #ffffff;
+  width: 90px;
+
 }
 
 .action-btn.secondary:hover {
   background: #d1d5db;
 }
 
+
+.action-btn.secondary {
+  background: rgb(152, 151, 151);
+  color: #ffffff;
+
+}
+
+.action-btn.secondary:hover {
+  background: #d1d5db;
+}
+.twobuttons{
+  display: flex;
+  gap:500px;
+}
 .action-btn.task {
   background: #FF584A;
   color: #fff;
