@@ -40,6 +40,9 @@ public class UserStory {
     @Column(nullable = false)
     private Status status;
 
+    @ManyToOne
+    @JoinColumn(name = "sprint_id")
+    private Sprint sprint;
     public Long getId() {
         return id;
     }
@@ -118,5 +121,13 @@ public class UserStory {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
+    }
+
+    public Sprint getSprint() {
+        return sprint;
+    }
+
+    public void setSprint(Sprint sprint) {
+        this.sprint = sprint;
     }
 }
