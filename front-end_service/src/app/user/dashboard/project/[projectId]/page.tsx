@@ -41,10 +41,19 @@ interface UserStory {
   id: number;
   name: string;
   description: string;
-  status: "BACKLOG" | "IN_SPRINT" | "DONE" | "";
+  status:
+    | "BACKLOG"
+    | "SELECTED_FOR_SPRINT"
+    | "IN_PROGRESS"
+    | "DONE"
+    | "BLOCKED" // Nouveaux statuts
+    | "ON_HOLD"
+    | "CANCELED"
+    | "ARCHIVED";
   priority: "LOW" | "MEDIUM" | "HIGH" | "";
   effortPoints: number;
   sprintId?: number;
+  dependsOn?: number[]; // Ajout pour les dépendances (comme discuté précédemment)
 }
 
 interface Sprint {
@@ -55,6 +64,7 @@ interface Sprint {
   capacity: number;
   goal: string;
   userStories: UserStory[];
+  status: "PLANNED" | "ACTIVE" | "COMPLETED" | "ARCHIVED" | "CANCELED"; // Nouveau champ
 }
 
 const initialTasks: Task[] = [
@@ -83,14 +93,35 @@ const initialTasks: Task[] = [
 export default function Tasks() {
   const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
-  const params = useParams();
   const [backlog, setBacklog] = useState<UserStory[]>([]);
+  const [expandedDependsOn, setExpandedDependsOn] = useState<number | null>(
+    null
+  );
+  const [searchQuery, setSearchQuery] = useState(""); // Nouvel état pour la recherche
+  // Calculer les éléments à afficher avec recherche et pagination
+  const filteredBacklog = backlog
+    .filter((us) => !us.sprintId) // Stories sans sprint
+    .filter((us) => {
+      if (searchQuery === "") return true; // Si pas de recherche, tout afficher
+      const nameMatch = us.name
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      const descMatch = us.description
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase());
+      return nameMatch || descMatch; // Retourner vrai si match dans name ou description
+    });
+  // Reset page to 1 when search query changes (optionnel, pour éviter confusion)
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Revenir à la première page lors d'une nouvelle recherche
+  };
+  const params = useParams();
   const projectId = params.projectId as string;
   const [currentPage, setCurrentPage] = useState(1); // État pour la page actuelle
   const itemsPerPage = 3; // Nombre d'éléments par page
 
   // Calculer les éléments à afficher pour la page actuelle
-  const filteredBacklog = backlog.filter((us) => !us.sprintId); // Stories sans sprint
   const totalItems = filteredBacklog.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage); // Nombre total de pages
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -109,16 +140,90 @@ export default function Tasks() {
       setCurrentPage(currentPage - 1);
     }
   };
+
+  // Ajout des nouvelles fonctions
+  const handleCancelSprint = async (sprintId: number) => {
+    try {
+      const response = await axiosInstance.post(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprintId}/cancel`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const updatedSprint: Sprint = response.data; // SprintDTO retourné par le backend
+      setSprints(
+        sprints.map((s: Sprint) =>
+          s.id === sprintId
+            ? { ...updatedSprint, userStories: [] } // Utilisation des données de l'API
+            : s
+        )
+      );
+      const canceledSprint = sprints.find((s: Sprint) => s.id === sprintId);
+      if (canceledSprint) {
+        const updatedBacklogStories: UserStory[] =
+          canceledSprint.userStories.map((us: UserStory) => ({
+            ...us,
+            status: "BACKLOG",
+            sprintId: undefined,
+          }));
+        setBacklog([...backlog, ...updatedBacklogStories]);
+      }
+      if (activeSprint?.id === sprintId) {
+        setActiveSprint(null); // Désactiver le sprint actif si c'est celui annulé
+      }
+    } catch (error) {
+      console.error("Erreur lors de l'annulation du sprint :", error);
+      alert("Erreur lors de l'annulation du sprint.");
+    }
+  };
+
+  const handleArchiveSprint = async (sprintId: number) => {
+    try {
+      const response = await axiosInstance.post(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprintId}/archive`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      const updatedSprint: Sprint = response.data; // SprintDTO retourné par le backend
+      setSprints(
+        sprints.map(
+          (s: Sprint) => (s.id === sprintId ? { ...updatedSprint } : s) // Utilisation des données de l'API
+        )
+      );
+    } catch (error) {
+      console.error("Erreur lors de l'archivage du sprint :", error);
+      alert("Erreur lors de l'archivage du sprint.");
+    }
+  };
   const [sprints, setSprints] = useState<Sprint[]>([]);
   const [currentSprintPage, setCurrentSprintPage] = useState(1); // État pour la page actuelle des sprints
-
+  const [sprintSearchQuery, setSprintSearchQuery] = useState(""); // Nouvel état pour la recherche des sprints
+  const filteredSprints = sprints.filter((sprint) => {
+    if (sprintSearchQuery === "") return true;
+    const nameMatch = sprint.name
+      ?.toLowerCase()
+      .includes(sprintSearchQuery.toLowerCase());
+    const goalMatch = sprint.goal
+      ?.toLowerCase()
+      .includes(sprintSearchQuery.toLowerCase());
+    return nameMatch || goalMatch;
+  });
+  const handleSprintSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSprintSearchQuery(e.target.value);
+    setCurrentSprintPage(1); // Revenir à la première page lors d'une nouvelle recherche
+  };
   // Calculer les sprints à afficher pour la page actuelle
-  const totalSprintItems = sprints.length;
+  const totalSprintItems = filteredSprints.length;
   const totalSprintPages = Math.ceil(totalSprintItems / itemsPerPage); // Nombre total de pages
   const sprintStartIndex = (currentSprintPage - 1) * itemsPerPage;
   const sprintEndIndex = sprintStartIndex + itemsPerPage;
-  const currentSprints = sprints.slice(sprintStartIndex, sprintEndIndex); // Sprints pour la page actuelle
-
+  const currentSprints = filteredSprints.slice(
+    sprintStartIndex,
+    sprintEndIndex
+  );
   // Handlers pour la pagination des sprints
   const goToNextSprintPage = () => {
     if (currentSprintPage < totalSprintPages) {
@@ -131,6 +236,7 @@ export default function Tasks() {
       setCurrentSprintPage(currentSprintPage - 1);
     }
   };
+
   // Ajout d'un état pour gérer l'édition
   const [editingUserStory, setEditingUserStory] = useState<UserStory | null>(
     null
@@ -168,6 +274,7 @@ export default function Tasks() {
     status: "BACKLOG",
     priority: "",
     effortPoints: 0,
+    dependsOn: [],
   });
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [newSprint, setNewSprint] = useState<Sprint>({
@@ -178,11 +285,26 @@ export default function Tasks() {
     goal: "",
     capacity: 0,
     userStories: [],
+    status: "PLANNED",
   });
-  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
+  const [activeSprint] = useState<Sprint | null>(null);
   const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(
     null
   ); // Pour le mini-modal
+  const setActiveSprint = async (sprint) => {
+    try {
+      const response = await axiosInstance.post(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprint.id}/activate`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      // Mettre à jour l'état local avec le sprint activé
+      setActiveSprint(response.data);
+    } catch (error) {
+      console.error("Erreur lors de l'activation du sprint :", error);
+      alert("Erreur lors de l'activation du sprint.");
+    }
+  };
 
   // Fonction pour éditer une User Story
   const handleEditUserStory = (story: UserStory) => {
@@ -311,6 +433,7 @@ export default function Tasks() {
           priority: newUserStory.priority,
           status: "BACKLOG", // Toujours "BACKLOG" pour une nouvelle user story
           effortPoints: newUserStory.effortPoints,
+          dependsOn: newUserStory.dependsOn || [], // Ajout de dependsOn (vide par défaut)
         },
         {
           headers: {
@@ -329,6 +452,7 @@ export default function Tasks() {
           status: createdUserStory.status, // Récupérer depuis la réponse
           priority: createdUserStory.priority,
           effortPoints: createdUserStory.effortPoints,
+          dependsOn: createdUserStory.dependsOn || [], // Récupérer depuis la réponse
         },
       ]);
       setNewUserStory({
@@ -338,6 +462,7 @@ export default function Tasks() {
         status: "BACKLOG",
         priority: "",
         effortPoints: 0,
+        dependsOn: [], // Réinitialiser avec un tableau vide
       });
     } catch (error) {
       console.error("Erreur lors de la création de la User Story :", error);
@@ -371,6 +496,7 @@ export default function Tasks() {
           priority: us.priority,
           effortPoints: us.effortPoints,
           sprintId: us.sprintId,
+          dependsOn: us.dependsOn || [], // Ajout de dependsOn
         }));
         setBacklog(userStories);
       } catch (error) {
@@ -396,6 +522,7 @@ export default function Tasks() {
           description: editingUserStory.description,
           priority: editingUserStory.priority,
           effortPoints: editingUserStory.effortPoints,
+          dependsOn: editingUserStory.dependsOn || [], // Ajout de dependsOn
           // Ne pas inclure status ici, il reste inchangé sauf via assign/remove
         },
         {
@@ -416,6 +543,7 @@ export default function Tasks() {
                 priority: updatedStory.priority,
                 effortPoints: updatedStory.effortPoints,
                 status: updatedStory.status, // Récupérer depuis la réponse
+                dependsOn: updatedStory.dependsOn || [], // Récupérer depuis la réponse
               }
             : us
         )
@@ -436,6 +564,7 @@ export default function Tasks() {
                   priority: updatedStory.priority,
                   effortPoints: updatedStory.effortPoints,
                   status: updatedStory.status,
+                  dependsOn: updatedStory.dependsOn || [], // Récupérer depuis la réponse
                 }
               : us
           ),
@@ -494,6 +623,7 @@ export default function Tasks() {
           endDate: s.endDate,
           goal: s.goal,
           capacity: s.capacity,
+          status: s.status || "PLANNED", // Ajout du statut, avec "PLANNED" par défaut si absent
           userStories: [], // À remplir si l'API renvoie les user stories
         }));
         setSprints(fetchedSprints);
@@ -516,6 +646,7 @@ export default function Tasks() {
           startDate: newSprint.startDate,
           endDate: newSprint.endDate,
           goal: newSprint.goal,
+          status: "PLANNED", // Toujours "BACKLOG" pour une nouvelle user story
           capacity: newSprint.capacity,
         },
         { headers: { Authorization: `Bearer ${accessToken}` } }
@@ -529,6 +660,7 @@ export default function Tasks() {
         endDate: "",
         goal: "",
         capacity: 0,
+        status: "PLANNED",
         userStories: [],
       }); // Réinitialiser après création
     } catch (error) {
@@ -1091,152 +1223,488 @@ export default function Tasks() {
                     <span>Stories List</span>
                   </div>
                   <div className="story-list">
-                    {filteredBacklog.length > 0 ? (
+                    {backlog.length > 0 ? ( // Vérifier si backlog a des éléments au départ
                       <>
-                        <table className="story-table">
-                          <thead>
-                            <tr>
-                              <th>Title</th>
-                              <th>Priority</th>
-                              <th>Effort</th>
-                              <th>Status</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {currentStories.map((story) => (
-                              <tr key={story.id}>
-                                <td>{story.name}</td>
-                                <td
-                                  className={`priority-${story.priority.toLowerCase()}`}
-                                >
-                                  {story.priority}
-                                </td>
-                                <td>{story.effortPoints} pts</td>
-                                <td>{story.status || "BACKLOG"}</td>
-                                <td className="action-cell">
-                                  <button
-                                    onClick={() => handleEditUserStory(story)}
-                                    className="icon-btn edit"
-                                  >
-                                    <i className="fa fa-edit"></i>
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      handleDeleteUserStory(story.id)
-                                    }
-                                    className="icon-btn delete"
-                                  >
-                                    <i className="fa fa-trash"></i>
-                                  </button>
-                                  <select
-                                    onChange={async (e) => {
-                                      const sprintId = parseInt(e.target.value);
-                                      if (sprintId) {
-                                        const sprint = sprints.find(
-                                          (s) => s.id === sprintId
-                                        );
-                                        if (sprint) {
-                                          const currentEffort =
-                                            sprint.userStories.reduce(
-                                              (sum, us) =>
-                                                sum + us.effortPoints,
-                                              0
-                                            );
-                                          if (
-                                            currentEffort +
-                                              story.effortPoints <=
-                                            sprint.capacity
-                                          ) {
-                                            try {
-                                              await axiosInstance.put(
-                                                `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
-                                                {},
-                                                {
-                                                  headers: {
-                                                    Authorization: `Bearer ${accessToken}`,
-                                                  },
-                                                }
-                                              );
-                                              const updatedStory: UserStory = {
-                                                ...story,
-                                                sprintId,
-                                                status: "IN_SPRINT",
-                                              };
-                                              setBacklog(
-                                                backlog.map((us) =>
-                                                  us.id === story.id
-                                                    ? updatedStory
-                                                    : us
-                                                )
-                                              );
-                                              setSprints(
-                                                sprints.map((s) =>
-                                                  s.id === sprintId
-                                                    ? {
-                                                        ...s,
-                                                        userStories: [
-                                                          ...s.userStories,
-                                                          updatedStory,
-                                                        ],
-                                                      }
-                                                    : s
-                                                )
-                                              );
-                                            } catch (error) {
-                                              console.error(
-                                                "Erreur lors de l'assignation au Sprint :",
-                                                error
-                                              );
-                                              alert(
-                                                "Erreur lors de l'assignation de la User Story au Sprint."
-                                              );
-                                            }
-                                          } else {
-                                            alert(
-                                              "Sprint capacity insufficient!"
-                                            );
-                                          }
-                                        }
-                                      }
-                                    }}
-                                    value=""
-                                    className="sprint-select"
-                                  >
-                                    <option value="">To Sprint</option>
-                                    {sprints.map((sprint) => (
-                                      <option key={sprint.id} value={sprint.id}>
-                                        {sprint.name}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-
-                        {/* Pagination */}
-                        {totalItems > itemsPerPage && (
-                          <div className="pagination-container">
-                            <button
-                              onClick={goToPreviousPage}
-                              disabled={currentPage === 1}
-                              className="pagination-btn"
-                            >
-                              <i className="fa fa-arrow-left"></i> Previous
-                            </button>
-                            <span className="pagination-info">
-                              Page {currentPage} of {totalPages}
-                            </span>
-                            <button
-                              onClick={goToNextPage}
-                              disabled={currentPage === totalPages}
-                              className="pagination-btn"
-                            >
-                              Next <i className="fa fa-arrow-right"></i>
-                            </button>
+                        <div className="search-container">
+                          <div className="search-input-wrapper">
+                            <i className="fa fa-search search-icon"></i>
+                            <input
+                              type="text"
+                              placeholder="Search by title"
+                              value={searchQuery}
+                              onChange={handleSearchChange}
+                              className="search-input"
+                            />
                           </div>
+                        </div>
+
+                        {filteredBacklog.length > 0 ? (
+                          <>
+                            <table className="story-table">
+                              <thead>
+                                <tr>
+                                  <th>Title</th>
+                                  <th>Priority</th>
+                                  <th>Effort</th>
+                                  <th>Status</th>
+                                  <th>Dep</th>
+                                  <th>Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {currentStories.map((story) => (
+                                  <React.Fragment key={story.id}>
+                                    <tr>
+                                      <td>{story.name}</td>
+                                      <td
+                                        className={`priority-${story.priority.toLowerCase()}`}
+                                      >
+                                        {story.priority}
+                                      </td>
+                                      <td>{story.effortPoints} pts</td>
+                                      <td>{story.status || "BACKLOG"}</td>
+                                      <td>
+                                        <button
+                                          className="story-count-btn"
+                                          onClick={() =>
+                                            setExpandedDependsOn(
+                                              expandedDependsOn === story.id
+                                                ? null
+                                                : story.id
+                                            )
+                                          }
+                                        >
+                                          {story.dependsOn?.length || 0}{" "}
+                                          <i
+                                            className={`fa ${
+                                              expandedDependsOn === story.id
+                                                ? "fa-chevron-up"
+                                                : "fa-chevron-down"
+                                            }`}
+                                          ></i>
+                                        </button>
+                                      </td>
+                                      <td className="action-cell">
+                                        <button
+                                          onClick={() =>
+                                            handleEditUserStory(story)
+                                          }
+                                          className="icon-btn edit"
+                                        >
+                                          <i className="fa fa-edit"></i>
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteUserStory(story.id)
+                                          }
+                                          className="icon-btn delete"
+                                        >
+                                          <i className="fa fa-trash"></i>
+                                        </button>
+                                        <select
+                                          onChange={async (e) => {
+                                            const sprintId = parseInt(
+                                              e.target.value
+                                            );
+                                            if (sprintId) {
+                                              const sprint = sprints.find(
+                                                (s) => s.id === sprintId
+                                              );
+                                              if (sprint) {
+                                                const currentEffort =
+                                                  sprint.userStories.reduce(
+                                                    (sum, us) =>
+                                                      sum + us.effortPoints,
+                                                    0
+                                                  );
+                                                if (
+                                                  currentEffort +
+                                                    story.effortPoints <=
+                                                  sprint.capacity
+                                                ) {
+                                                  try {
+                                                    const response =
+                                                      await axiosInstance.put(
+                                                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
+                                                        {},
+                                                        {
+                                                          headers: {
+                                                            Authorization: `Bearer ${accessToken}`,
+                                                          },
+                                                        }
+                                                      );
+                                                    const updatedStory: UserStory =
+                                                      {
+                                                        ...story,
+                                                        sprintId,
+                                                        status:
+                                                          sprint.status ===
+                                                          "ACTIVE"
+                                                            ? "IN_PROGRESS"
+                                                            : "SELECTED_FOR_SPRINT",
+                                                      };
+                                                    setBacklog(
+                                                      backlog.map((us) =>
+                                                        us.id === story.id
+                                                          ? updatedStory
+                                                          : us
+                                                      )
+                                                    );
+                                                    setSprints(
+                                                      sprints.map((s) =>
+                                                        s.id === sprintId
+                                                          ? {
+                                                              ...s,
+                                                              userStories: [
+                                                                ...s.userStories,
+                                                                updatedStory,
+                                                              ],
+                                                            }
+                                                          : s
+                                                      )
+                                                    );
+                                                  } catch (error) {
+                                                    console.error(
+                                                      "Erreur lors de l'assignation au Sprint :",
+                                                      error
+                                                    );
+                                                    alert(
+                                                      "Erreur lors de l'assignation de la User Story au Sprint : " +
+                                                        (error.response?.data
+                                                          ?.message ||
+                                                          error.message)
+                                                    );
+                                                  }
+                                                } else {
+                                                  alert(
+                                                    "Sprint capacity insufficient!"
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          }}
+                                          value=""
+                                          className="sprint-select"
+                                        >
+                                          <option value="">To Sprint</option>
+                                          {sprints.map((sprint) => (
+                                            <option
+                                              key={sprint.id}
+                                              value={sprint.id}
+                                            >
+                                              {sprint.name}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </td>
+                                    </tr>
+                                    {expandedDependsOn === story.id && (
+                                      <tr>
+                                        <td colSpan={6}>
+                                          <div className="sprint-stories-list">
+                                            <table className="inner-story-table">
+                                              <thead>
+                                                <tr>
+                                                  <th>Nom</th>
+                                                  <th>Statut</th>
+                                                  <th>Action</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {story.dependsOn &&
+                                                story.dependsOn.length > 0 ? (
+                                                  story.dependsOn.map(
+                                                    (depId) => {
+                                                      const depStory =
+                                                        backlog.find(
+                                                          (us) =>
+                                                            us.id === depId
+                                                        );
+                                                      return (
+                                                        <tr key={depId}>
+                                                          <td>
+                                                            {depStory
+                                                              ? depStory.name
+                                                              : `US${depId}`}
+                                                          </td>
+                                                          <td>
+                                                            {depStory
+                                                              ? depStory.status
+                                                              : "Inconnu"}
+                                                            {depStory &&
+                                                              depStory.status !==
+                                                                "DONE" && (
+                                                                <span className="blocked-indicator">
+                                                                  {" "}
+                                                                  (Bloque)
+                                                                </span>
+                                                              )}
+                                                          </td>
+                                                          <td>
+                                                            <div className="action-cell-inner">
+                                                              <button
+                                                                className="icon-btn delete"
+                                                                onClick={async () => {
+                                                                  const newDependsOn =
+                                                                    (
+                                                                      story.dependsOn ||
+                                                                      []
+                                                                    ).filter(
+                                                                      (id) =>
+                                                                        id !==
+                                                                        depId
+                                                                    );
+                                                                  try {
+                                                                    const response =
+                                                                      await axiosInstance.put(
+                                                                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                                                                        {
+                                                                          dependsOn:
+                                                                            newDependsOn,
+                                                                        },
+                                                                        {
+                                                                          headers:
+                                                                            {
+                                                                              Authorization: `Bearer ${accessToken}`,
+                                                                            },
+                                                                        }
+                                                                      );
+                                                                    const updatedStory =
+                                                                      response.data; // Retourne UserStoryDTO avec statut recalculé
+                                                                    setBacklog(
+                                                                      backlog.map(
+                                                                        (us) =>
+                                                                          us.id ===
+                                                                          story.id
+                                                                            ? updatedStory
+                                                                            : us
+                                                                      )
+                                                                    );
+                                                                  } catch (error) {
+                                                                    console.error(
+                                                                      "Erreur lors de la suppression de la dépendance :",
+                                                                      error
+                                                                    );
+                                                                    alert(
+                                                                      "Erreur lors de la suppression de la dépendance."
+                                                                    );
+                                                                  }
+                                                                }}
+                                                              >
+                                                                <i className="fa fa-times"></i>
+                                                              </button>
+                                                              <select
+                                                                onChange={async (
+                                                                  e
+                                                                ) => {
+                                                                  const newDepId =
+                                                                    parseInt(
+                                                                      e.target
+                                                                        .value
+                                                                    );
+                                                                  if (
+                                                                    newDepId
+                                                                  ) {
+                                                                    const newDependsOn =
+                                                                      [
+                                                                        ...(story.dependsOn ||
+                                                                          []),
+                                                                        newDepId,
+                                                                      ];
+                                                                    try {
+                                                                      const response =
+                                                                        await axiosInstance.put(
+                                                                          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                                                                          {
+                                                                            dependsOn:
+                                                                              newDependsOn,
+                                                                          },
+                                                                          {
+                                                                            headers:
+                                                                              {
+                                                                                Authorization: `Bearer ${accessToken}`,
+                                                                              },
+                                                                          }
+                                                                        );
+                                                                      const updatedStory =
+                                                                        response.data;
+                                                                      setBacklog(
+                                                                        backlog.map(
+                                                                          (
+                                                                            us
+                                                                          ) =>
+                                                                            us.id ===
+                                                                            story.id
+                                                                              ? updatedStory
+                                                                              : us
+                                                                        )
+                                                                      );
+                                                                      e.target.value =
+                                                                        ""; // Réinitialiser le select
+                                                                    } catch (error) {
+                                                                      console.error(
+                                                                        "Erreur lors de l’ajout de la dépendance :",
+                                                                        error
+                                                                      );
+                                                                      alert(
+                                                                        "Erreur lors de l’ajout de la dépendance."
+                                                                      );
+                                                                    }
+                                                                  }
+                                                                }}
+                                                                value=""
+                                                              >
+                                                                <option value="">
+                                                                  Add dependency
+                                                                </option>
+                                                                {backlog
+                                                                  .filter(
+                                                                    (us) =>
+                                                                      us.id !==
+                                                                        story.id &&
+                                                                      !story.dependsOn?.includes(
+                                                                        us.id
+                                                                      )
+                                                                  )
+                                                                  .map((us) => (
+                                                                    <option
+                                                                      key={
+                                                                        us.id
+                                                                      }
+                                                                      value={
+                                                                        us.id
+                                                                      }
+                                                                    >
+                                                                      {us.name}
+                                                                    </option>
+                                                                  ))}
+                                                              </select>
+                                                            </div>
+                                                          </td>
+                                                        </tr>
+                                                      );
+                                                    }
+                                                  )
+                                                ) : (
+                                                  <tr>
+                                                    <td colSpan={2}>
+                                                      Aucune dépendance
+                                                    </td>
+                                                    <td>
+                                                      <select
+                                                        onChange={async (e) => {
+                                                          const newDepId =
+                                                            parseInt(
+                                                              e.target.value
+                                                            );
+                                                          if (newDepId) {
+                                                            const newDependsOn =
+                                                              [
+                                                                ...(story.dependsOn ||
+                                                                  []),
+                                                                newDepId,
+                                                              ];
+                                                            try {
+                                                              const response =
+                                                                await axiosInstance.put(
+                                                                  `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                                                                  {
+                                                                    dependsOn:
+                                                                      newDependsOn,
+                                                                  },
+                                                                  {
+                                                                    headers: {
+                                                                      Authorization: `Bearer ${accessToken}`,
+                                                                    },
+                                                                  }
+                                                                );
+                                                              const updatedStory =
+                                                                response.data;
+                                                              setBacklog(
+                                                                backlog.map(
+                                                                  (us) =>
+                                                                    us.id ===
+                                                                    story.id
+                                                                      ? updatedStory
+                                                                      : us
+                                                                )
+                                                              );
+                                                              e.target.value =
+                                                                "";
+                                                            } catch (error) {
+                                                              console.error(
+                                                                "Erreur lors de l’ajout de la dépendance :",
+                                                                error
+                                                              );
+                                                              alert(
+                                                                "Erreur lors de l’ajout de la dépendance."
+                                                              );
+                                                            }
+                                                          }
+                                                        }}
+                                                        value=""
+                                                      >
+                                                        <option value="">
+                                                          Add dependency
+                                                        </option>
+                                                        {backlog
+                                                          .filter(
+                                                            (us) =>
+                                                              us.id !==
+                                                                story.id &&
+                                                              !story.dependsOn?.includes(
+                                                                us.id
+                                                              )
+                                                          )
+                                                          .map((us) => (
+                                                            <option
+                                                              key={us.id}
+                                                              value={us.id}
+                                                            >
+                                                              {us.name}
+                                                            </option>
+                                                          ))}
+                                                      </select>
+                                                    </td>
+                                                  </tr>
+                                                )}
+                                              </tbody>
+                                            </table>
+                                          </div>
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </React.Fragment>
+                                ))}
+                              </tbody>
+                            </table>
+
+                            {totalItems > itemsPerPage && (
+                              <div className="pagination-container">
+                                <button
+                                  onClick={goToPreviousPage}
+                                  disabled={currentPage === 1}
+                                  className="pagination-btn"
+                                >
+                                  <i className="fa fa-arrow-left"></i> Previous
+                                </button>
+                                <span className="pagination-info">
+                                  Page {currentPage} of {totalPages}
+                                </span>
+                                <button
+                                  onClick={goToNextPage}
+                                  disabled={currentPage === totalPages}
+                                  className="pagination-btn"
+                                >
+                                  Next <i className="fa fa-arrow-right"></i>
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <p className="empty-text">
+                            No matching stories found.
+                          </p>
                         )}
                       </>
                     ) : (
@@ -1387,18 +1855,20 @@ export default function Tasks() {
                         min="0"
                         required
                       />
-                      <button type="submit" className="action-btn primary">
-                        {editingSprint ? "Update" : "Create"}
-                      </button>
-                      {editingSprint && (
-                        <button
-                          type="button"
-                          className="action-btn secondary"
-                          onClick={() => setEditingSprint(null)}
-                        >
-                          Cancel
+                      <div className="twobuttons">
+                        <button type="submit" className="action-btn primary">
+                          {editingSprint ? "Update" : "Create"}
                         </button>
-                      )}
+                        {editingSprint && (
+                          <button
+                            type="button"
+                            className="action-btn secondary"
+                            onClick={() => setEditingSprint(null)}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                     </form>
                   </div>
 
@@ -1406,202 +1876,282 @@ export default function Tasks() {
                     <span>Sprints List</span>
                   </div>
                   <div className="sprint-list">
-      {sprints.length > 0 ? (
-        <>
-          <table className="sprint-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Dates</th>
-                <th>Goal</th>
-                <th>Capacity</th>
-                <th>Stories</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentSprints.map((sprint) => (
-                <React.Fragment key={sprint.id}>
-                  <tr>
-                    <td>{sprint.name}</td>
-                    <td>
-                      {new Date(sprint.startDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "2-digit",
-                      })}{" "}
-                      -{" "}
-                      {new Date(sprint.endDate).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "2-digit",
-                      })}
-                    </td>
-                    <td>{sprint.goal || "No goal set"}</td>
-                    <td>{sprint.capacity} pts</td>
-                    <td>
-                      <button
-                        className="story-count-btn"
-                        onClick={() =>
-                          setExpandedSprintStories(
-                            expandedSprintStories === sprint.id ? null : sprint.id
-                          )
-                        }
-                      >
-                        {sprint.userStories.length}{" "}
-                        <i
-                          className={`fa ${
-                            expandedSprintStories === sprint.id
-                              ? "fa-chevron-up"
-                              : "fa-chevron-down"
-                          }`}
-                        ></i>
-                      </button>
-                    </td>
-                    <td className="action-cell">
-                      <button
-                        onClick={() => handleEditSprint(sprint)}
-                        className="icon-btn edit"
-                      >
-                        <i className="fa fa-edit"></i>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSprint(sprint.id)}
-                        className="icon-btn delete"
-                      >
-                        <i className="fa fa-trash"></i>
-                      </button>
-                      <div className="tooltip-container">
-                        <button
-                          onClick={() => setActiveSprint(sprint)}
-                          className={`icon-btn activate ${
-                            activeSprint?.id === sprint.id ? "active" : ""
-                          }`}
-                        >
-                          <i className="fa fa-play"></i>
-                        </button>
-                        <span className="tooltip-text">Activer ce sprint</span>
-                      </div>
-                    </td>
-                  </tr>
-                  {/* Afficher les user stories si le sprint est "expanded" */}
-                  {expandedSprintStories === sprint.id && (
-                    <tr>
-                      <td colSpan={6}>
-                        <div className="sprint-stories-list">
-                          {sprint.userStories.length > 0 ? (
-                            <table className="inner-story-table">
-                              <thead>
+                    {sprints.length > 0 ? (
+                      <>
+                        {/* Barre de recherche pour les sprints */}
+                        <div className="search-container">
+                          <div className="search-input-wrapper">
+                            <i className="fa fa-search search-icon"></i>
+                            <input
+                              type="text"
+                              placeholder="Search by name"
+                              value={sprintSearchQuery}
+                              onChange={handleSprintSearchChange}
+                              className="search-input"
+                            />
+                          </div>
+                        </div>
+
+                        <table className="sprint-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Dates</th>
+                              <th>Goal</th>
+                              <th>Capacity</th>
+                              <th>Status</th>
+                              <th>Stories</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {currentSprints.map((sprint) => (
+                              <React.Fragment key={sprint.id}>
                                 <tr>
-                                  <th>Name</th>
-                                  <th>Effort (pts)</th>
-                                  <th>Status</th>
-                                  <th>Action</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {sprint.userStories.map((story) => (
-                                  <tr key={story.id}>
-                                    <td>{story.name}</td>
-                                    <td>{story.effortPoints}</td>
-                                    <td>{story.status || "IN_SPRINT"}</td>
-                                    <td>
+                                  <td>{sprint.name}</td>
+                                  <td>
+                                    {new Date(
+                                      sprint.startDate
+                                    ).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "2-digit",
+                                    })}{" "}
+                                    -{" "}
+                                    {new Date(
+                                      sprint.endDate
+                                    ).toLocaleDateString("en-US", {
+                                      month: "short",
+                                      day: "2-digit",
+                                    })}
+                                  </td>
+                                  <td>{sprint.goal || "No goal set"}</td>
+                                  <td>{sprint.capacity} pts</td>
+                                  <td>{sprint.status}</td>
+                                  <td>
+                                    <button
+                                      className="story-count-btn"
+                                      onClick={() =>
+                                        setExpandedSprintStories(
+                                          expandedSprintStories === sprint.id
+                                            ? null
+                                            : sprint.id
+                                        )
+                                      }
+                                    >
+                                      {sprint.userStories.length}{" "}
+                                      <i
+                                        className={`fa ${
+                                          expandedSprintStories === sprint.id
+                                            ? "fa-chevron-up"
+                                            : "fa-chevron-down"
+                                        }`}
+                                      ></i>
+                                    </button>
+                                  </td>
+                                  <td className="action-cell">
+                                    <button
+                                      onClick={() => handleEditSprint(sprint)}
+                                      className="icon-btn edit"
+                                    >
+                                      <i className="fa fa-edit"></i>
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleDeleteSprint(sprint.id)
+                                      }
+                                      className="icon-btn delete"
+                                    >
+                                      <i className="fa fa-trash"></i>
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleCancelSprint(sprint.id)
+                                      }
+                                      className="icon-btn cancel"
+                                      disabled={
+                                        sprint.status === "COMPLETED" ||
+                                        sprint.status === "CANCELED" ||
+                                        sprint.status === "ARCHIVED"
+                                      }
+                                    >
+                                      <i className="fa fa-stop"></i>
+                                    </button>
+                                    <button
+                                      onClick={() =>
+                                        handleArchiveSprint(sprint.id)
+                                      }
+                                      className="icon-btn archive"
+                                      disabled={
+                                        sprint.status !== "COMPLETED" &&
+                                        sprint.status !== "CANCELED"
+                                      }
+                                    >
+                                      <i className="fa fa-archive"></i>
+                                    </button>
+                                    <div className="tooltip-container">
                                       <button
-                                        onClick={async () => {
-                                          try {
-                                            await axiosInstance.put(
-                                              `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/remove-sprint`,
-                                              {},
-                                              {
-                                                headers: {
-                                                  Authorization: `Bearer ${accessToken}`,
-                                                },
-                                              }
-                                            );
-                                            const updatedStory: UserStory = {
-                                              ...story,
-                                              sprintId: undefined,
-                                              status: "BACKLOG",
-                                            };
-                                            setBacklog([...backlog, updatedStory]);
-                                            setSprints(
-                                              sprints.map((s) =>
-                                                s.id === sprint.id
-                                                  ? {
-                                                      ...s,
-                                                      userStories:
-                                                        s.userStories.filter(
-                                                          (us) => us.id !== story.id
-                                                        ),
-                                                    }
-                                                  : s
-                                              )
-                                            );
-                                            if (activeSprint?.id === sprint.id) {
-                                              setActiveSprint({
-                                                ...activeSprint,
-                                                userStories:
-                                                  activeSprint.userStories.filter(
-                                                    (us) => us.id !== story.id
-                                                  ),
-                                              });
-                                            }
-                                          } catch (error) {
-                                            console.error(
-                                              "Erreur lors du retrait du Sprint :",
-                                              error
-                                            );
-                                            alert(
-                                              "Erreur lors du retrait de la User Story du Sprint."
-                                            );
-                                          }
-                                        }}
-                                        className="icon-btn delete"
+                                        onClick={() => setActiveSprint(sprint)}
+                                        className={`icon-btn activate ${
+                                          activeSprint?.id === sprint.id
+                                            ? "active"
+                                            : ""
+                                        }`}
                                       >
-                                        <i className="fa fa-times"></i>
+                                        <i className="fa fa-play"></i>
                                       </button>
+                                      <span className="tooltip-text">
+                                        Activer ce sprint
+                                      </span>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {expandedSprintStories === sprint.id && (
+                                  <tr>
+                                    <td colSpan={6}>
+                                      <div className="sprint-stories-list">
+                                        {sprint.userStories.length > 0 ? (
+                                          <table className="inner-story-table">
+                                            <thead>
+                                              <tr>
+                                                <th>Name</th>
+                                                <th>Effort (pts)</th>
+                                                <th>Status</th>
+                                                <th>Action</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {sprint.userStories.map(
+                                                (story) => (
+                                                  <tr key={story.id}>
+                                                    <td>{story.name}</td>
+                                                    <td>
+                                                      {story.effortPoints}
+                                                    </td>
+                                                    <td>
+                                                      {story.status ||
+                                                        "IN_SPRINT"}
+                                                    </td>
+                                                    <td>
+                                                      <button
+                                                        onClick={async () => {
+                                                          try {
+                                                            await axiosInstance.put(
+                                                              `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/remove-sprint`,
+                                                              {},
+                                                              {
+                                                                headers: {
+                                                                  Authorization: `Bearer ${accessToken}`,
+                                                                },
+                                                              }
+                                                            );
+                                                            const updatedStory: UserStory =
+                                                              {
+                                                                ...story,
+                                                                sprintId:
+                                                                  undefined,
+                                                                status:
+                                                                  "BACKLOG",
+                                                              };
+                                                            setBacklog([
+                                                              ...backlog,
+                                                              updatedStory,
+                                                            ]);
+                                                            setSprints(
+                                                              sprints.map((s) =>
+                                                                s.id ===
+                                                                sprint.id
+                                                                  ? {
+                                                                      ...s,
+                                                                      userStories:
+                                                                        s.userStories.filter(
+                                                                          (
+                                                                            us
+                                                                          ) =>
+                                                                            us.id !==
+                                                                            story.id
+                                                                        ),
+                                                                    }
+                                                                  : s
+                                                              )
+                                                            );
+                                                            if (
+                                                              activeSprint?.id ===
+                                                              sprint.id
+                                                            ) {
+                                                              setActiveSprint({
+                                                                ...activeSprint,
+                                                                userStories:
+                                                                  activeSprint.userStories.filter(
+                                                                    (us) =>
+                                                                      us.id !==
+                                                                      story.id
+                                                                  ),
+                                                              });
+                                                            }
+                                                          } catch (error) {
+                                                            console.error(
+                                                              "Erreur lors du retrait du Sprint :",
+                                                              error
+                                                            );
+                                                            alert(
+                                                              "Erreur lors du retrait de la User Story du Sprint."
+                                                            );
+                                                          }
+                                                        }}
+                                                        className="icon-btn delete"
+                                                      >
+                                                        <i className="fa fa-times"></i>
+                                                      </button>
+                                                    </td>
+                                                  </tr>
+                                                )
+                                              )}
+                                            </tbody>
+                                          </table>
+                                        ) : (
+                                          <p>
+                                            No user stories assigned to this
+                                            sprint.
+                                          </p>
+                                        )}
+                                      </div>
                                     </td>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <p>No user stories assigned to this sprint.</p>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                        </table>
 
-          {/* Pagination pour les sprints */}
-          {totalSprintItems > itemsPerPage && (
-            <div className="pagination-container">
-              <button
-                onClick={goToPreviousSprintPage}
-                disabled={currentSprintPage === 1}
-                className="pagination-btn"
-              >
-                <i className="fa fa-arrow-left"></i> Prev
-              </button>
-              <span className="pagination-info">
-                Page {currentSprintPage} of {totalSprintPages}
-              </span>
-              <button
-                onClick={goToNextSprintPage}
-                disabled={currentSprintPage === totalSprintPages}
-                className="pagination-btn"
-              >
-                Next <i className="fa fa-arrow-right"></i>
-              </button>
-            </div>
-          )}
-        </>
-      ) : (
-        <p className="empty-text">No sprints yet. Create one to start planning!</p>
-      )}
-    </div>
+                        {/* Pagination pour les sprints */}
+                        {totalSprintItems > itemsPerPage && (
+                          <div className="pagination-container">
+                            <button
+                              onClick={goToPreviousSprintPage}
+                              disabled={currentSprintPage === 1}
+                              className="pagination-btn"
+                            >
+                              <i className="fa fa-arrow-left"></i> Prev
+                            </button>
+                            <span className="pagination-info">
+                              Page {currentSprintPage} of {totalSprintPages}
+                            </span>
+                            <button
+                              onClick={goToNextSprintPage}
+                              disabled={currentSprintPage === totalSprintPages}
+                              className="pagination-btn"
+                            >
+                              Next <i className="fa fa-arrow-right"></i>
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="empty-text">
+                        No sprints yet. Create one to start planning!
+                      </p>
+                    )}
+                  </div>
 
                   {activeSprint && (
                     <div className="active-sprint">

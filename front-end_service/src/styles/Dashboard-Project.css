@@ -888,8 +888,8 @@
 }
 
 .action-cell i {
-gap:100px;
-padding: 1px 10px;
+gap:10px;
+padding: 1px 5px;
 }
 
 /* Pour éviter que le dernier ait un espace à droite inutile */
@@ -955,7 +955,7 @@ padding: 1px 10px;
 }
 .twobuttons{
   display: flex;
-  gap:500px;
+  gap:30px;
 }
 .action-btn.task {
   background: #FF584A;
@@ -1283,4 +1283,84 @@ padding: 1px 10px;
 
 .pagination-info:hover {
   transform: scale(1.05);
+}
+
+
+/* Conteneur de la barre de recherche */
+/* Conteneur principal (ajuste selon ton layout global si nécessaire) */
+.search-container {
+  display: flex;
+}
+
+/* Wrapper pour positionner l'icône et l'input */
+.search-input-wrapper {
+  margin-top: -30px;
+  position: relative;
+  margin-left: 370px; /* Déplace tout le wrapper */
+}
+
+/* Icône de recherche */
+.search-icon {
+  position: absolute;
+  transform: translateY(-50%); /* Centrage vertical */
+  font-size: 11px;
+  color: rgba(33, 33, 33, 0.6); /* Ta couleur personnalisée */
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+/* Input de recherche */
+.search-input {
+  padding: 6px 7px 7px 22px; /* Padding gauche pour l’icône */
+  height: 20px; /* Hauteur fixée comme demandé */
+  font-size: 14px;
+  width: 120px; /* Réduit de max-width: 300px à 120px comme tu veux */
+  color: #333;
+  background: #5b5a5a13; /* Fond semi-transparent */
+  border-bottom: 2px solid #a7a6a6; /* Bordure inférieure comme demandé */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+/* Placeholder */
+.search-input::placeholder {
+  color: #999;
+  font-style: italic;
+  font-size: 10px;
+}
+
+
+
+
+
+.depends-btn {
+  background: none;
+  border: none;
+  color: #007bff;
+  cursor: pointer;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.remove-dependency-btn {
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.remove-dependency-btn:hover {
+  background-color: #cc0000;
+}
+
+
+
+
+
+.action-cell-inner{
+gap: 100px;
 }
