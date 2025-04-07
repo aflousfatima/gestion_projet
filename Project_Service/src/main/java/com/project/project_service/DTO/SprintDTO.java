@@ -11,6 +11,8 @@ public class SprintDTO {
     private LocalDate endDate;
     private String goal;
     private int capacity;
+    private String status;
+
     // Constructors
     public SprintDTO() {
     }
@@ -22,6 +24,7 @@ public class SprintDTO {
         this.endDate = sprint.getEndDate();
         this.goal = sprint.getGoal();
         this.capacity=sprint.getCapacity();
+        this.status = sprint.getStatus().name(); // Utilisation de .name() pour convertir l'enum en String
     }
 
     // Getters and Setters
@@ -72,4 +75,13 @@ public class SprintDTO {
     public void setCapacity(int capacity) {
         this.capacity = capacity;
     }
+
+    public String getStatus() { return status; } // Ajout du getter manquant
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+
+
 }

@@ -1,5 +1,7 @@
 package com.project.project_service.Entity;
 
+import com.project.project_service.Enumeration.SprintStatus;
+import com.project.project_service.Enumeration.UserStoryStatus;
 import jakarta.persistence.*;
 import org.w3c.dom.Text;
 
@@ -37,6 +39,10 @@ public class Sprint {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SprintStatus status;
 
     @OneToMany(mappedBy = "sprint", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserStory> userStories = new ArrayList<>();
@@ -77,5 +83,13 @@ public class Sprint {
 
     public void setCapacity(int capacity) {
         this.capacity = capacity;
+    }
+
+    public SprintStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SprintStatus status) {
+        this.status = status;
     }
 }
