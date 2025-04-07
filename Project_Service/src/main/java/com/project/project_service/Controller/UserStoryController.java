@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/projects")
@@ -106,5 +107,16 @@ public class UserStoryController {
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
+    }
+
+    @PutMapping("/{projectId}/user-stories/{userStoryId}/dependencies")
+    public ResponseEntity<UserStoryDTO> updateDependencies(
+            @PathVariable Long projectId,
+            @PathVariable Long userStoryId,
+            @RequestBody Map<String, List<Long>> requestBody,
+            @RequestHeader("Authorization") String token) {
+        List<Long> newDependsOn = requestBody.get("dependsOn");
+        UserStoryDTO updatedStory = userStoryService.updateDependencies(projectId, userStoryId, newDependsOn, token);
+        return ResponseEntity.ok(updatedStory);
     }
 }

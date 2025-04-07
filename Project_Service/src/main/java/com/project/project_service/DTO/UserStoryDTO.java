@@ -2,6 +2,8 @@ package com.project.project_service.DTO;
 
 import com.project.project_service.Entity.UserStory;
 
+import java.util.List;
+
 public class UserStoryDTO {
     private Long id;
     private String title;
@@ -9,6 +11,7 @@ public class UserStoryDTO {
     private String priority;
     private int effortPoints;
     private String status;
+    private List<Long> dependsOn;
     private Long projectId; // Include only the ID, not the full Projet object
     private Long sprintId; // Ajouté pour refléter l’association avec le sprint
     // Constructors, getters, setters
@@ -19,6 +22,7 @@ public class UserStoryDTO {
         this.priority = userStory.getPriority().name();
         this.effortPoints = userStory.getEffortPoints();
         this.status = userStory.getStatus().name();
+        this.dependsOn = userStory.getDependsOn();
         this.projectId = userStory.getProject().getId();
         this.sprintId = userStory.getSprint() != null ? userStory.getSprint().getId() : null; // Vérification explicite
     }
@@ -85,5 +89,13 @@ public class UserStoryDTO {
 
     public void setSprintId(Long sprintId) {
         this.sprintId = sprintId;
+    }
+
+    public List<Long> getDependsOn() {
+        return dependsOn;
+    }
+
+    public void setDependsOn(List<Long> dependsOn) {
+        this.dependsOn = dependsOn;
     }
 }

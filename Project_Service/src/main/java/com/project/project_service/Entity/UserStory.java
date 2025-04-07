@@ -1,10 +1,12 @@
 package com.project.project_service.Entity;
 
 import com.project.project_service.Enumeration.Priority;
-import com.project.project_service.Enumeration.Status;
+import com.project.project_service.Enumeration.UserStoryStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "user_stories")
@@ -38,8 +40,10 @@ public class UserStory {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Status status;
+    private UserStoryStatus status;
 
+    @ElementCollection
+    private List<Long> dependsOn = new ArrayList<>(); // Pour les dépendances
     @ManyToOne
     @JoinColumn(name = "sprint_id")
     private Sprint sprint;
@@ -107,11 +111,11 @@ public class UserStory {
         this.createdAt = createdAt;
     }
 
-    public Status getStatus() {
+    public UserStoryStatus getStatus() {
         return status;
     }
 
-    public void setStatus(Status status) {
+    public void setStatus(UserStoryStatus status) {
         this.status = status;
     }
 
@@ -129,5 +133,13 @@ public class UserStory {
 
     public void setSprint(Sprint sprint) {
         this.sprint = sprint;
+    }
+
+    public List<Long> getDependsOn() {
+        return dependsOn;
+    }
+
+    public void setDependsOn(List<Long> dependsOn) {
+        this.dependsOn = dependsOn;
     }
 }

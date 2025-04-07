@@ -71,4 +71,54 @@ public class SprintController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
+
+    // Endpoint pour annuler un sprint
+    @PostMapping("/${projectId}/sprints/{sprintId}/cancel")
+    public ResponseEntity<SprintDTO> cancelSprint(
+            @PathVariable Long projectId,
+            @PathVariable Long sprintId,
+            @RequestHeader("Authorization") String token) {
+        SprintDTO updatedSprint = sprintService.cancelSprint(projectId, sprintId, token.replace("Bearer ", ""));
+        return ResponseEntity.ok(updatedSprint);
+    }
+
+    // Endpoint pour archiver un sprint
+    @PostMapping("/${projectId}/sprints/{sprintId}/archive")
+    public ResponseEntity<SprintDTO> archiveSprint(
+            @PathVariable Long projectId,
+            @PathVariable Long sprintId,
+            @RequestHeader("Authorization") String token) {
+        SprintDTO updatedSprint = sprintService.archiveSprint(projectId, sprintId, token.replace("Bearer ", ""));
+        return ResponseEntity.ok(updatedSprint);
+    }
+
+    @PostMapping("/{projectId}/sprints/{sprintId}/activate")
+    public ResponseEntity<SprintDTO> activateSprint(
+            @PathVariable Long projectId,
+            @PathVariable Long sprintId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            SprintDTO activatedSprint = sprintService.activateSprint(projectId, sprintId, authorizationHeader);
+            return ResponseEntity.status(HttpStatus.OK).body(activatedSprint);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
+    @PostMapping("/{projectId}/sprints/{sprintId}/update-status")
+    public ResponseEntity<Void> updateSprintStatus(
+            @PathVariable Long projectId,
+            @PathVariable Long sprintId,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            sprintService.updateSprintStatus(projectId, sprintId, authorizationHeader);
+            return ResponseEntity.ok().build(); // 200 OK si tout se passe bien
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401 si token invalide
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // 400 si sprint/projet introuvable ou autre erreur
+        }
+    }
 }
