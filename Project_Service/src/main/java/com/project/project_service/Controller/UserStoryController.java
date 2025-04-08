@@ -119,4 +119,21 @@ public class UserStoryController {
         UserStoryDTO updatedStory = userStoryService.updateDependencies(projectId, userStoryId, newDependsOn, token);
         return ResponseEntity.ok(updatedStory);
     }
+
+    @PutMapping("/{projectId}/user-stories/{userStoryId}/tags")
+    public ResponseEntity<UserStoryDTO> updateTags(
+            @PathVariable Long projectId,
+            @PathVariable Long userStoryId,
+            @RequestBody Map<String, List<String>> requestBody,
+            @RequestHeader("Authorization") String authorizationHeader) {
+        try {
+            List<String> tags = requestBody.get("tags");
+            UserStoryDTO updatedStory = userStoryService.updateTags(projectId, userStoryId, tags, authorizationHeader);
+            return ResponseEntity.ok(updatedStory);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
 }

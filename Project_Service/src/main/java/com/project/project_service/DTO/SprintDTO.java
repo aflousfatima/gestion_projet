@@ -3,6 +3,8 @@ package com.project.project_service.DTO;
 import com.project.project_service.Entity.Sprint;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class SprintDTO {
     private Long id;
@@ -12,7 +14,7 @@ public class SprintDTO {
     private String goal;
     private int capacity;
     private String status;
-
+    private List<UserStoryDTO> userStories;
     // Constructors
     public SprintDTO() {
     }
@@ -25,6 +27,9 @@ public class SprintDTO {
         this.goal = sprint.getGoal();
         this.capacity=sprint.getCapacity();
         this.status = sprint.getStatus().name(); // Utilisation de .name() pour convertir l'enum en String
+        this.userStories = sprint.getUserStories().stream()
+                .map(UserStoryDTO::new)
+                .collect(Collectors.toList());
     }
 
     // Getters and Setters
@@ -83,5 +88,11 @@ public class SprintDTO {
     }
 
 
+    public List<UserStoryDTO> getUserStories() {
+        return userStories;
+    }
 
+    public void setUserStories(List<UserStoryDTO> userStories) {
+        this.userStories = userStories;
+    }
 }
