@@ -9,11 +9,6 @@ import com.project.project_service.Repository.ClientRepository;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.config.AuthClient;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
