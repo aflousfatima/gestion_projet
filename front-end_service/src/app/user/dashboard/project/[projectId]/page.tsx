@@ -3,19 +3,20 @@ import React, { useState, useEffect } from "react";
 import "../../../../../styles/Dashboard-Project.css";
 import { useAuth } from "../../../../../context/AuthContext";
 import useAxios from "../../../../../hooks/useAxios";
+import { AxiosError } from 'axios'; // Ajoutez cet import en haut du fichier
 import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
 } from "../../../../../config/useApi";
 import { useParams } from "next/navigation";
-
+import { useCallback } from 'react'; // Ajoutez cet import si ce n'est pas déjà fait
 // Interfaces
 interface Task {
   id: number;
   name: string;
   responsible: string | null;
   dueDate: string;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"|"";
   status: "TO DO" | "IN PROGRESS" | "DONE";
   sprintId?: number;
   userStoryId?: number;
@@ -39,7 +40,7 @@ interface Manager {
 
 interface UserStory {
   id: number;
-  name: string;
+  title: string;
   description: string;
   status:
     | "BACKLOG"
@@ -50,7 +51,7 @@ interface UserStory {
     | "ON_HOLD"
     | "CANCELED"
     | "ARCHIVED";
-  priority: "LOW" | "MEDIUM" | "HIGH" | "";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "";
   effortPoints: number;
   sprintId?: number;
   dependsOn?: number[]; // Ajout pour les dépendances (comme discuté précédemment)
@@ -103,7 +104,7 @@ export default function Tasks() {
     .filter((us) => !us.sprintId) // Stories sans sprint
     .filter((us) => {
       if (searchQuery === "") return true; // Si pas de recherche, tout afficher
-      const nameMatch = us.name
+      const nameMatch = us.title
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase());
       const descMatch = us.description
@@ -269,7 +270,7 @@ export default function Tasks() {
 
   const [newUserStory, setNewUserStory] = useState<UserStory>({
     id: 0,
-    name: "",
+    title: "",
     description: "",
     status: "BACKLOG",
     priority: "",
@@ -287,24 +288,10 @@ export default function Tasks() {
     userStories: [],
     status: "PLANNED",
   });
-  const [activeSprint] = useState<Sprint | null>(null);
+  const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
   const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(
     null
   ); // Pour le mini-modal
-  const setActiveSprint = async (sprint) => {
-    try {
-      const response = await axiosInstance.post(
-        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprint.id}/activate`,
-        {},
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      // Mettre à jour l'état local avec le sprint activé
-      setActiveSprint(response.data);
-    } catch (error) {
-      console.error("Erreur lors de l'activation du sprint :", error);
-      alert("Erreur lors de l'activation du sprint.");
-    }
-  };
 
   // Fonction pour éditer une User Story
   const handleEditUserStory = (story: UserStory) => {
@@ -428,7 +415,7 @@ export default function Tasks() {
       const response = await axiosInstance.post(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
         {
-          title: newUserStory.name,
+          title: newUserStory.title,
           description: newUserStory.description,
           priority: newUserStory.priority,
           status: "BACKLOG", // Toujours "BACKLOG" pour une nouvelle user story
@@ -447,7 +434,7 @@ export default function Tasks() {
         ...backlog,
         {
           id: createdUserStory.id,
-          name: createdUserStory.title,
+          title: createdUserStory.title,
           description: createdUserStory.description,
           status: createdUserStory.status, // Récupérer depuis la réponse
           priority: createdUserStory.priority,
@@ -457,7 +444,7 @@ export default function Tasks() {
       ]);
       setNewUserStory({
         id: 0,
-        name: "",
+        title: "",
         description: "",
         status: "BACKLOG",
         priority: "",
@@ -489,9 +476,9 @@ export default function Tasks() {
           },
         });
         console.log("Réponse de l’API :", response.data);
-        const userStories = response.data.map((us: any) => ({
+        const userStories = response.data.map((us: UserStory) => ({
           id: us.id,
-          name: us.title,
+          title: us.title,
           description: us.description,
           priority: us.priority,
           effortPoints: us.effortPoints,
@@ -518,7 +505,7 @@ export default function Tasks() {
       const response = await axiosInstance.put(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${editingUserStory.id}`,
         {
-          title: editingUserStory.name,
+          title: editingUserStory.title,
           description: editingUserStory.description,
           priority: editingUserStory.priority,
           effortPoints: editingUserStory.effortPoints,
@@ -538,7 +525,7 @@ export default function Tasks() {
           us.id === updatedStory.id
             ? {
                 ...us,
-                name: updatedStory.title,
+                title: updatedStory.title,
                 description: updatedStory.description,
                 priority: updatedStory.priority,
                 effortPoints: updatedStory.effortPoints,
@@ -559,7 +546,7 @@ export default function Tasks() {
             us.id === updatedStory.id
               ? {
                   ...us,
-                  name: updatedStory.title,
+                  title: updatedStory.title,
                   description: updatedStory.description,
                   priority: updatedStory.priority,
                   effortPoints: updatedStory.effortPoints,
@@ -616,7 +603,7 @@ export default function Tasks() {
           `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
-        const fetchedSprints = response.data.map((s: any) => ({
+        const fetchedSprints = response.data.map((s: Sprint) => ({
           id: s.id,
           name: s.name,
           startDate: s.startDate,
@@ -635,6 +622,45 @@ export default function Tasks() {
     fetchSprints();
   }, [accessToken, authLoading, axiosInstance, projectId]);
 
+
+
+  // Définir fetchData avec useCallback
+  const fetchData = useCallback(async () => {
+    try {
+      const sprintsResponse = await axiosInstance.get(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const fetchedSprints = sprintsResponse.data.map((sprint: SprintDTO) => ({
+        id: sprint.id,
+        name: sprint.name,
+        startDate: sprint.startDate,
+        endDate: sprint.endDate,
+        capacity: sprint.capacity,
+        goal: sprint.goal || "",
+        status: sprint.status,
+        userStories: sprint.userStories || [],
+      }));
+      setSprints(fetchedSprints);
+  
+      const active = fetchedSprints.find((s: Sprint) => s.status === "ACTIVE");
+      if (active) {
+        setActiveSprint(active);
+      }
+  
+      const backlogResponse = await axiosInstance.get(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      setBacklog(backlogResponse.data); // Toutes les user stories
+    } catch (error) {
+      console.error("Erreur lors du rechargement des données :", error);
+    }
+  }, [axiosInstance, projectId, accessToken, setSprints, setActiveSprint, setBacklog]);
+  // Utilisation dans useEffect
+  useEffect(() => {
+    fetchData();
+  }, [fetchData, projectId, accessToken]); // Dépendances du useEffect
   // Gestionnaire pour ajouter un sprint
   const handleAddSprint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -700,6 +726,23 @@ export default function Tasks() {
     }
   };
 
+  const displayedSprint =
+    activeSprint || sprints.find((s) => s.status === "ACTIVE");
+
+    
+useEffect(() => {
+  const syncActiveSprint = async () => {
+    await fetchData(); // Charge les données initiales
+    const active = sprints.find((s) => s.status === "ACTIVE");
+    if (active && !activeSprint) {
+      setActiveSprint(active); // Définit activeSprint si un sprint est actif
+    }
+  };
+  syncActiveSprint();
+}, [sprints, activeSprint, fetchData, projectId, accessToken]); // Ajoutez projectId et accessToken comme dépendances
+  
+
+  // Déclenche à chaque changement de sprints ou activeSprint
   const getTasksByStatus = (status: "TO DO" | "IN PROGRESS" | "DONE") => {
     let filteredTasks = activeSprint
       ? tasks.filter(
@@ -1112,18 +1155,18 @@ export default function Tasks() {
                         placeholder="Story Title"
                         value={
                           editingUserStory
-                            ? editingUserStory.name
-                            : newUserStory.name
+                            ? editingUserStory.title
+                            : newUserStory.title
                         }
                         onChange={(e) =>
                           editingUserStory
                             ? setEditingUserStory({
                                 ...editingUserStory,
-                                name: e.target.value,
+                                title: e.target.value,
                               })
                             : setNewUserStory({
                                 ...newUserStory,
-                                name: e.target.value,
+                                title: e.target.value,
                               })
                         }
                         required
@@ -1255,7 +1298,7 @@ export default function Tasks() {
                                 {currentStories.map((story) => (
                                   <React.Fragment key={story.id}>
                                     <tr>
-                                      <td>{story.name}</td>
+                                      <td>{story.title}</td>
                                       <td
                                         className={`priority-${story.priority.toLowerCase()}`}
                                       >
@@ -1307,79 +1350,26 @@ export default function Tasks() {
                                               e.target.value
                                             );
                                             if (sprintId) {
-                                              const sprint = sprints.find(
-                                                (s) => s.id === sprintId
-                                              );
-                                              if (sprint) {
-                                                const currentEffort =
-                                                  sprint.userStories.reduce(
-                                                    (sum, us) =>
-                                                      sum + us.effortPoints,
-                                                    0
+                                              try {
+                                              
+                                                  await axiosInstance.put(
+                                                    `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
+                                                    {},
+                                                    {
+                                                      headers: {
+                                                        Authorization: `Bearer ${accessToken}`,
+                                                      },
+                                                    }
                                                   );
-                                                if (
-                                                  currentEffort +
-                                                    story.effortPoints <=
-                                                  sprint.capacity
-                                                ) {
-                                                  try {
-                                                    const response =
-                                                      await axiosInstance.put(
-                                                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
-                                                        {},
-                                                        {
-                                                          headers: {
-                                                            Authorization: `Bearer ${accessToken}`,
-                                                          },
-                                                        }
-                                                      );
-                                                    const updatedStory: UserStory =
-                                                      {
-                                                        ...story,
-                                                        sprintId,
-                                                        status:
-                                                          sprint.status ===
-                                                          "ACTIVE"
-                                                            ? "IN_PROGRESS"
-                                                            : "SELECTED_FOR_SPRINT",
-                                                      };
-                                                    setBacklog(
-                                                      backlog.map((us) =>
-                                                        us.id === story.id
-                                                          ? updatedStory
-                                                          : us
-                                                      )
-                                                    );
-                                                    setSprints(
-                                                      sprints.map((s) =>
-                                                        s.id === sprintId
-                                                          ? {
-                                                              ...s,
-                                                              userStories: [
-                                                                ...s.userStories,
-                                                                updatedStory,
-                                                              ],
-                                                            }
-                                                          : s
-                                                      )
-                                                    );
-                                                  } catch (error) {
-                                                    console.error(
-                                                      "Erreur lors de l'assignation au Sprint :",
-                                                      error
-                                                    );
-                                                    alert(
-                                                      "Erreur lors de l'assignation de la User Story au Sprint : " +
-                                                        (error.response?.data
-                                                          ?.message ||
-                                                          error.message)
-                                                    );
-                                                  }
-                                                } else {
-                                                  alert(
-                                                    "Sprint capacity insufficient!"
-                                                  );
-                                                }
+                                            
+                                                await fetchData(); // Recharger toutes les données
+                                              } catch (error) {
+                                                const axiosError = error as AxiosError<{ message?: string }>; 
+                                                console.error("Erreur lors de l'assignation au Sprint :", axiosError);
+                                                alert(
+                                                  "Erreur lors de l'assignation : " +
+                                                    (axiosError.response?.data?.message || axiosError.message)
+                                                );
                                               }
                                             }
                                           }}
@@ -1402,274 +1392,136 @@ export default function Tasks() {
                                       <tr>
                                         <td colSpan={6}>
                                           <div className="sprint-stories-list">
-                                            <table className="inner-story-table">
-                                              <thead>
-                                                <tr>
-                                                  <th>Nom</th>
-                                                  <th>Statut</th>
-                                                  <th>Action</th>
-                                                </tr>
-                                              </thead>
-                                              <tbody>
-                                                {story.dependsOn &&
-                                                story.dependsOn.length > 0 ? (
-                                                  story.dependsOn.map(
-                                                    (depId) => {
-                                                      const depStory =
-                                                        backlog.find(
-                                                          (us) =>
-                                                            us.id === depId
-                                                        );
-                                                      return (
-                                                        <tr key={depId}>
-                                                          <td>
-                                                            {depStory
-                                                              ? depStory.name
-                                                              : `US${depId}`}
-                                                          </td>
-                                                          <td>
-                                                            {depStory
-                                                              ? depStory.status
-                                                              : "Inconnu"}
-                                                            {depStory &&
-                                                              depStory.status !==
-                                                                "DONE" && (
-                                                                <span className="blocked-indicator">
-                                                                  {" "}
-                                                                  (Bloque)
-                                                                </span>
-                                                              )}
-                                                          </td>
-                                                          <td>
-                                                            <div className="action-cell-inner">
-                                                              <button
-                                                                className="icon-btn delete"
-                                                                onClick={async () => {
-                                                                  const newDependsOn =
-                                                                    (
-                                                                      story.dependsOn ||
-                                                                      []
-                                                                    ).filter(
-                                                                      (id) =>
-                                                                        id !==
-                                                                        depId
-                                                                    );
-                                                                  try {
-                                                                    const response =
-                                                                      await axiosInstance.put(
-                                                                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
-                                                                        {
-                                                                          dependsOn:
-                                                                            newDependsOn,
-                                                                        },
-                                                                        {
-                                                                          headers:
-                                                                            {
-                                                                              Authorization: `Bearer ${accessToken}`,
-                                                                            },
-                                                                        }
-                                                                      );
-                                                                    const updatedStory =
-                                                                      response.data; // Retourne UserStoryDTO avec statut recalculé
-                                                                    setBacklog(
-                                                                      backlog.map(
-                                                                        (us) =>
-                                                                          us.id ===
-                                                                          story.id
-                                                                            ? updatedStory
-                                                                            : us
-                                                                      )
-                                                                    );
-                                                                  } catch (error) {
-                                                                    console.error(
-                                                                      "Erreur lors de la suppression de la dépendance :",
-                                                                      error
-                                                                    );
-                                                                    alert(
-                                                                      "Erreur lors de la suppression de la dépendance."
-                                                                    );
-                                                                  }
-                                                                }}
-                                                              >
-                                                                <i className="fa fa-times"></i>
-                                                              </button>
-                                                              <select
-                                                                onChange={async (
-                                                                  e
-                                                                ) => {
-                                                                  const newDepId =
-                                                                    parseInt(
-                                                                      e.target
-                                                                        .value
-                                                                    );
-                                                                  if (
-                                                                    newDepId
-                                                                  ) {
-                                                                    const newDependsOn =
-                                                                      [
-                                                                        ...(story.dependsOn ||
-                                                                          []),
-                                                                        newDepId,
-                                                                      ];
-                                                                    try {
-                                                                      const response =
-                                                                        await axiosInstance.put(
-                                                                          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
-                                                                          {
-                                                                            dependsOn:
-                                                                              newDependsOn,
-                                                                          },
-                                                                          {
-                                                                            headers:
-                                                                              {
-                                                                                Authorization: `Bearer ${accessToken}`,
-                                                                              },
-                                                                          }
-                                                                        );
-                                                                      const updatedStory =
-                                                                        response.data;
-                                                                      setBacklog(
-                                                                        backlog.map(
-                                                                          (
-                                                                            us
-                                                                          ) =>
-                                                                            us.id ===
-                                                                            story.id
-                                                                              ? updatedStory
-                                                                              : us
-                                                                        )
-                                                                      );
-                                                                      e.target.value =
-                                                                        ""; // Réinitialiser le select
-                                                                    } catch (error) {
-                                                                      console.error(
-                                                                        "Erreur lors de l’ajout de la dépendance :",
-                                                                        error
-                                                                      );
-                                                                      alert(
-                                                                        "Erreur lors de l’ajout de la dépendance."
-                                                                      );
-                                                                    }
-                                                                  }
-                                                                }}
-                                                                value=""
-                                                              >
-                                                                <option value="">
-                                                                  Add dependency
-                                                                </option>
-                                                                {backlog
-                                                                  .filter(
-                                                                    (us) =>
-                                                                      us.id !==
-                                                                        story.id &&
-                                                                      !story.dependsOn?.includes(
-                                                                        us.id
-                                                                      )
-                                                                  )
-                                                                  .map((us) => (
-                                                                    <option
-                                                                      key={
-                                                                        us.id
-                                                                      }
-                                                                      value={
-                                                                        us.id
-                                                                      }
-                                                                    >
-                                                                      {us.name}
-                                                                    </option>
-                                                                  ))}
-                                                              </select>
-                                                            </div>
-                                                          </td>
-                                                        </tr>
-                                                      );
-                                                    }
-                                                  )
-                                                ) : (
-                                                  <tr>
-                                                    <td colSpan={2}>
-                                                      Aucune dépendance
-                                                    </td>
-                                                    <td>
-                                                      <select
-                                                        onChange={async (e) => {
-                                                          const newDepId =
-                                                            parseInt(
-                                                              e.target.value
-                                                            );
-                                                          if (newDepId) {
-                                                            const newDependsOn =
-                                                              [
-                                                                ...(story.dependsOn ||
-                                                                  []),
-                                                                newDepId,
-                                                              ];
-                                                            try {
-                                                              const response =
-                                                                await axiosInstance.put(
-                                                                  `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
-                                                                  {
-                                                                    dependsOn:
-                                                                      newDependsOn,
-                                                                  },
-                                                                  {
-                                                                    headers: {
-                                                                      Authorization: `Bearer ${accessToken}`,
-                                                                    },
-                                                                  }
-                                                                );
-                                                              const updatedStory =
-                                                                response.data;
-                                                              setBacklog(
-                                                                backlog.map(
-                                                                  (us) =>
-                                                                    us.id ===
-                                                                    story.id
-                                                                      ? updatedStory
-                                                                      : us
-                                                                )
-                                                              );
-                                                              e.target.value =
-                                                                "";
-                                                            } catch (error) {
-                                                              console.error(
-                                                                "Erreur lors de l’ajout de la dépendance :",
-                                                                error
-                                                              );
-                                                              alert(
-                                                                "Erreur lors de l’ajout de la dépendance."
-                                                              );
-                                                            }
-                                                          }
-                                                        }}
-                                                        value=""
-                                                      >
-                                                        <option value="">
-                                                          Add dependency
-                                                        </option>
-                                                        {backlog
-                                                          .filter(
-                                                            (us) =>
-                                                              us.id !==
-                                                                story.id &&
-                                                              !story.dependsOn?.includes(
-                                                                us.id
-                                                              )
-                                                          )
-                                                          .map((us) => (
-                                                            <option
-                                                              key={us.id}
-                                                              value={us.id}
-                                                            >
-                                                              {us.name}
-                                                            </option>
-                                                          ))}
-                                                      </select>
-                                                    </td>
-                                                  </tr>
-                                                )}
-                                              </tbody>
-                                            </table>
+                                          <table className="inner-story-table">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th>Statut</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+  <tbody>
+    {story.dependsOn && story.dependsOn.length > 0 ? (
+      story.dependsOn.map((depId) => {
+        const depStory = backlog.find((us) => us.id === depId);
+        return (
+          <tr key={depId}>
+            <td>{depStory ? depStory.title : `US${depId}`}</td>
+            <td>
+              {depStory ? depStory.status : "Inconnu"}
+              {depStory && depStory.status !== "DONE" && (
+                <span className="blocked-indicator"> (Bloque)</span>
+              )}
+            </td>
+            <td>
+              <div className="action-cell-inner">
+                <button
+                  className="icon-btn delete"
+                  onClick={async () => {
+                    const newDependsOn = (story.dependsOn || []).filter(
+                      (id) => id !== depId
+                    );
+                    try {
+                      await axiosInstance.put(
+                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                        { dependsOn: newDependsOn },
+                        { headers: { Authorization: `Bearer ${accessToken}` } }
+                      );
+                      setBacklog((prev) =>
+                        prev.map((us) =>
+                          us.id === story.id ? { ...us, dependsOn: newDependsOn } : us
+                        )
+                      ); // Mise à jour locale
+                    } catch (error) {
+                      console.error("Erreur lors de la suppression de la dépendance :", error);
+                      alert("Erreur lors de la suppression de la dépendance.");
+                    }
+                  }}
+                >
+                  <i className="fa fa-times"></i>
+                </button>
+                <select
+                  onChange={async (e) => {
+                    const newDepId = parseInt(e.target.value);
+                    if (newDepId) {
+                      const newDependsOn = [...(story.dependsOn || []), newDepId];
+                      try {
+                        await axiosInstance.put(
+                          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                          { dependsOn: newDependsOn },
+                          { headers: { Authorization: `Bearer ${accessToken}` } }
+                        );
+                        setBacklog((prev) =>
+                          prev.map((us) =>
+                            us.id === story.id ? { ...us, dependsOn: newDependsOn } : us
+                          )
+                        ); // Mise à jour locale
+                        e.target.value = "";
+                      } catch (error) {
+                        console.error("Erreur lors de l’ajout de la dépendance :", error);
+                        alert("Erreur lors de l’ajout de la dépendance.");
+                      }
+                    }
+                  }}
+                  value=""
+                >
+                  <option value="">Add dependency</option>
+                  {backlog
+                    .filter((us) => us.id !== story.id && !story.dependsOn?.includes(us.id))
+                    .map((us) => (
+                      <option key={us.id} value={us.id}>
+                        {us.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </td>
+          </tr>
+        );
+      })
+    ) : (
+      <tr>
+        <td colSpan={2}>Aucune dépendance</td>
+        <td>
+          <select
+            onChange={async (e) => {
+              const newDepId = parseInt(e.target.value);
+              if (newDepId) {
+                const newDependsOn = [...(story.dependsOn || []), newDepId];
+                try {
+                  await axiosInstance.put(
+                    `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                    { dependsOn: newDependsOn },
+                    { headers: { Authorization: `Bearer ${accessToken}` } }
+                  );
+                  setBacklog((prev) =>
+                    prev.map((us) =>
+                      us.id === story.id ? { ...us, dependsOn: newDependsOn } : us
+                    )
+                  ); // Mise à jour locale
+                  e.target.value = "";
+                } catch (error) {
+                  console.error("Erreur lors de l’ajout de la dépendance :", error);
+                  alert("Erreur lors de l’ajout de la dépendance.");
+                }
+              }
+            }}
+            value=""
+          >
+            <option value="">Add dependency</option>
+            {backlog
+              .filter((us) => us.id !== story.id && !story.dependsOn?.includes(us.id))
+              .map((us) => (
+                <option key={us.id} value={us.id}>
+                  {us.title}
+                </option>
+              ))}
+          </select>
+        </td>
+      </tr>
+    )}
+  </tbody>
+</table>
                                           </div>
                                         </td>
                                       </tr>
@@ -1963,6 +1815,44 @@ export default function Tasks() {
                                     >
                                       <i className="fa fa-trash"></i>
                                     </button>
+                                    <div className="tooltip-container">
+                                      <button
+                                        onClick={async () => {
+                                          try {
+                                            const response =
+                                              await axiosInstance.post(
+                                                `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprint.id}/activate`,
+                                                {},
+                                                {
+                                                  headers: {
+                                                    Authorization: `Bearer ${accessToken}`,
+                                                  },
+                                                }
+                                              );
+                                            setActiveSprint(response.data); // Utilise le setter de useState
+                                            await fetchData(); // Recharge les données
+                                          } catch (error) {
+                                            console.error(
+                                              "Erreur lors de l'activation du sprint :",
+                                              error
+                                            );
+                                            alert(
+                                              "Erreur lors de l'activation du sprint."
+                                            );
+                                          }
+                                        }}
+                                        className={`icon-btn activate ${
+                                          activeSprint?.id === sprint.id
+                                            ? "active"
+                                            : ""
+                                        }`}
+                                      >
+                                        <i className="fa fa-play"></i>
+                                      </button>
+                                      <span className="tooltip-text">
+                                        Activer ce sprint
+                                      </span>
+                                    </div>
                                     <button
                                       onClick={() =>
                                         handleCancelSprint(sprint.id)
@@ -1988,21 +1878,6 @@ export default function Tasks() {
                                     >
                                       <i className="fa fa-archive"></i>
                                     </button>
-                                    <div className="tooltip-container">
-                                      <button
-                                        onClick={() => setActiveSprint(sprint)}
-                                        className={`icon-btn activate ${
-                                          activeSprint?.id === sprint.id
-                                            ? "active"
-                                            : ""
-                                        }`}
-                                      >
-                                        <i className="fa fa-play"></i>
-                                      </button>
-                                      <span className="tooltip-text">
-                                        Activer ce sprint
-                                      </span>
-                                    </div>
                                   </td>
                                 </tr>
                                 {expandedSprintStories === sprint.id && (
@@ -2023,7 +1898,7 @@ export default function Tasks() {
                                               {sprint.userStories.map(
                                                 (story) => (
                                                   <tr key={story.id}>
-                                                    <td>{story.name}</td>
+                                                    <td>{story.title}</td>
                                                     <td>
                                                       {story.effortPoints}
                                                     </td>
@@ -2044,57 +1919,14 @@ export default function Tasks() {
                                                                 },
                                                               }
                                                             );
-                                                            const updatedStory: UserStory =
-                                                              {
-                                                                ...story,
-                                                                sprintId:
-                                                                  undefined,
-                                                                status:
-                                                                  "BACKLOG",
-                                                              };
-                                                            setBacklog([
-                                                              ...backlog,
-                                                              updatedStory,
-                                                            ]);
-                                                            setSprints(
-                                                              sprints.map((s) =>
-                                                                s.id ===
-                                                                sprint.id
-                                                                  ? {
-                                                                      ...s,
-                                                                      userStories:
-                                                                        s.userStories.filter(
-                                                                          (
-                                                                            us
-                                                                          ) =>
-                                                                            us.id !==
-                                                                            story.id
-                                                                        ),
-                                                                    }
-                                                                  : s
-                                                              )
-                                                            );
-                                                            if (
-                                                              activeSprint?.id ===
-                                                              sprint.id
-                                                            ) {
-                                                              setActiveSprint({
-                                                                ...activeSprint,
-                                                                userStories:
-                                                                  activeSprint.userStories.filter(
-                                                                    (us) =>
-                                                                      us.id !==
-                                                                      story.id
-                                                                  ),
-                                                              });
-                                                            }
+                                                            await fetchData(); // Recharger après suppression
                                                           } catch (error) {
                                                             console.error(
                                                               "Erreur lors du retrait du Sprint :",
                                                               error
                                                             );
                                                             alert(
-                                                              "Erreur lors du retrait de la User Story du Sprint."
+                                                              "Erreur lors du retrait de la User Story."
                                                             );
                                                           }
                                                         }}
@@ -2122,7 +1954,6 @@ export default function Tasks() {
                             ))}
                           </tbody>
                         </table>
-
                         {/* Pagination pour les sprints */}
                         {totalSprintItems > itemsPerPage && (
                           <div className="pagination-container">
@@ -2153,16 +1984,16 @@ export default function Tasks() {
                     )}
                   </div>
 
-                  {activeSprint && (
+                  {displayedSprint && (
                     <div className="active-sprint">
                       <h4>
                         <i className="fa fa-rocket"></i> Sprint actif :{" "}
-                        {activeSprint.name}
+                        {displayedSprint.name}
                       </h4>
                       <p className="sprint-goal">
                         Objectif :{" "}
                         <strong>
-                          {activeSprint.goal || "Aucun objectif défini"}
+                          {displayedSprint.goal || "Aucun objectif défini"}
                         </strong>
                       </p>
 
@@ -2172,12 +2003,12 @@ export default function Tasks() {
                             className="progress"
                             style={{
                               width: `${
-                                (activeSprint.userStories.reduce(
+                                ((displayedSprint.userStories || []).reduce(
                                   (sum, us) => sum + us.effortPoints,
                                   0
                                 ) /
-                                  activeSprint.capacity) *
-                                100
+                                  displayedSprint.capacity) *
+                                  100 || 0
                               }%`,
                             }}
                           ></div>
@@ -2185,12 +2016,12 @@ export default function Tasks() {
                         <p className="capacity-info">
                           <i className="fas fa-sync-alt"></i> Used Capacity :{" "}
                           <strong>
-                            {activeSprint.userStories.reduce(
+                            {(displayedSprint.userStories || []).reduce(
                               (sum, us) => sum + us.effortPoints,
                               0
                             )}
                           </strong>{" "}
-                          / {activeSprint.capacity} pts
+                          / {displayedSprint.capacity} pts
                         </p>
                       </div>
 
@@ -2203,9 +2034,10 @@ export default function Tasks() {
                           </tr>
                         </thead>
                         <tbody>
-                          {activeSprint.userStories.map((story) => (
+                          {(displayedSprint.userStories || []).map((story) => (
                             <tr key={story.id}>
-                              <td>{story.name}</td>
+                              <td>{story.title}</td>{" "}
+                              {/* Remplacez "title" par "name" si nécessaire */}
                               <td>{story.effortPoints}</td>
                               <td>
                                 <button

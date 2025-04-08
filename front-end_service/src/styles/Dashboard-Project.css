@@ -569,7 +569,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 700px; /* Élargissement du panneau */
+  width: 750px; /* Élargissement du panneau */
   height: 100%;
   background: linear-gradient(145deg, #ffffff 0%, #ffffff 100%);
   border-left: 1px solid #d1d5db;
@@ -1221,6 +1221,10 @@ padding: 1px 5px;
   color: #dc3545;
 }
 
+.icon-btn.cancel{
+  color: #dc3545;
+
+}
 
 /* Conteneur de la pagination */
 .pagination-container {
