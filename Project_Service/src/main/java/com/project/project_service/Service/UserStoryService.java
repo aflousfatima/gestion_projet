@@ -5,12 +5,14 @@ import com.project.project_service.DTO.UserStoryDTO;
 import com.project.project_service.DTO.UserStoryRequest;
 import com.project.project_service.Entity.Projet;
 import com.project.project_service.Entity.Sprint;
+import com.project.project_service.Entity.Tag;
 import com.project.project_service.Entity.UserStory;
 import com.project.project_service.Enumeration.Priority;
 import com.project.project_service.Enumeration.SprintStatus;
 import com.project.project_service.Enumeration.UserStoryStatus;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.Repository.SprintRepository;
+import com.project.project_service.Repository.TagRepository;
 import com.project.project_service.Repository.UserStoryRepository;
 import com.project.project_service.config.AuthClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +32,8 @@ public class UserStoryService {
     @Autowired
     private SprintRepository sprintRepository;
 
+    @Autowired
+    private TagRepository tagRepository;
     @Autowired
     private AuthClient authClient;
 
@@ -54,23 +58,42 @@ public class UserStoryService {
         userStory.setCreatedBy(userIdStr);
         userStory.setStatus(UserStoryStatus.valueOf(request.status())); // Utiliser la valeur envoyée par le frontend
         userStory.setDependsOn(request.dependsOn() != null ? request.dependsOn() : new ArrayList<>());
+
+        // Gestion des tags
+        // Gestion des tags
+        if (request.tags() != null) { // Correction ici : tags() au lieu de getTags()
+            List<Tag> tags = request.tags().stream()
+                    .map(tagName -> tagRepository.findByName(tagName)
+                            .orElseGet(() -> tagRepository.save(new Tag(tagName))))
+                    .toList();
+            userStory.setTags(tags);
+        }
         UserStory savedStory = userStoryRepository.save(userStory);
         return new UserStoryDTO(savedStory);
     }
     // New method to update a user story
     public UserStoryDTO updateUserStory(Long projectId, Long userStoryId, UserStoryRequest request, String token) {
+
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
+            System.out.println("Étape 1 échouée: Token invalide ou utilisateur non identifié");
             throw new IllegalArgumentException("Token invalide ou utilisateur non identifié");
         }
 
         Projet projet = projetRepository.findById(projectId)
-                .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
+                .orElseThrow(() -> {
+                    System.out.println("Étape 2 échouée: Projet non trouvé avec l'ID: " + projectId);
+                    return new RuntimeException("Projet non trouvé avec l'ID: " + projectId);
+                });
 
         UserStory userStory = userStoryRepository.findById(userStoryId)
-                .orElseThrow(() -> new RuntimeException("User Story non trouvée avec l'ID: " + userStoryId));
+                .orElseThrow(() -> {
+                    System.out.println("Étape 3 échouée: User Story non trouvée avec l'ID: " + userStoryId);
+                    return new RuntimeException("User Story non trouvée avec l'ID: " + userStoryId);
+                });
 
         if (!userStory.getProject().getId().equals(projectId)) {
+            System.out.println("Étape 4 échouée: La User Story n’appartient pas au projet - Projet attendu: " + projectId + ", Projet trouvé: " + userStory.getProject().getId());
             throw new RuntimeException("La User Story n'appartient pas à ce projet");
         }
 
@@ -78,10 +101,30 @@ public class UserStoryService {
         userStory.setDescription(request.description());
         userStory.setPriority(Priority.valueOf(request.priority()));
         userStory.setEffortPoints(request.effortPoints());
-        // Ne pas modifier status ici
         userStory.setDependsOn(request.dependsOn() != null ? request.dependsOn() : userStory.getDependsOn());
-        UserStory updatedStory = userStoryRepository.save(userStory);
-        return new UserStoryDTO(updatedStory);
+
+        if (request.tags() != null) {
+            List<Tag> tags = new ArrayList<>();
+            for (String tagName : request.tags()) {
+                Tag tag = tagRepository.findByName(tagName)
+                        .orElseGet(() -> {
+                            return tagRepository.save(new Tag(tagName));
+                        });
+                tags.add(tag);
+            }
+            userStory.setTags(tags);
+            System.out.println("Tags mis à jour: " + userStory.getTags());
+        }
+        try {
+            UserStory updatedStory = userStoryRepository.save(userStory);
+            System.out.println("Étape 7 réussie: User Story sauvegardée - ID: " + updatedStory.getId());
+            return new UserStoryDTO(updatedStory);
+        } catch (Exception e) {
+            System.out.println("Étape 7 échouée: Erreur lors de la sauvegarde - " + e.getMessage());
+            e.printStackTrace(); // Affiche la stack trace complète
+            throw e; // Relance pour que le contrôleur retourne 404
+        }
+
     }
     // New method to fetch all user stories for a project
     public List<UserStoryDTO> getUserStoriesByProjectId(Long projectId) {
@@ -133,29 +176,20 @@ public class UserStoryService {
             throw new RuntimeException("La capacité du sprint est insuffisante pour cette User Story");
         }
 
-        // Vérifier les dépendances
+        // Vérifier les dépendances avant assignation
         if (!userStory.getDependsOn().isEmpty()) {
             for (Long depId : userStory.getDependsOn()) {
                 UserStory depStory = userStoryRepository.findById(depId)
                         .orElseThrow(() -> new RuntimeException("Dépendance non trouvée : " + depId));
                 if (!depStory.getStatus().equals(UserStoryStatus.DONE)) {
-                    userStory.setStatus(UserStoryStatus.BLOCKED);
-                    userStoryRepository.save(userStory);
-                    throw new RuntimeException("Dépendance non terminée : " + depStory.getTitle());
+                    if (sprint.getStatus() == SprintStatus.ACTIVE && (depStory.getSprint() == null || depStory.getSprint().getStatus() != SprintStatus.ACTIVE)) {
+                        throw new RuntimeException("La dépendance " + depStory.getTitle() + " doit être dans un sprint actif ou terminée");
+                    }
                 }
             }
         }
-
-        // Assigner la user story au sprint
         userStory.setSprint(sprint);
-
-        // Définir le statut en fonction du statut du sprint
-        if (sprint.getStatus() == SprintStatus.ACTIVE) {
-            userStory.setStatus(UserStoryStatus.IN_PROGRESS);
-        } else {
-            userStory.setStatus(UserStoryStatus.SELECTED_FOR_SPRINT);
-        }
-
+        updateStatusBasedOnDependencies(userStory); // Recalculer le statut
         UserStory updatedUserStory = userStoryRepository.save(userStory);
         return new UserStoryDTO(updatedUserStory);
     }
@@ -231,7 +265,7 @@ public class UserStoryService {
         UserStory updatedStory = userStoryRepository.save(userStory);
         return new UserStoryDTO(updatedStory);
     }
-    private void updateStatusBasedOnDependencies(UserStory userStory) {
+    public void updateStatusBasedOnDependencies(UserStory userStory) {
         if (userStory.getDependsOn().isEmpty()) {
             if (userStory.getSprint() != null) {
                 userStory.setStatus(userStory.getSprint().getStatus() == SprintStatus.ACTIVE ? UserStoryStatus.IN_PROGRESS : UserStoryStatus.SELECTED_FOR_SPRINT);
@@ -242,23 +276,68 @@ public class UserStoryService {
         }
 
         boolean allDependenciesDone = true;
+        boolean allDependenciesInActiveSprint = true;
+
         for (Long depId : userStory.getDependsOn()) {
             UserStory depStory = userStoryRepository.findById(depId)
                     .orElseThrow(() -> new RuntimeException("Dépendance non trouvée : " + depId));
             if (!depStory.getStatus().equals(UserStoryStatus.DONE)) {
                 allDependenciesDone = false;
-                break;
+                if (depStory.getSprint() == null || depStory.getSprint().getStatus() != SprintStatus.ACTIVE) {
+                    allDependenciesInActiveSprint = false;
+                }
             }
         }
 
-        if (!allDependenciesDone) {
-            userStory.setStatus(UserStoryStatus.BLOCKED);
-        } else if (userStory.getSprint() != null) {
-            userStory.setStatus(userStory.getSprint().getStatus() == SprintStatus.ACTIVE ? UserStoryStatus.IN_PROGRESS : UserStoryStatus.SELECTED_FOR_SPRINT);
-        } else if (!userStory.getStatus().equals(UserStoryStatus.DONE) && !userStory.getStatus().equals(UserStoryStatus.CANCELED)) {
-            userStory.setStatus(UserStoryStatus.BACKLOG);
+        if (userStory.getSprint() == null) {
+            userStory.setStatus(UserStoryStatus.BACKLOG); // Sans sprint, toujours BACKLOG si pas DONE/CANCELED
+        } else if (userStory.getSprint().getStatus() == SprintStatus.PLANNED) {
+            if (allDependenciesDone) {
+                userStory.setStatus(UserStoryStatus.SELECTED_FOR_SPRINT);
+            } else {
+                userStory.setStatus(UserStoryStatus.ON_HOLD); // En attente car dépendances non terminées
+            }
+        } else if (userStory.getSprint().getStatus() == SprintStatus.ACTIVE) {
+            if (allDependenciesDone) {
+                userStory.setStatus(UserStoryStatus.IN_PROGRESS);
+            } else if (allDependenciesInActiveSprint) {
+                userStory.setStatus(UserStoryStatus.BLOCKED); // Dépendances dans sprint actif mais pas DONE
+            } else {
+                userStory.setStatus(UserStoryStatus.ON_HOLD); // Dépendances pas dans sprint actif
+            }
         }
     }
 
+    public UserStoryDTO updateTags(Long projectId, Long userStoryId, List<String> tagNames, String authorizationHeader) {
+        // Vérifiez l'autorisation ici si nécessaire...
 
+        UserStory userStory = userStoryRepository.findById(userStoryId)
+                .orElseThrow(() -> new RuntimeException("User story not found"));
+
+        if (!userStory.getProject().getId().equals(projectId)) {
+            throw new RuntimeException("User story does not belong to this project");
+        }
+
+        // Gestion des tags
+        List<Tag> tags = new ArrayList<>();
+        if (tagNames != null) {
+            for (String tagName : tagNames) {
+                Tag tag = tagRepository.findByName(tagName)
+                        .orElseGet(() -> {
+                            Tag newTag = new Tag(tagName);
+                            return tagRepository.save(newTag);
+                        });
+                tags.add(tag);
+            }
+        }
+
+        userStory.setTags(tags);
+        UserStory updatedUserStory = userStoryRepository.save(userStory);
+
+        // Conversion en DTO
+        return convertToDTO(updatedUserStory);
+    }
+    private UserStoryDTO convertToDTO(UserStory userStory) {
+        return new UserStoryDTO(userStory);
+    }
 }

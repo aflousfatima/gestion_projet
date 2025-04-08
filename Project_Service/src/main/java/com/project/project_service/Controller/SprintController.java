@@ -73,22 +73,22 @@ public class SprintController {
     }
 
     // Endpoint pour annuler un sprint
-    @PostMapping("/${projectId}/sprints/{sprintId}/cancel")
+    @PostMapping("/{projectId}/sprints/{sprintId}/cancel")
     public ResponseEntity<SprintDTO> cancelSprint(
             @PathVariable Long projectId,
             @PathVariable Long sprintId,
             @RequestHeader("Authorization") String token) {
-        SprintDTO updatedSprint = sprintService.cancelSprint(projectId, sprintId, token.replace("Bearer ", ""));
+        SprintDTO updatedSprint = sprintService.cancelSprint(projectId, sprintId, token);
         return ResponseEntity.ok(updatedSprint);
     }
 
     // Endpoint pour archiver un sprint
-    @PostMapping("/${projectId}/sprints/{sprintId}/archive")
+    @PostMapping("/{projectId}/sprints/{sprintId}/archive")
     public ResponseEntity<SprintDTO> archiveSprint(
             @PathVariable Long projectId,
             @PathVariable Long sprintId,
             @RequestHeader("Authorization") String token) {
-        SprintDTO updatedSprint = sprintService.archiveSprint(projectId, sprintId, token.replace("Bearer ", ""));
+        SprintDTO updatedSprint = sprintService.archiveSprint(projectId, sprintId, token);
         return ResponseEntity.ok(updatedSprint);
     }
 
@@ -108,17 +108,17 @@ public class SprintController {
     }
 
     @PostMapping("/{projectId}/sprints/{sprintId}/update-status")
-    public ResponseEntity<Void> updateSprintStatus(
+    public ResponseEntity<SprintDTO> updateSprintStatus(
             @PathVariable Long projectId,
             @PathVariable Long sprintId,
             @RequestHeader("Authorization") String authorizationHeader) {
         try {
-            sprintService.updateSprintStatus(projectId, sprintId, authorizationHeader);
-            return ResponseEntity.ok().build(); // 200 OK si tout se passe bien
+            SprintDTO updatedSprint = sprintService.updateSprintStatus(projectId, sprintId, authorizationHeader);
+            return ResponseEntity.ok(updatedSprint); // 200 OK avec SprintDTO
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401 si token invalide
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build(); // 401
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build(); // 400 si sprint/projet introuvable ou autre erreur
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null); // 400
         }
     }
 }

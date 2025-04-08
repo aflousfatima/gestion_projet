@@ -44,9 +44,18 @@ public class UserStory {
 
     @ElementCollection
     private List<Long> dependsOn = new ArrayList<>(); // Pour les dépendances
+
     @ManyToOne
     @JoinColumn(name = "sprint_id")
     private Sprint sprint;
+
+    @ManyToMany
+    @JoinTable(
+            name = "user_story_tags",
+            joinColumns = @JoinColumn(name = "user_story_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private List<Tag> tags = new ArrayList<>();
     public Long getId() {
         return id;
     }
@@ -141,5 +150,13 @@ public class UserStory {
 
     public void setDependsOn(List<Long> dependsOn) {
         this.dependsOn = dependsOn;
+    }
+
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<Tag> tags) {
+        this.tags = tags;
     }
 }

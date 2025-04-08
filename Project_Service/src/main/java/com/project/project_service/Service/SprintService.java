@@ -3,6 +3,7 @@ package com.project.project_service.Service;
 import com.project.project_service.DTO.SprintDTO;
 import com.project.project_service.Entity.Projet;
 import com.project.project_service.Entity.Sprint;
+import com.project.project_service.Entity.UserStory;
 import com.project.project_service.Enumeration.SprintStatus;
 import com.project.project_service.Enumeration.UserStoryStatus;
 import com.project.project_service.Repository.ProjetRepository;
@@ -29,6 +30,7 @@ public class SprintService {
 
     @Autowired
     private UserStoryRepository userStoryRepository;
+
 
     public SprintDTO createSprint(Long projectId, SprintDTO request, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -101,7 +103,7 @@ public class SprintService {
         sprintRepository.delete(sprint);
     }
 
-    public void updateSprintStatus(Long projectId, Long sprintId, String token) {
+    public SprintDTO updateSprintStatus(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
             throw new IllegalArgumentException("Token invalide ou utilisateur non identifié");
@@ -114,11 +116,9 @@ public class SprintService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endDateTime = sprint.getEndDate().atTime(23, 59); // fin de la journée
+        LocalDateTime endDateTime = sprint.getEndDate().atTime(23, 59);
         if (sprint.getStatus() == SprintStatus.ACTIVE && now.isAfter(endDateTime)) {
-            // Sprint atteint la date de fin
             sprint.setStatus(SprintStatus.COMPLETED);
-            // Remettre les US incomplètes dans le backlog
             sprint.getUserStories().forEach(us -> {
                 if (!us.getStatus().equals(UserStoryStatus.DONE)) {
                     us.setSprint(null);
@@ -128,6 +128,7 @@ public class SprintService {
             });
             sprintRepository.save(sprint);
         }
+        return new SprintDTO(sprint); // Toujours renvoyer le sprint, même sans changement
     }
 
     public SprintDTO cancelSprint(Long projectId, Long sprintId, String token) {
@@ -195,20 +196,59 @@ public class SprintService {
             throw new RuntimeException("Seul un sprint planifié (PLANNED) peut être activé");
         }
 
-        // Changer le statut du sprint à ACTIVE
         sprint.setStatus(SprintStatus.ACTIVE);
 
-        // Mettre à jour les user stories existantes
+        // Mettre à jour les user stories en fonction des dépendances
         sprint.getUserStories().forEach(us -> {
             if (us.getStatus() != UserStoryStatus.DONE && us.getStatus() != UserStoryStatus.CANCELED) {
-                us.setStatus(UserStoryStatus.IN_PROGRESS);
-                // Optionnel : vérifier les dépendances si nécessaire
-                // updateStatusBasedOnDependencies(us);
+                updateStatusBasedOnDependencies(us); // Méthode existante dans UserStoryService
                 userStoryRepository.save(us);
             }
         });
 
         Sprint updatedSprint = sprintRepository.save(sprint);
         return new SprintDTO(updatedSprint);
+    }
+    public void updateStatusBasedOnDependencies(UserStory userStory) {
+        if (userStory.getDependsOn().isEmpty()) {
+            if (userStory.getSprint() != null) {
+                userStory.setStatus(userStory.getSprint().getStatus() == SprintStatus.ACTIVE ? UserStoryStatus.IN_PROGRESS : UserStoryStatus.SELECTED_FOR_SPRINT);
+            } else if (!userStory.getStatus().equals(UserStoryStatus.DONE) && !userStory.getStatus().equals(UserStoryStatus.CANCELED)) {
+                userStory.setStatus(UserStoryStatus.BACKLOG);
+            }
+            return;
+        }
+
+        boolean allDependenciesDone = true;
+        boolean allDependenciesInActiveSprint = true;
+
+        for (Long depId : userStory.getDependsOn()) {
+            UserStory depStory = userStoryRepository.findById(depId)
+                    .orElseThrow(() -> new RuntimeException("Dépendance non trouvée : " + depId));
+            if (!depStory.getStatus().equals(UserStoryStatus.DONE)) {
+                allDependenciesDone = false;
+                if (depStory.getSprint() == null || depStory.getSprint().getStatus() != SprintStatus.ACTIVE) {
+                    allDependenciesInActiveSprint = false;
+                }
+            }
+        }
+
+        if (userStory.getSprint() == null) {
+            userStory.setStatus(UserStoryStatus.BACKLOG); // Sans sprint, toujours BACKLOG si pas DONE/CANCELED
+        } else if (userStory.getSprint().getStatus() == SprintStatus.PLANNED) {
+            if (allDependenciesDone) {
+                userStory.setStatus(UserStoryStatus.SELECTED_FOR_SPRINT);
+            } else {
+                userStory.setStatus(UserStoryStatus.ON_HOLD); // En attente car dépendances non terminées
+            }
+        } else if (userStory.getSprint().getStatus() == SprintStatus.ACTIVE) {
+            if (allDependenciesDone) {
+                userStory.setStatus(UserStoryStatus.IN_PROGRESS);
+            } else if (allDependenciesInActiveSprint) {
+                userStory.setStatus(UserStoryStatus.BLOCKED); // Dépendances dans sprint actif mais pas DONE
+            } else {
+                userStory.setStatus(UserStoryStatus.ON_HOLD); // Dépendances pas dans sprint actif
+            }
+        }
     }
 }
