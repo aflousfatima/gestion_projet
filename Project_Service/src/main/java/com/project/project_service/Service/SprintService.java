@@ -31,7 +31,8 @@ public class SprintService {
     @Autowired
     private UserStoryRepository userStoryRepository;
 
-
+    @Autowired
+    private HistoryService historyService;
     public SprintDTO createSprint(Long projectId, SprintDTO request, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -52,8 +53,15 @@ public class SprintService {
         sprint.setCreatedAt(LocalDateTime.now());
         sprint.setStatus(SprintStatus.valueOf(request.getStatus())); // Utiliser la valeur envoyée par le frontend
 
-
         Sprint savedSprint = sprintRepository.save(sprint);
+
+        // Ajout de l'historique de création du sprint
+        historyService.addSprintHistory(
+                savedSprint.getId(),
+                "CREATE", // Action
+                userIdStr, // Auteur
+                "Sprint créé : " + savedSprint.getName()
+        );
         return new SprintDTO(savedSprint);
     }
 
@@ -85,8 +93,21 @@ public class SprintService {
         sprint.setEndDate(request.getEndDate());
         sprint.setGoal(request.getGoal());
         sprint.setCapacity(request.getCapacity());
-        Sprint updatedSprint = sprintRepository.save(sprint);
-        return new SprintDTO(updatedSprint);
+        try {
+            Sprint updatedSprint = sprintRepository.save(sprint);
+
+            // Ajout de l'historique
+            historyService.addSprintHistory(
+                    updatedSprint.getId(),
+                    "UPDATE", // Action
+                    userIdStr, // Auteur
+                    "Sprint mis à jour : " + updatedSprint.getName()
+            );
+
+            return new SprintDTO(updatedSprint);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la mise à jour du Sprint", e);
+        }
     }
 
     public void deleteSprint(Long projectId, Long sprintId) {
@@ -101,6 +122,14 @@ public class SprintService {
         }
 
         sprintRepository.delete(sprint);
+
+        // Ajout de l'historique de suppression
+        historyService.addSprintHistory(
+                sprint.getId(),
+                "DELETE", // Action
+                sprint.getCreatedBy(), // Auteur
+                "Sprint supprimé : " + sprint.getName()
+        );
     }
 
     public SprintDTO updateSprintStatus(Long projectId, Long sprintId, String token) {
@@ -127,6 +156,12 @@ public class SprintService {
                 }
             });
             sprintRepository.save(sprint);
+            historyService.addSprintHistory(
+                    sprint.getId(),
+                    "UPDATE_STATUS", // Action
+                    userIdStr, // Auteur
+                    "Sprint complété : " + sprint.getName()
+            );
         }
         return new SprintDTO(sprint); // Toujours renvoyer le sprint, même sans changement
     }
@@ -151,6 +186,13 @@ public class SprintService {
                 userStoryRepository.save(us);
             });
             Sprint updatedSprint = sprintRepository.save(sprint);
+            // Ajout de l'historique d'annulation
+            historyService.addSprintHistory(
+                    updatedSprint.getId(),
+                    "CANCEL", // Action
+                    userIdStr, // Auteur
+                    "Sprint annulé : " + updatedSprint.getName()
+            );
             return new SprintDTO(updatedSprint);
         }
         throw new RuntimeException("Impossible d'annuler un sprint déjà terminé ou archivé");
@@ -171,6 +213,14 @@ public class SprintService {
         if (sprint.getStatus() == SprintStatus.COMPLETED || sprint.getStatus() == SprintStatus.CANCELED) {
             sprint.setStatus(SprintStatus.ARCHIVED);
             Sprint updatedSprint = sprintRepository.save(sprint);
+
+            // Ajout de l'historique d'archivage
+            historyService.addSprintHistory(
+                    updatedSprint.getId(),
+                    "ARCHIVE", // Action
+                    userIdStr, // Auteur
+                    "Sprint archivé : " + updatedSprint.getName()
+            );
             return new SprintDTO(updatedSprint);
         }
         throw new RuntimeException("Seuls les sprints terminés ou annulés peuvent être archivés");
@@ -207,6 +257,14 @@ public class SprintService {
         });
 
         Sprint updatedSprint = sprintRepository.save(sprint);
+
+        // Ajout de l'historique d'activation
+        historyService.addSprintHistory(
+                updatedSprint.getId(),
+                "ACTIVATE", // Action
+                userIdStr, // Auteur
+                "Sprint activé : " + updatedSprint.getName()
+        );
         return new SprintDTO(updatedSprint);
     }
     public void updateStatusBasedOnDependencies(UserStory userStory) {

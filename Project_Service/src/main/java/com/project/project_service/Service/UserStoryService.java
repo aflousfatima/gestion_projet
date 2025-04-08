@@ -1,6 +1,5 @@
 package com.project.project_service.Service;
 
-import com.project.project_service.DTO.SprintDTO;
 import com.project.project_service.DTO.UserStoryDTO;
 import com.project.project_service.DTO.UserStoryRequest;
 import com.project.project_service.Entity.Projet;
@@ -36,7 +35,12 @@ public class UserStoryService {
     private TagRepository tagRepository;
     @Autowired
     private AuthClient authClient;
+    @Autowired
+    private HistoryService historyService;
 
+    private UserStoryDTO convertToDTO(UserStory userStory) {
+        return new UserStoryDTO(userStory);
+    }
     public UserStoryDTO createUserStory(Long projectId, UserStoryRequest request, String token) {
         System.out.println("Début de createUserStory pour projectId: " + projectId);
         System.out.println("Données reçues: " + request);
@@ -69,6 +73,14 @@ public class UserStoryService {
             userStory.setTags(tags);
         }
         UserStory savedStory = userStoryRepository.save(userStory);
+
+        // Ajout de l'historique de création du sprint
+        historyService.addUserStoryHistory(
+                savedStory.getId(),
+                "CREATE", // Action
+                userIdStr, // Auteur
+                "User Story  créé : " + savedStory.getTitle()
+        );
         return new UserStoryDTO(savedStory);
     }
     // New method to update a user story
@@ -117,14 +129,19 @@ public class UserStoryService {
         }
         try {
             UserStory updatedStory = userStoryRepository.save(userStory);
-            System.out.println("Étape 7 réussie: User Story sauvegardée - ID: " + updatedStory.getId());
+
+            // Ajout de l'historique
+            historyService.addUserStoryHistory(
+                    updatedStory.getId(),
+                    "UPDATE", // Action
+                    userIdStr, // Auteur (ou id utilisateur décrypté)
+                    "User Story mise à jour : " + updatedStory.getTitle()
+            );
+
             return new UserStoryDTO(updatedStory);
         } catch (Exception e) {
-            System.out.println("Étape 7 échouée: Erreur lors de la sauvegarde - " + e.getMessage());
-            e.printStackTrace(); // Affiche la stack trace complète
-            throw e; // Relance pour que le contrôleur retourne 404
+            throw new RuntimeException("Erreur lors de la mise à jour de la User Story", e);
         }
-
     }
     // New method to fetch all user stories for a project
     public List<UserStoryDTO> getUserStoriesByProjectId(Long projectId) {
@@ -144,6 +161,13 @@ public class UserStoryService {
             throw new RuntimeException("La User Story n'appartient pas à ce projet");
         }
         userStoryRepository.delete(userStory);
+        // Ajout de l'historique de suppression
+        historyService.addUserStoryHistory(
+                userStory.getId(),
+                "DELETE", // Action
+                userStory.getCreatedBy(), // Auteur
+                "User Story supprimé : " + userStory.getTitle()
+        );
     }
 
     // Nouvelle méthode pour assigner une user story à un sprint
@@ -191,6 +215,14 @@ public class UserStoryService {
         userStory.setSprint(sprint);
         updateStatusBasedOnDependencies(userStory); // Recalculer le statut
         UserStory updatedUserStory = userStoryRepository.save(userStory);
+
+        // Ajout de l'historique de suppression
+        historyService.addUserStoryHistory(
+                userStory.getId(),
+                "ASSIGN_TO_SPRINT", // Action
+                userStory.getCreatedBy(), // Auteur
+                "User Story attribuer au sprint : " + userStory.getTitle()
+        );
         return new UserStoryDTO(updatedUserStory);
     }
     // Nouvelle méthode pour retirer une user story d'un sprint
@@ -213,6 +245,14 @@ public class UserStoryService {
         userStory.setSprint(null);
         userStory.setStatus(UserStoryStatus.BACKLOG); // Remettre à "BACKLOG" lorsqu'elle est retirée
         UserStory updatedUserStory = userStoryRepository.save(userStory);
+
+        // Ajout de l'historique de suppression
+        historyService.addUserStoryHistory(
+                userStory.getId(),
+                "DELETE", // Action
+                userStory.getCreatedBy(), // Auteur
+                "User Story  retirer su sprint : " + userStory.getTitle()
+        );
         return new UserStoryDTO(updatedUserStory);
     }
 
@@ -238,6 +278,13 @@ public class UserStoryService {
         updateStatusBasedOnDependencies(userStory);
 
         UserStory updatedStory = userStoryRepository.save(userStory);
+        // Ajout de l'historique de suppression
+        historyService.addUserStoryHistory(
+                userStory.getId(),
+                "UPDATE_DEPENCENCIES", // Action
+                userStory.getCreatedBy(), // Auteur
+                "Modifier dependance entre les Users Stories : " + userStory.getTitle()
+        );
         return new UserStoryDTO(updatedStory);
     }
 
@@ -263,6 +310,14 @@ public class UserStoryService {
         }
         userStory.setStatus(status);
         UserStory updatedStory = userStoryRepository.save(userStory);
+
+        // Ajout de l'historique de suppression
+        historyService.addUserStoryHistory(
+                userStory.getId(),
+                "UPDATE_USER_STORY_STATUS", // Action
+                userStory.getCreatedBy(), // Auteur
+                "Modifier Status du User Story : " + userStory.getTitle()
+        );
         return new UserStoryDTO(updatedStory);
     }
     public void updateStatusBasedOnDependencies(UserStory userStory) {
@@ -334,10 +389,15 @@ public class UserStoryService {
         userStory.setTags(tags);
         UserStory updatedUserStory = userStoryRepository.save(userStory);
 
+        // Ajout de l'historique de suppression
+        historyService.addUserStoryHistory(
+                userStory.getId(),
+                "UPDATE_TAG", // Action
+                userStory.getCreatedBy(), // Auteur
+                "Modifier le tag : " + userStory.getTitle()
+        );
         // Conversion en DTO
         return convertToDTO(updatedUserStory);
     }
-    private UserStoryDTO convertToDTO(UserStory userStory) {
-        return new UserStoryDTO(userStory);
-    }
+
 }
