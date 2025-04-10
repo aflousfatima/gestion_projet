@@ -33,7 +33,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/signup","/api/login","/api/refresh","/api/logout","/actuator/health","/api/invitations/verify").permitAll() // Endpoint public pour login
                         .requestMatchers("/swagger.html","/swagger-ui/**", "/swagger-ui.html", "/docs/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/invitations").hasRole("MANAGER") // Réservé aux managers
-                        .requestMatchers("/api/me","/api/user-id").authenticated() // Accessible aux authentifiés
+                        .requestMatchers("/api/me","/api/user-id","/api/auth/decode-token").authenticated() // Accessible aux authentifiés
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
