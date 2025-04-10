@@ -904,11 +904,11 @@ export default function Tasks() {
           <button className="tasks-tab active">
             <i className="fa fa-list"></i> List
           </button>
-          <button className="tasks-tab">
-            <i className="fa fa-table"></i> Table
+          <button className="tasks-tab active">
+            <i className="fa fa-chart-simple"></i> Kanban
           </button>
           <button className="tasks-tab">
-            <i className="fa fa-clock"></i> Chronology
+            <i className="fa fa-table"></i> Table
           </button>
           <button className="tasks-tab">
             <i className="fa fa-chart-line"></i> Dashboard
