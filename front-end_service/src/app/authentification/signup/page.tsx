@@ -124,8 +124,8 @@ export default function SignupPage() {
   if (error) {
     return (
       <div className="container1">
-        <div className="form-box">
-          <h3 className="title1">Erreur</h3>
+        <div className="form-box1">
+          <h3 className="title1up">Erreur</h3>
           <p>{error}</p>
           <Link href="/authentification/signin">Retour à la connexion</Link>
         </div>
@@ -134,9 +134,9 @@ export default function SignupPage() {
   }
   return (
     <div className="container1">
-      <div className=" form-box">
-        <h3 className="title1">Get started with AGILIA</h3>
-        <h2 className="title2">
+      <div className=" form-box1">
+        <h3 className="title1up">Get started with AGILIA</h3>
+        <h2 className="title2up">
           It’s free for up to 10 users - no credit card needed.
         </h2>
         {/* Horizontal Signup Sections */}

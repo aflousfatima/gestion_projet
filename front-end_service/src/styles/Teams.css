@@ -121,17 +121,19 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.7); /* Overlay plus sombre */
+  background: rgba(101, 97, 97, 0.11); /* Fond plus sombre pour plus de contraste */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
   animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(5px); /* Effet de flou en arrière-plan (support moderne) */
+  animation: fadeInModal 0.3s ease-out; /* Animation d’apparition */
 }
 
 .teams-modal {
   background-color: #fff; /* Fond blanc pour le pop-up */
-  padding: 40px;
+  padding: 30px;
   border-radius: 20px;
   width: 110%;
   max-width: 600px;
@@ -235,21 +237,26 @@
 
 /* Animations */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-@keyframes slideIn {
-  from {
-    transform: translateY(-40px);
-    opacity: 0;
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive : ajuste pour petits écrans */
+@media (max-width: 500px) {
+  .teams-modal {
+    width: 90%;
+    padding: 15px;
+    border-radius: 10px;
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+
 }

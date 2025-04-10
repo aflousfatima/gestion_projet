@@ -9,7 +9,7 @@
   }
   
   /* Form Box */
-  .form-box {
+  .form-box1 {
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
@@ -111,11 +111,11 @@
 
       }
 
-.title1{
+.title1up{
     font-size: 30px;
 margin-left:130px
 }
-.title2{
+.title2up{
     margin-top: 10px;
     font-size: 15px;
 margin-left:123px

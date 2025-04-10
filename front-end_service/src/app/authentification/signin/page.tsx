@@ -68,18 +68,47 @@ export default function SigninPage() {
 
   return (
     <div className="container2">
-      <div className="form-box">
-        <h3 className="title1">Welcome Back to AGILIA</h3>
-        <h2 className="title2">Sign in to access your workspace</h2>
+      <div className=" form-box">
+      <h3 className="title1">Welcome Back to AGILIA</h3>
+      <h2 className="title2">Sign in to access your workspace</h2>
         {/* Horizontal Signup Sections */}
         <div className="signin-sections">
           {/* Social Sign Up Section (Left) */}
           {/* Social Sign Up Section */}
+          <div className="social-signin">
+            <a href="#" className="social-iconin" title="Continuer avec Google">
+              <img src="/google.png" alt="Google" className="social-img" />
+            </a>
+            <a href="#" className="social-iconin" title="Continuer avec Facebook">
+              <img src="/facebook.png" alt="Facebook" className="social-img" />
+            </a>
+            <a
+              href="#"
+              className="social-iconin"
+              title="Continuer avec Microsoft"
+            >
+              <img
+                src="/microsoft.png"
+                alt="Microsoft"
+                className="social-img"
+              />
+            </a>
+            <a href="#" className="social-iconin" title="Continuer avec Apple">
+              <img src="/apple.png" alt="Apple" className="social-img" />
+            </a>
+          </div>
+
+          <div className="separator">
+            <div className="vertical-line"></div> {/* Ligne verticale */}
+            <div className="or-text">OR</div>
+            <div className="vertical-line"></div> {/* Ligne verticale */}
+          </div>
 
           {/* Personal Info Sign Up Section (Right) */}
           <div className="personal-signin">
             <form onSubmit={handleSubmit}>
-              <div className="input-group">
+              
+             <div className="input-group">
                 <i className="fas fa-envelope input-icon"></i>
                 <input
                   type="email"
@@ -91,7 +120,6 @@ export default function SigninPage() {
                   required
                 />
               </div>
-
               <div className="input-group">
                 <i className="fas fa-lock input-icon"></i>
                 <input
@@ -104,6 +132,7 @@ export default function SigninPage() {
                   required
                 />
               </div>
+
               <button type="submit" className="submit1-btn">
                 Sign In
               </button>
@@ -129,8 +158,8 @@ export default function SigninPage() {
               </p>
             </form>
           </div>
-        </div>
       </div>
+    </div>
       <div className="signin-image-container">
         <img
           src="/signin.png"
@@ -139,6 +168,6 @@ export default function SigninPage() {
           className="signin-image"
         />
       </div>
-    </div>
+      </div>     
   );
 }

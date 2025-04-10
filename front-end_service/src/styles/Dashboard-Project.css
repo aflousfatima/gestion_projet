@@ -569,7 +569,7 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 750px; /* Élargissement du panneau */
+  width: 800px; /* Élargissement du panneau */
   height: 100%;
   background: linear-gradient(145deg, #ffffff 0%, #ffffff 100%);
   border-left: 1px solid #d1d5db;
@@ -1027,6 +1027,7 @@ padding: 1px 5px;
   justify-content: center;
   align-items: center;
   z-index: 2000;
+
 }
 
 .modal-content {
@@ -1034,8 +1035,9 @@ padding: 1px 5px;
   border-radius: 12px;
   padding: 25px;
   width: 400px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px rgba(194, 30, 30, 0.1);
   animation: fadeIn 0.3s ease-out;
+
 }
 
 .modal-content h4 {
@@ -1367,4 +1369,415 @@ padding: 1px 5px;
 
 .action-cell-inner{
 gap: 100px;
+}
+
+/* Liste des tags */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px; /* Un peu plus d'espace pour une respiration visuelle */
+  margin-top: 10px;
+  padding: 5px;
+  animation: fadeIn 0.5s ease-in-out; /* Animation d'entrée douce */
+}
+
+/* Style des tags individuels */
+.tag {
+  background: linear-gradient(135deg, #82c0f3b9, #069be6); /* Dégradé vibrant */
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px; /* Coins arrondis pour un look moderne */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ombre légère */
+  transition: transform 0.2s ease, box-shadow 0.2s ease; /* Animation fluide */
+}
+
+/* Effet au survol */
+.tag:hover {
+  transform: translateY(-2px); /* Légère élévation */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Ombre plus prononcée */
+}
+
+/* Bouton de suppression dans le tag */
+.tag button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #a20101; /* Rouge vif pour le contraste */
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+/* Effet au survol du bouton */
+.tag button:hover {
+  color: #a10606; /* Rouge plus intense */
+  transform: scale(1.2); /* Agrandissement subtil */
+}
+
+/* Modale */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(101, 97, 97, 0.11); /* Fond plus sombre pour plus de contraste */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(5px); /* Effet de flou en arrière-plan (support moderne) */
+  animation: fadeInModal 0.3s ease-out; /* Animation d’apparition */
+}
+
+/* Contenu de la modale */
+.modal-content {
+  background: linear-gradient(145deg, #ffffff, #f0f4ff); /* Dégradé subtil */
+  padding: 25px;
+  border-radius: 15px; /* Coins plus arrondis pour un look doux */
+  width: 450px; /* Légèrement plus large pour plus d’espace */
+  max-height: 80vh; /* Limite la hauteur */
+  overflow-y: auto; /* Scroll si contenu trop long */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); /* Ombre profonde pour un effet "flottant" */
+  border: 1px solid rgba(255, 255, 255, 0.5); /* Bordure subtile */
+  position: relative;
+  transform: scale(0.95); /* Légère réduction initiale */
+  animation: popIn 0.3s ease-out forwards; /* Animation d’entrée */
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive : ajuste pour petits écrans */
+@media (max-width: 500px) {
+  .modal-content {
+    width: 90%;
+    padding: 15px;
+    border-radius: 10px;
+  }
+
+  .tag {
+    padding: 3px 10px;
+    font-size: 12px;
+  }
+}
+
+/* jadid */
+/* Overlay */
+.modal-overlay-history {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in;
+  backdrop-filter: blur(5px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Conteneur principal */
+.modal-content-history {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
+  max-width: 1000px;
+  width:900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  animation: slideUp 0.4s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Titre */
+.modal-content-history h4 {
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 1.3em;
+  margin-bottom: 30px;
+  padding-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* Timeline */
+.history-timeline {
+  position: relative;
+  padding: 0 20px;
+}
+
+/* Ligne verticale */
+.history-timeline::before {
+  content: '';
+  position: absolute;
+  left: 24%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #333, #333); /* Dégradé gris subtil */
+  z-index: 1;
+}
+
+/* Événement */
+.history-event {
+  position: relative;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  animation: eventFadeIn 0.5s ease-out;
+}
+
+@keyframes eventFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Date (à gauche) */
+.history-event .event-date {
+  width: 20%;
+  text-align: right;
+  padding-right: 15px;
+  color: #333;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 500;
+  font-size: 0.9em;
+  letter-spacing: 0.5px;
+}
+
+/* Conteneur des détails (à droite) */
+.history-event .event-details-container {
+  width: 70%;
+  padding: 15px 20px;
+  background: #a3a0a024; /* Fond gris très clair */
+  border-radius: 8px;
+  border-left: 3px solid #333; /* Bordure assortie à la ligne */
+  position: relative;
+  transition: background 0.3s ease;
+left:10%;
+
+}
+
+.history-event:hover .event-details-container {
+  background: #edf2f7; /* Légère variation au survol */
+}
+
+/* Connecteur entre la ligne et la carte */
+.history-event .event-details-container::before {
+  content: '';
+  position: absolute;
+  left: -53px;
+  top: 50%;
+  width: 53px;
+  height: 2px;
+  background: #333;
+  z-index: 0;
+}
+
+/* Marqueur de l’événement */
+.history-event::after {
+  content: '';
+  position: absolute;
+  left: 23%;
+  transform: translateX(-50%);
+  top: 47%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #333;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 8px;
+}
+
+/* Icônes selon l’action */
+.history-event.created::after {
+  content: '\f055'; /* FontAwesome "plus-circle" */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c; /* Vert doux pour "Created" */
+}
+
+.history-event.updated::after {
+  content: '\f303'; /* FontAwesome "pen" */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c; /* Orange doux pour "Updated" */
+}
+
+.history-event.deleted::after {
+  content: '\f2ed'; /* FontAwesome "trash" */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c; /* Rouge doux pour "Deleted" */
+}
+
+/* Détails */
+.history-event .event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Ligne pour Auteur et Action */
+.event-details .top-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e3f0e2;
+}
+
+/* Ligne pour Description */
+.event-details .description-row {
+  display: flex;
+  align-items: center;
+  padding-top: 8px;
+}
+
+/* Style des champs avec icônes */
+.history-event .event-details i {
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+/* Couleurs variées pour les icônes */
+.history-event .event-details .author i {
+  color: #2cbafc; /* Gris foncé pour l’auteur */
+}
+
+.history-event .event-details .action i {
+  color: #fcb02c; /* Orange pour l’action */
+}
+
+.history-event .event-details .description i {
+  color: #ef5011; /* Vert pour la description */
+}
+
+/* Style des champs */
+.history-event .event-details .author,
+.history-event .event-details .action,
+.history-event .event-details .description {
+  display: flex;
+  align-items: center;
+}
+
+/* Polices variées */
+.history-event .event-details strong {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  margin-right: 5px;
+  color: #333;
+}
+
+.history-event .event-details .author span,
+.history-event .event-details .description span {
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+/* Badge pour l’action */
+.history-event .event-details .action span {
+  font-family: 'Inter', sans-serif;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.history-event .event-details .action span.created {
+  background: #e6fffa;
+  color: #2c7a7b;
+}
+
+.history-event .event-details .action span.updated {
+  background: #fffaf0;
+  color: #975a16;
+}
+
+.history-event .event-details .action span.deleted {
+  background: #fff5f5;
+  color: #9b2c2c;
+}
+
+/* Message "Aucun historique" */
+.modal-content-history p {
+  color: #718096;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1em;
+  text-align: center;
+  padding: 25px;
+}
+
+/* Bouton */
+.action-btn.secondary {
+  background: #fc522c;
+  color: white;
+  border: none;
+  padding: 10px 25px;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+  margin-top: 30px;
+  display: block;
+  margin-left: auto;
+}
+
+.action-btn.secondary:hover {
+  background: #333;
+  transform: translateY(-2px);
+}
+
+/* Scrollbar */
+.modal-content-history::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content-history::-webkit-scrollbar-track {
+  background: #107bc200;
+}
+
+.modal-content-history::-webkit-scrollbar-thumb {
+  background: #fc522c;
+  border-radius: 10px;
+}
+
+.modal-content-history::-webkit-scrollbar-thumb:hover {
+  background: #4a5568;
 }

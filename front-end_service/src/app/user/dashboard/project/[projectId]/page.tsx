@@ -3,20 +3,20 @@ import React, { useState, useEffect } from "react";
 import "../../../../../styles/Dashboard-Project.css";
 import { useAuth } from "../../../../../context/AuthContext";
 import useAxios from "../../../../../hooks/useAxios";
-import { AxiosError } from 'axios'; // Ajoutez cet import en haut du fichier
+import { AxiosError } from "axios"; // Ajoutez cet import en haut du fichier
 import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
 } from "../../../../../config/useApi";
 import { useParams } from "next/navigation";
-import { useCallback } from 'react'; // Ajoutez cet import si ce n'est pas déjà fait
+import { useCallback } from "react"; // Ajoutez cet import si ce n'est pas déjà fait
 // Interfaces
 interface Task {
   id: number;
   name: string;
   responsible: string | null;
   dueDate: string;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"|"";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "";
   status: "TO DO" | "IN PROGRESS" | "DONE";
   sprintId?: number;
   userStoryId?: number;
@@ -55,6 +55,7 @@ interface UserStory {
   effortPoints: number;
   sprintId?: number;
   dependsOn?: number[]; // Ajout pour les dépendances (comme discuté précédemment)
+  tags?: string[];
 }
 
 interface Sprint {
@@ -91,6 +92,21 @@ const initialTasks: Task[] = [
   },
 ];
 
+interface History {
+  id: number;
+  action: string; // ex: "CREATE", "UPDATE", "DELETE"
+  date: string; // LocalDateTime sera converti en string par l'API (ex: "2025-04-08T10:00:00")
+  authorFullName: string;
+  description: string;
+}
+
+interface UserStoryHistory extends History {
+  userStoryId: number;
+}
+
+interface SprintHistory extends History {
+  sprintId: number;
+}
 export default function Tasks() {
   const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
@@ -276,6 +292,7 @@ export default function Tasks() {
     priority: "",
     effortPoints: 0,
     dependsOn: [],
+    tags: [],
   });
   const [editingSprint, setEditingSprint] = useState<Sprint | null>(null);
   const [newSprint, setNewSprint] = useState<Sprint>({
@@ -293,8 +310,39 @@ export default function Tasks() {
     null
   ); // Pour le mini-modal
 
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<{
+    id: number;
+    type: "userStory" | "sprint";
+    title: string
+  } | null>(null);
+  const [history, setHistory] = useState<(UserStoryHistory | SprintHistory)[]>(
+    []
+  );
+
+  const fetchHistory = async (id: number, type: "userStory" | "sprint") => {
+    try {
+      const endpoint =
+        type === "userStory"
+          ? `${PROJECT_SERVICE_URL}/api/projects/user-story/${id}/history`
+          : `${PROJECT_SERVICE_URL}/api/projects/sprint/${id}/history`;
+      const response = await axiosInstance.get(endpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setHistory(response.data); // Stocke l'historique
+      setIsHistoryModalOpen(true); // Ouvre la modale
+    } catch (error) {
+      console.error(
+        `Erreur lors de la récupération de l'historique ${type} :`,
+        error
+      );
+      alert("Erreur lors du chargement de l'historique.");
+    }
+  };
+
   // Fonction pour éditer une User Story
   const handleEditUserStory = (story: UserStory) => {
+    console.log("Édition de la User Story sélectionnée :", story);
     setEditingUserStory(story); // Pré-remplit le formulaire avec les données de la User Story
   };
 
@@ -411,6 +459,8 @@ export default function Tasks() {
   const handleAddUserStory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    console.log("newUserStory avant envoi :", newUserStory);
+
     try {
       const response = await axiosInstance.post(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
@@ -418,9 +468,10 @@ export default function Tasks() {
           title: newUserStory.title,
           description: newUserStory.description,
           priority: newUserStory.priority,
-          status: "BACKLOG", // Toujours "BACKLOG" pour une nouvelle user story
+          status: "BACKLOG",
           effortPoints: newUserStory.effortPoints,
-          dependsOn: newUserStory.dependsOn || [], // Ajout de dependsOn (vide par défaut)
+          dependsOn: newUserStory.dependsOn || [],
+          tags: newUserStory.tags || [],
         },
         {
           headers: {
@@ -436,10 +487,11 @@ export default function Tasks() {
           id: createdUserStory.id,
           title: createdUserStory.title,
           description: createdUserStory.description,
-          status: createdUserStory.status, // Récupérer depuis la réponse
+          status: createdUserStory.status,
           priority: createdUserStory.priority,
           effortPoints: createdUserStory.effortPoints,
-          dependsOn: createdUserStory.dependsOn || [], // Récupérer depuis la réponse
+          dependsOn: createdUserStory.dependsOn || [],
+          tags: createdUserStory.tags || [],
         },
       ]);
       setNewUserStory({
@@ -449,7 +501,8 @@ export default function Tasks() {
         status: "BACKLOG",
         priority: "",
         effortPoints: 0,
-        dependsOn: [], // Réinitialiser avec un tableau vide
+        dependsOn: [],
+        tags: [],
       });
     } catch (error) {
       console.error("Erreur lors de la création de la User Story :", error);
@@ -457,50 +510,22 @@ export default function Tasks() {
     }
   };
 
-  useEffect(() => {
-    const fetchUserStories = async () => {
-      if (authLoading || !accessToken || !projectId) {
-        console.log("Conditions non remplies : ", {
-          authLoading,
-          accessToken,
-          projectId,
-        });
-        return;
-      }
-      const url = `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`;
-      console.log("Appel de l’API User Stories avec URL :", url);
-      try {
-        const response = await axiosInstance.get(url, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-        console.log("Réponse de l’API :", response.data);
-        const userStories = response.data.map((us: UserStory) => ({
-          id: us.id,
-          title: us.title,
-          description: us.description,
-          priority: us.priority,
-          effortPoints: us.effortPoints,
-          sprintId: us.sprintId,
-          dependsOn: us.dependsOn || [], // Ajout de dependsOn
-        }));
-        setBacklog(userStories);
-      } catch (error) {
-        console.error(
-          "Erreur lors de la récupération des User Stories :",
-          error
-        );
-        alert("Erreur lors du chargement des User Stories.");
-      }
-    };
-    fetchUserStories();
-  }, [accessToken, authLoading, axiosInstance, projectId]);
   // Update user story
   const handleUpdateUserStory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingUserStory) return;
-
+    console.log("Mise à jour de la User Story :", {
+      projectId,
+      userStoryId: editingUserStory.id,
+      data: {
+        title: editingUserStory.title,
+        description: editingUserStory.description,
+        priority: editingUserStory.priority,
+        effortPoints: editingUserStory.effortPoints,
+        dependsOn: editingUserStory.dependsOn || [],
+        tags: editingUserStory.tags || [],
+      },
+    });
     try {
       const response = await axiosInstance.put(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${editingUserStory.id}`,
@@ -509,8 +534,8 @@ export default function Tasks() {
           description: editingUserStory.description,
           priority: editingUserStory.priority,
           effortPoints: editingUserStory.effortPoints,
-          dependsOn: editingUserStory.dependsOn || [], // Ajout de dependsOn
-          // Ne pas inclure status ici, il reste inchangé sauf via assign/remove
+          dependsOn: editingUserStory.dependsOn || [],
+          tags: editingUserStory.tags || [],
         },
         {
           headers: {
@@ -529,35 +554,13 @@ export default function Tasks() {
                 description: updatedStory.description,
                 priority: updatedStory.priority,
                 effortPoints: updatedStory.effortPoints,
-                status: updatedStory.status, // Récupérer depuis la réponse
-                dependsOn: updatedStory.dependsOn || [], // Récupérer depuis la réponse
+                status: updatedStory.status,
+                dependsOn: updatedStory.dependsOn || [],
+                tags: updatedStory.tags || [],
               }
             : us
         )
       );
-
-      if (
-        activeSprint &&
-        activeSprint.userStories.some((us) => us.id === updatedStory.id)
-      ) {
-        setActiveSprint({
-          ...activeSprint,
-          userStories: activeSprint.userStories.map((us) =>
-            us.id === updatedStory.id
-              ? {
-                  ...us,
-                  title: updatedStory.title,
-                  description: updatedStory.description,
-                  priority: updatedStory.priority,
-                  effortPoints: updatedStory.effortPoints,
-                  status: updatedStory.status,
-                  dependsOn: updatedStory.dependsOn || [], // Récupérer depuis la réponse
-                }
-              : us
-          ),
-        });
-      }
-
       setEditingUserStory(null);
     } catch (error) {
       console.error("Erreur lors de la mise à jour de la User Story :", error);
@@ -622,16 +625,17 @@ export default function Tasks() {
     fetchSprints();
   }, [accessToken, authLoading, axiosInstance, projectId]);
 
-
-
   // Définir fetchData avec useCallback
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
   const fetchData = useCallback(async () => {
+    if (isDataLoaded) return; // Évite les appels multiples inutiles
     try {
       const sprintsResponse = await axiosInstance.get(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      const fetchedSprints = sprintsResponse.data.map((sprint: SprintDTO) => ({
+      const fetchedSprints = sprintsResponse.data.map((sprint: Sprint) => ({
         id: sprint.id,
         name: sprint.name,
         startDate: sprint.startDate,
@@ -642,25 +646,34 @@ export default function Tasks() {
         userStories: sprint.userStories || [],
       }));
       setSprints(fetchedSprints);
-  
+
       const active = fetchedSprints.find((s: Sprint) => s.status === "ACTIVE");
       if (active) {
         setActiveSprint(active);
       }
-  
+
       const backlogResponse = await axiosInstance.get(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      setBacklog(backlogResponse.data); // Toutes les user stories
+      setBacklog(backlogResponse.data);
+      setIsDataLoaded(true); // Marque les données comme chargées
     } catch (error) {
       console.error("Erreur lors du rechargement des données :", error);
     }
-  }, [axiosInstance, projectId, accessToken, setSprints, setActiveSprint, setBacklog]);
-  // Utilisation dans useEffect
+  }, [axiosInstance, projectId, accessToken, isDataLoaded]);
+
   useEffect(() => {
-    fetchData();
-  }, [fetchData, projectId, accessToken]); // Dépendances du useEffect
+    if (!authLoading && accessToken && projectId) {
+      fetchData();
+    }
+  }, [fetchData, authLoading, accessToken, projectId]);
+
+  useEffect(() => {
+    if (!authLoading && accessToken && projectId) {
+      fetchData();
+    }
+  }, [fetchData, authLoading, accessToken, projectId]);
   // Gestionnaire pour ajouter un sprint
   const handleAddSprint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -729,18 +742,16 @@ export default function Tasks() {
   const displayedSprint =
     activeSprint || sprints.find((s) => s.status === "ACTIVE");
 
-    
-useEffect(() => {
-  const syncActiveSprint = async () => {
-    await fetchData(); // Charge les données initiales
-    const active = sprints.find((s) => s.status === "ACTIVE");
-    if (active && !activeSprint) {
-      setActiveSprint(active); // Définit activeSprint si un sprint est actif
-    }
-  };
-  syncActiveSprint();
-}, [sprints, activeSprint, fetchData, projectId, accessToken]); // Ajoutez projectId et accessToken comme dépendances
-  
+  useEffect(() => {
+    const syncActiveSprint = async () => {
+      await fetchData(); // Charge les données initiales
+      const active = sprints.find((s) => s.status === "ACTIVE");
+      if (active && !activeSprint) {
+        setActiveSprint(active); // Définit activeSprint si un sprint est actif
+      }
+    };
+    syncActiveSprint();
+  }, [sprints, activeSprint, fetchData, projectId, accessToken]); // Ajoutez projectId et accessToken comme dépendances
 
   // Déclenche à chaque changement de sprints ou activeSprint
   const getTasksByStatus = (status: "TO DO" | "IN PROGRESS" | "DONE") => {
@@ -754,6 +765,40 @@ useEffect(() => {
       // You can reintroduce this logic if you add user data back to AuthContext
     }
     return filteredTasks;
+  };
+
+  const [editingTagsUserStory, setEditingTagsUserStory] =
+    useState<UserStory | null>(null);
+
+  const handleEditTags = (story: UserStory) => {
+    setEditingTagsUserStory(story); // Ouvre un formulaire ou une modale pour éditer les tags
+  };
+
+  // Nouvelle fonction pour mettre à jour les tags
+  const handleUpdateTags = async (userStoryId: number, newTags: string[]) => {
+    try {
+      const response = await axiosInstance.put(
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${userStoryId}/tags`,
+        { tags: newTags },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      const updatedStory = response.data;
+      setBacklog(
+        backlog.map((us) =>
+          us.id === updatedStory.id
+            ? { ...us, tags: updatedStory.tags || [] }
+            : us
+        )
+      );
+      setEditingTagsUserStory(null); // Ferme le formulaire après mise à jour
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des tags :", error);
+      alert("Erreur lors de la mise à jour des tags.");
+    }
   };
 
   if (loading) return <p>Loading...</p>;
@@ -1139,116 +1184,241 @@ useEffect(() => {
               </div>
               {expandedSection === "backlog" && (
                 <div className="section-body">
-                  {/* Formulaire */}
-                  <div className="story-form">
-                    <h4>{editingUserStory ? "Edit Story" : "New Story"}</h4>
-                    <form
-                      onSubmit={
-                        editingUserStory
-                          ? handleUpdateUserStory
-                          : handleAddUserStory
-                      }
-                      className="modern-form"
-                    >
-                      <input
-                        type="text"
-                        placeholder="Story Title"
-                        value={
-                          editingUserStory
-                            ? editingUserStory.title
-                            : newUserStory.title
-                        }
-                        onChange={(e) =>
-                          editingUserStory
-                            ? setEditingUserStory({
-                                ...editingUserStory,
-                                title: e.target.value,
-                              })
-                            : setNewUserStory({
-                                ...newUserStory,
-                                title: e.target.value,
-                              })
-                        }
-                        required
-                      />
-                      <textarea
-                        placeholder="Description (optional)"
-                        value={
-                          editingUserStory
-                            ? editingUserStory.description
-                            : newUserStory.description
-                        }
-                        onChange={(e) =>
-                          editingUserStory
-                            ? setEditingUserStory({
-                                ...editingUserStory,
-                                description: e.target.value,
-                              })
-                            : setNewUserStory({
-                                ...newUserStory,
-                                description: e.target.value,
-                              })
-                        }
-                      />
-                      <div className="form-row">
-                        <select
-                          value={
-                            editingUserStory
-                              ? editingUserStory.priority
-                              : newUserStory.priority
-                          }
-                          onChange={(e) =>
-                            editingUserStory
-                              ? setEditingUserStory({
-                                  ...editingUserStory,
-                                  priority: e.target.value as
-                                    | "LOW"
-                                    | "MEDIUM"
-                                    | "HIGH"
-                                    | "",
-                                })
-                              : setNewUserStory({
-                                  ...newUserStory,
-                                  priority: e.target.value as
-                                    | "LOW"
-                                    | "MEDIUM"
-                                    | "HIGH"
-                                    | "",
-                                })
-                          }
-                        >
-                          <option value="">Priority</option>
-                          <option value="LOW">Low</option>
-                          <option value="MEDIUM">Medium</option>
-                          <option value="HIGH">High</option>
-                        </select>
+                  {/* Formulaire de création */}
+                  {!editingUserStory && (
+                    <div className="story-form">
+                      <h4>New Story</h4>
+                      <form
+                        onSubmit={handleAddUserStory}
+                        className="modern-form"
+                      >
                         <input
-                          type="number"
-                          placeholder="Effort (pts)"
-                          value={
-                            editingUserStory
-                              ? editingUserStory.effortPoints
-                              : newUserStory.effortPoints || ""
-                          }
+                          type="text"
+                          placeholder="Story Title"
+                          value={newUserStory.title}
                           onChange={(e) =>
-                            editingUserStory
-                              ? setEditingUserStory({
-                                  ...editingUserStory,
-                                  effortPoints: parseInt(e.target.value) || 0,
-                                })
-                              : setNewUserStory({
-                                  ...newUserStory,
-                                  effortPoints: parseInt(e.target.value) || 0,
-                                })
+                            setNewUserStory({
+                              ...newUserStory,
+                              title: e.target.value,
+                            })
                           }
-                          min="0"
+                          required
                         />
-                      </div>
-                      <div className="twobuttons">
+                        <textarea
+                          placeholder="Description (optional)"
+                          value={newUserStory.description}
+                          onChange={(e) =>
+                            setNewUserStory({
+                              ...newUserStory,
+                              description: e.target.value,
+                            })
+                          }
+                        />
+                        <div className="form-row">
+                          <select
+                            value={newUserStory.priority}
+                            onChange={(e) =>
+                              setNewUserStory({
+                                ...newUserStory,
+                                priority: e.target.value as
+                                  | "LOW"
+                                  | "MEDIUM"
+                                  | "HIGH"
+                                  | "",
+                              })
+                            }
+                          >
+                            <option value="">Priority</option>
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="HIGH">High</option>
+                          </select>
+                          <input
+                            type="number"
+                            placeholder="Effort (pts)"
+                            value={newUserStory.effortPoints || ""}
+                            onChange={(e) =>
+                              setNewUserStory({
+                                ...newUserStory,
+                                effortPoints: parseInt(e.target.value) || 0,
+                              })
+                            }
+                            min="0"
+                          />
+                        </div>
+                        <div className="form-row">
+                          <input
+                            type="text"
+                            placeholder="Tags (press Enter to add)"
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "Enter" &&
+                                e.currentTarget.value.trim()
+                              ) {
+                                e.preventDefault();
+                                const newTag = e.currentTarget.value.trim();
+                                const currentTags = newUserStory.tags || [];
+                                if (!currentTags.includes(newTag)) {
+                                  setNewUserStory({
+                                    ...newUserStory,
+                                    tags: [...currentTags, newTag],
+                                  });
+                                }
+                                e.currentTarget.value = "";
+                              }
+                            }}
+                          />
+                          <div className="tag-list">
+                            {newUserStory.tags &&
+                            newUserStory.tags.length > 0 ? (
+                              newUserStory.tags.map((tag, index) => (
+                                <span key={index} className="tag">
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedTags =
+                                        newUserStory.tags!.filter(
+                                          (t) => t !== tag
+                                        );
+                                      setNewUserStory({
+                                        ...newUserStory,
+                                        tags: updatedTags,
+                                      });
+                                    }}
+                                  >
+                                    x
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span>No tags</span>
+                            )}
+                          </div>
+                        </div>
                         <button type="submit" className="action-btn primary">
-                          {editingUserStory ? "Update" : "Add"}
+                          Add
                         </button>
-                        {editingUserStory && (
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Formulaire d'édition */}
+                  {editingUserStory && (
+                    <div className="story-form">
+                      <h4>Edit Story</h4>
+                      <form
+                        onSubmit={handleUpdateUserStory}
+                        className="modern-form"
+                      >
+                        <input
+                          type="text"
+                          placeholder="Story Title"
+                          value={editingUserStory.title}
+                          onChange={(e) =>
+                            setEditingUserStory({
+                              ...editingUserStory,
+                              title: e.target.value,
+                            })
+                          }
+                          required
+                        />
+                        <textarea
+                          placeholder="Description (optional)"
+                          value={editingUserStory.description}
+                          onChange={(e) =>
+                            setEditingUserStory({
+                              ...editingUserStory,
+                              description: e.target.value,
+                            })
+                          }
+                        />
+                        <div className="form-row">
+                          <select
+                            value={editingUserStory.priority}
+                            onChange={(e) =>
+                              setEditingUserStory({
+                                ...editingUserStory,
+                                priority: e.target.value as
+                                  | "LOW"
+                                  | "MEDIUM"
+                                  | "HIGH"
+                                  | "",
+                              })
+                            }
+                          >
+                            <option value="">Priority</option>
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM">Medium</option>
+                            <option value="HIGH">High</option>
+                          </select>
+                          <input
+                            type="number"
+                            placeholder="Effort (pts)"
+                            value={editingUserStory.effortPoints || ""}
+                            onChange={(e) =>
+                              setEditingUserStory({
+                                ...editingUserStory,
+                                effortPoints: parseInt(e.target.value) || 0,
+                              })
+                            }
+                            min="0"
+                          />
+                        </div>
+                        <div className="form-row">
+                          <input
+                            type="text"
+                            placeholder="Tags (press Enter to add)"
+                            onKeyDown={(e) => {
+                              if (
+                                e.key === "Enter" &&
+                                e.currentTarget.value.trim()
+                              ) {
+                                e.preventDefault();
+                                const newTag = e.currentTarget.value.trim();
+                                const currentTags = editingUserStory.tags || [];
+                                if (!currentTags.includes(newTag)) {
+                                  setEditingUserStory({
+                                    ...editingUserStory,
+                                    tags: [...currentTags, newTag],
+                                  });
+                                }
+                                e.currentTarget.value = "";
+                              }
+                            }}
+                          />
+                          <div className="tag-list">
+                            {editingUserStory.tags &&
+                            editingUserStory.tags.length > 0 ? (
+                              editingUserStory.tags.map((tag, index) => (
+                                <span key={index} className="tag">
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updatedTags =
+                                        editingUserStory.tags!.filter(
+                                          (t) => t !== tag
+                                        );
+                                      setEditingUserStory({
+                                        ...editingUserStory,
+                                        tags: updatedTags,
+                                      });
+                                    }}
+                                  >
+                                    x
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <span>No tags</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="twobuttons">
+                          <button type="submit" className="action-btn primary">
+                            Update
+                          </button>
                           <button
                             type="button"
                             className="action-btn secondary-cancel"
@@ -1256,10 +1426,10 @@ useEffect(() => {
                           >
                             Cancel
                           </button>
-                        )}
-                      </div>
-                    </form>
-                  </div>
+                        </div>
+                      </form>
+                    </div>
+                  )}
 
                   {/* Séparateur et Liste */}
                   <div className="section-divider">
@@ -1290,6 +1460,7 @@ useEffect(() => {
                                   <th>Priority</th>
                                   <th>Effort</th>
                                   <th>Status</th>
+                                  <th>Tags</th>
                                   <th>Dep</th>
                                   <th>Actions</th>
                                 </tr>
@@ -1297,7 +1468,18 @@ useEffect(() => {
                               <tbody>
                                 {currentStories.map((story) => (
                                   <React.Fragment key={story.id}>
-                                    <tr>
+                                    <tr
+                                      key={story.id}
+                                      onClick={() => {
+                                        setSelectedItem({
+                                          id: story.id,
+                                          type: "userStory",
+                                          title:story.title
+                                        });
+                                        fetchHistory(story.id, "userStory");
+                                      }}
+                                      style={{ cursor: "pointer" }}
+                                    >
                                       <td>{story.title}</td>
                                       <td
                                         className={`priority-${story.priority.toLowerCase()}`}
@@ -1307,6 +1489,11 @@ useEffect(() => {
                                       <td>{story.effortPoints} pts</td>
                                       <td>{story.status || "BACKLOG"}</td>
                                       <td>
+                                        {story.tags && story.tags.length > 0
+                                          ? story.tags.join(", ")
+                                          : "No tags"}
+                                      </td>
+                                      <td onClick={(e) => e.stopPropagation()}>
                                         <button
                                           className="story-count-btn"
                                           onClick={() =>
@@ -1329,46 +1516,157 @@ useEffect(() => {
                                       </td>
                                       <td className="action-cell">
                                         <button
-                                          onClick={() =>
-                                            handleEditUserStory(story)
-                                          }
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditUserStory(story);
+                                          }}
                                           className="icon-btn edit"
                                         >
                                           <i className="fa fa-edit"></i>
                                         </button>
                                         <button
-                                          onClick={() =>
-                                            handleDeleteUserStory(story.id)
-                                          }
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteUserStory(story.id);
+                                          }}
                                           className="icon-btn delete"
                                         >
                                           <i className="fa fa-trash"></i>
                                         </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditTags(story);
+                                          }}
+                                          className="icon-btn tags"
+                                        >
+                                          <i className="fa fa-tags"></i>
+                                        </button>
+                                        {editingTagsUserStory && (
+                                          <div className="modal">
+                                            <div className="modal-content">
+                                              <h4>
+                                                Edit Tags for{" "}
+                                                {editingTagsUserStory.title}
+                                              </h4>
+                                              <input
+                                                type="text"
+                                                placeholder="Add tag (press Enter)"
+                                                onKeyDown={(e) => {
+                                                  if (
+                                                    e.key === "Enter" &&
+                                                    e.currentTarget.value.trim()
+                                                  ) {
+                                                    e.preventDefault();
+                                                    const newTag =
+                                                      e.currentTarget.value.trim();
+                                                    const currentTags =
+                                                      editingTagsUserStory.tags ||
+                                                      [];
+                                                    if (
+                                                      !currentTags.includes(
+                                                        newTag
+                                                      )
+                                                    ) {
+                                                      setEditingTagsUserStory({
+                                                        ...editingTagsUserStory,
+                                                        tags: [
+                                                          ...currentTags,
+                                                          newTag,
+                                                        ],
+                                                      });
+                                                    }
+                                                    e.currentTarget.value = "";
+                                                  }
+                                                }}
+                                              />
+                                              <div className="tag-list">
+                                                {editingTagsUserStory.tags?.map(
+                                                  (tag, index) => (
+                                                    <span
+                                                      key={index}
+                                                      className="tag"
+                                                    >
+                                                      {tag}
+                                                      <button
+                                                        onClick={() =>
+                                                          setEditingTagsUserStory(
+                                                            {
+                                                              ...editingTagsUserStory,
+                                                              tags: editingTagsUserStory.tags?.filter(
+                                                                (t) => t !== tag
+                                                              ),
+                                                            }
+                                                          )
+                                                        }
+                                                      >
+                                                        x
+                                                      </button>
+                                                    </span>
+                                                  )
+                                                )}
+                                              </div>
+                                              <div className="twobuttons">
+                                                <button
+                                                  onClick={() =>
+                                                    handleUpdateTags(
+                                                      editingTagsUserStory.id,
+                                                      editingTagsUserStory.tags ||
+                                                        []
+                                                    )
+                                                  }
+                                                  className="action-btn primary"
+                                                >
+                                                  Save
+                                                </button>
+                                                <button
+                                                  onClick={() =>
+                                                    setEditingTagsUserStory(
+                                                      null
+                                                    )
+                                                  }
+                                                  className="action-btn secondary-cancel"
+                                                >
+                                                  Cancel
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+
                                         <select
+                                          onClick={(e) => e.stopPropagation()}
                                           onChange={async (e) => {
                                             const sprintId = parseInt(
                                               e.target.value
                                             );
                                             if (sprintId) {
                                               try {
-                                              
-                                                  await axiosInstance.put(
-                                                    `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
-                                                    {},
-                                                    {
-                                                      headers: {
-                                                        Authorization: `Bearer ${accessToken}`,
-                                                      },
-                                                    }
-                                                  );
-                                            
+                                                await axiosInstance.put(
+                                                  `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/assign-sprint/${sprintId}`,
+                                                  {},
+                                                  {
+                                                    headers: {
+                                                      Authorization: `Bearer ${accessToken}`,
+                                                    },
+                                                  }
+                                                );
+
                                                 await fetchData(); // Recharger toutes les données
                                               } catch (error) {
-                                                const axiosError = error as AxiosError<{ message?: string }>; 
-                                                console.error("Erreur lors de l'assignation au Sprint :", axiosError);
+                                                const axiosError =
+                                                  error as AxiosError<{
+                                                    message?: string;
+                                                  }>;
+                                                console.error(
+                                                  "Erreur lors de l'assignation au Sprint :",
+                                                  axiosError
+                                                );
                                                 alert(
                                                   "Erreur lors de l'assignation : " +
-                                                    (axiosError.response?.data?.message || axiosError.message)
+                                                    (axiosError.response?.data
+                                                      ?.message ||
+                                                      axiosError.message)
                                                 );
                                               }
                                             }
@@ -1392,136 +1690,284 @@ useEffect(() => {
                                       <tr>
                                         <td colSpan={6}>
                                           <div className="sprint-stories-list">
-                                          <table className="inner-story-table">
-  <thead>
-    <tr>
-      <th>Nom</th>
-      <th>Statut</th>
-      <th>Action</th>
-    </tr>
-  </thead>
-  <tbody>
-    {story.dependsOn && story.dependsOn.length > 0 ? (
-      story.dependsOn.map((depId) => {
-        const depStory = backlog.find((us) => us.id === depId);
-        return (
-          <tr key={depId}>
-            <td>{depStory ? depStory.title : `US${depId}`}</td>
-            <td>
-              {depStory ? depStory.status : "Inconnu"}
-              {depStory && depStory.status !== "DONE" && (
-                <span className="blocked-indicator"> (Bloque)</span>
-              )}
-            </td>
-            <td>
-              <div className="action-cell-inner">
-                <button
-                  className="icon-btn delete"
-                  onClick={async () => {
-                    const newDependsOn = (story.dependsOn || []).filter(
-                      (id) => id !== depId
-                    );
-                    try {
-                      await axiosInstance.put(
-                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
-                        { dependsOn: newDependsOn },
-                        { headers: { Authorization: `Bearer ${accessToken}` } }
-                      );
-                      setBacklog((prev) =>
-                        prev.map((us) =>
-                          us.id === story.id ? { ...us, dependsOn: newDependsOn } : us
-                        )
-                      ); // Mise à jour locale
-                    } catch (error) {
-                      console.error("Erreur lors de la suppression de la dépendance :", error);
-                      alert("Erreur lors de la suppression de la dépendance.");
-                    }
-                  }}
-                >
-                  <i className="fa fa-times"></i>
-                </button>
-                <select
-                  onChange={async (e) => {
-                    const newDepId = parseInt(e.target.value);
-                    if (newDepId) {
-                      const newDependsOn = [...(story.dependsOn || []), newDepId];
-                      try {
-                        await axiosInstance.put(
-                          `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
-                          { dependsOn: newDependsOn },
-                          { headers: { Authorization: `Bearer ${accessToken}` } }
-                        );
-                        setBacklog((prev) =>
-                          prev.map((us) =>
-                            us.id === story.id ? { ...us, dependsOn: newDependsOn } : us
-                          )
-                        ); // Mise à jour locale
-                        e.target.value = "";
-                      } catch (error) {
-                        console.error("Erreur lors de l’ajout de la dépendance :", error);
-                        alert("Erreur lors de l’ajout de la dépendance.");
-                      }
-                    }
-                  }}
-                  value=""
-                >
-                  <option value="">Add dependency</option>
-                  {backlog
-                    .filter((us) => us.id !== story.id && !story.dependsOn?.includes(us.id))
-                    .map((us) => (
-                      <option key={us.id} value={us.id}>
-                        {us.title}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            </td>
-          </tr>
-        );
-      })
-    ) : (
-      <tr>
-        <td colSpan={2}>Aucune dépendance</td>
-        <td>
-          <select
-            onChange={async (e) => {
-              const newDepId = parseInt(e.target.value);
-              if (newDepId) {
-                const newDependsOn = [...(story.dependsOn || []), newDepId];
-                try {
-                  await axiosInstance.put(
-                    `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
-                    { dependsOn: newDependsOn },
-                    { headers: { Authorization: `Bearer ${accessToken}` } }
-                  );
-                  setBacklog((prev) =>
-                    prev.map((us) =>
-                      us.id === story.id ? { ...us, dependsOn: newDependsOn } : us
-                    )
-                  ); // Mise à jour locale
-                  e.target.value = "";
-                } catch (error) {
-                  console.error("Erreur lors de l’ajout de la dépendance :", error);
-                  alert("Erreur lors de l’ajout de la dépendance.");
-                }
-              }
-            }}
-            value=""
-          >
-            <option value="">Add dependency</option>
-            {backlog
-              .filter((us) => us.id !== story.id && !story.dependsOn?.includes(us.id))
-              .map((us) => (
-                <option key={us.id} value={us.id}>
-                  {us.title}
-                </option>
-              ))}
-          </select>
-        </td>
-      </tr>
-    )}
-  </tbody>
-</table>
+                                            <table className="inner-story-table">
+                                              <thead>
+                                                <tr>
+                                                  <th>Nom</th>
+                                                  <th>Statut</th>
+                                                  <th>Action</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {story.dependsOn &&
+                                                story.dependsOn.length > 0 ? (
+                                                  story.dependsOn.map(
+                                                    (depId) => {
+                                                      const depStory =
+                                                        backlog.find(
+                                                          (us) =>
+                                                            us.id === depId
+                                                        );
+                                                      return (
+                                                        <tr key={depId}>
+                                                          <td>
+                                                            {depStory
+                                                              ? depStory.title
+                                                              : `US${depId}`}
+                                                          </td>
+                                                          <td>
+                                                            {depStory
+                                                              ? depStory.status
+                                                              : "Inconnu"}
+                                                            {depStory &&
+                                                              depStory.status !==
+                                                                "DONE" && (
+                                                                <span className="blocked-indicator">
+                                                                  {" "}
+                                                                  (Bloque)
+                                                                </span>
+                                                              )}
+                                                          </td>
+                                                          <td>
+                                                            <div className="action-cell-inner">
+                                                              <button
+                                                                className="icon-btn delete"
+                                                                onClick={async () => {
+                                                                  const newDependsOn =
+                                                                    (
+                                                                      story.dependsOn ||
+                                                                      []
+                                                                    ).filter(
+                                                                      (id) =>
+                                                                        id !==
+                                                                        depId
+                                                                    );
+                                                                  try {
+                                                                    await axiosInstance.put(
+                                                                      `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                                                                      {
+                                                                        dependsOn:
+                                                                          newDependsOn,
+                                                                      },
+                                                                      {
+                                                                        headers:
+                                                                          {
+                                                                            Authorization: `Bearer ${accessToken}`,
+                                                                          },
+                                                                      }
+                                                                    );
+                                                                    setBacklog(
+                                                                      (prev) =>
+                                                                        prev.map(
+                                                                          (
+                                                                            us
+                                                                          ) =>
+                                                                            us.id ===
+                                                                            story.id
+                                                                              ? {
+                                                                                  ...us,
+                                                                                  dependsOn:
+                                                                                    newDependsOn,
+                                                                                }
+                                                                              : us
+                                                                        )
+                                                                    ); // Mise à jour locale
+                                                                  } catch (error) {
+                                                                    console.error(
+                                                                      "Erreur lors de la suppression de la dépendance :",
+                                                                      error
+                                                                    );
+                                                                    alert(
+                                                                      "Erreur lors de la suppression de la dépendance."
+                                                                    );
+                                                                  }
+                                                                }}
+                                                              >
+                                                                <i className="fa fa-times"></i>
+                                                              </button>
+                                                              <select
+                                                                onChange={async (
+                                                                  e
+                                                                ) => {
+                                                                  const newDepId =
+                                                                    parseInt(
+                                                                      e.target
+                                                                        .value
+                                                                    );
+                                                                  if (
+                                                                    newDepId
+                                                                  ) {
+                                                                    const newDependsOn =
+                                                                      [
+                                                                        ...(story.dependsOn ||
+                                                                          []),
+                                                                        newDepId,
+                                                                      ];
+                                                                    try {
+                                                                      await axiosInstance.put(
+                                                                        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                                                                        {
+                                                                          dependsOn:
+                                                                            newDependsOn,
+                                                                        },
+                                                                        {
+                                                                          headers:
+                                                                            {
+                                                                              Authorization: `Bearer ${accessToken}`,
+                                                                            },
+                                                                        }
+                                                                      );
+                                                                      setBacklog(
+                                                                        (
+                                                                          prev
+                                                                        ) =>
+                                                                          prev.map(
+                                                                            (
+                                                                              us
+                                                                            ) =>
+                                                                              us.id ===
+                                                                              story.id
+                                                                                ? {
+                                                                                    ...us,
+                                                                                    dependsOn:
+                                                                                      newDependsOn,
+                                                                                  }
+                                                                                : us
+                                                                          )
+                                                                      ); // Mise à jour locale
+                                                                      e.target.value =
+                                                                        "";
+                                                                    } catch (error) {
+                                                                      console.error(
+                                                                        "Erreur lors de l’ajout de la dépendance :",
+                                                                        error
+                                                                      );
+                                                                      alert(
+                                                                        "Erreur lors de l’ajout de la dépendance."
+                                                                      );
+                                                                    }
+                                                                  }
+                                                                }}
+                                                                value=""
+                                                              >
+                                                                <option value="">
+                                                                  Add dependency
+                                                                </option>
+                                                                {backlog
+                                                                  .filter(
+                                                                    (us) =>
+                                                                      us.id !==
+                                                                        story.id &&
+                                                                      !story.dependsOn?.includes(
+                                                                        us.id
+                                                                      )
+                                                                  )
+                                                                  .map((us) => (
+                                                                    <option
+                                                                      key={
+                                                                        us.id
+                                                                      }
+                                                                      value={
+                                                                        us.id
+                                                                      }
+                                                                    >
+                                                                      {us.title}
+                                                                    </option>
+                                                                  ))}
+                                                              </select>
+                                                            </div>
+                                                          </td>
+                                                        </tr>
+                                                      );
+                                                    }
+                                                  )
+                                                ) : (
+                                                  <tr>
+                                                    <td colSpan={2}>
+                                                      Aucune dépendance
+                                                    </td>
+                                                    <td>
+                                                      <select
+                                                        onChange={async (e) => {
+                                                          const newDepId =
+                                                            parseInt(
+                                                              e.target.value
+                                                            );
+                                                          if (newDepId) {
+                                                            const newDependsOn =
+                                                              [
+                                                                ...(story.dependsOn ||
+                                                                  []),
+                                                                newDepId,
+                                                              ];
+                                                            try {
+                                                              await axiosInstance.put(
+                                                                `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/dependencies`,
+                                                                {
+                                                                  dependsOn:
+                                                                    newDependsOn,
+                                                                },
+                                                                {
+                                                                  headers: {
+                                                                    Authorization: `Bearer ${accessToken}`,
+                                                                  },
+                                                                }
+                                                              );
+                                                              setBacklog(
+                                                                (prev) =>
+                                                                  prev.map(
+                                                                    (us) =>
+                                                                      us.id ===
+                                                                      story.id
+                                                                        ? {
+                                                                            ...us,
+                                                                            dependsOn:
+                                                                              newDependsOn,
+                                                                          }
+                                                                        : us
+                                                                  )
+                                                              ); // Mise à jour locale
+                                                              e.target.value =
+                                                                "";
+                                                            } catch (error) {
+                                                              console.error(
+                                                                "Erreur lors de l’ajout de la dépendance :",
+                                                                error
+                                                              );
+                                                              alert(
+                                                                "Erreur lors de l’ajout de la dépendance."
+                                                              );
+                                                            }
+                                                          }
+                                                        }}
+                                                        value=""
+                                                      >
+                                                        <option value="">
+                                                          Add dependency
+                                                        </option>
+                                                        {backlog
+                                                          .filter(
+                                                            (us) =>
+                                                              us.id !==
+                                                                story.id &&
+                                                              !story.dependsOn?.includes(
+                                                                us.id
+                                                              )
+                                                          )
+                                                          .map((us) => (
+                                                            <option
+                                                              key={us.id}
+                                                              value={us.id}
+                                                            >
+                                                              {us.title}
+                                                            </option>
+                                                          ))}
+                                                      </select>
+                                                    </td>
+                                                  </tr>
+                                                )}
+                                              </tbody>
+                                            </table>
                                           </div>
                                         </td>
                                       </tr>
@@ -1759,7 +2205,18 @@ useEffect(() => {
                           <tbody>
                             {currentSprints.map((sprint) => (
                               <React.Fragment key={sprint.id}>
-                                <tr>
+                                <tr
+                                  key={sprint.id}
+                                  onClick={() => {
+                                    setSelectedItem({
+                                      id: sprint.id,
+                                      type: "sprint",
+                                      title:sprint.name
+                                    });
+                                    fetchHistory(sprint.id, "sprint");
+                                  }}
+                                  style={{ cursor: "pointer" }}
+                                >
                                   <td>{sprint.name}</td>
                                   <td>
                                     {new Date(
@@ -2079,6 +2536,66 @@ useEffect(() => {
             </div>
           </div>
 
+          {/* Mini-modal pour afficher l'historique */}
+          {isHistoryModalOpen && selectedItem && (
+  <div
+    className="modal-overlay-history"
+    onClick={() => setIsHistoryModalOpen(false)}
+  >
+    <div
+      className="modal-content-history"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h4>
+        Historique{" "}
+        {selectedItem.type === "userStory" ? "User Story" : "Sprint"}{" "}
+        {selectedItem.title}
+      </h4>
+      {history.length > 0 ? (
+        <div className="history-timeline">
+          {history.map((entry, index) => (
+            <div
+              className={`history-event ${entry.action.toLowerCase()}`}
+              key={index}
+            >
+              <div className="event-date">
+                {new Date(entry.date).toLocaleString()}
+              </div>
+              <div className="event-details-container">
+                <div className="event-details">
+                  <div className="top-row">
+                    <div className="author">
+                      <i className="fa fa-user"></i>
+                      <strong>Auteur:</strong> <span>{entry.authorFullName}</span>
+                    </div>
+                    <div className="action">
+                      <i className="fa fa-bolt"></i>
+                      <strong>Action:</strong> <span className={entry.action.toLowerCase()}>{entry.action}</span>
+                    </div>
+                  </div>
+                  <div className="description-row">
+                    <div className="description">
+                      <i className="fa fa-comment"></i>
+                      <strong>Description:</strong> <span>{entry.description}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p>Aucun historique disponible.</p>
+      )}
+      <button
+        className="action-btn secondary"
+        onClick={() => setIsHistoryModalOpen(false)}
+      >
+        Fermer
+      </button>
+    </div>
+  </div>
+)}
           {/* Mini-modal pour ajouter une tâche */}
           {selectedUserStoryId && (
             <div

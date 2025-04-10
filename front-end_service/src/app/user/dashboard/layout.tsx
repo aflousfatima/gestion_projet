@@ -35,7 +35,6 @@ export default function DashboardLayout({
       );
     }
   };
-
   const { projects, setProjects, loading, error } = useProjects();
   const axiosInstance = useAxios();
   const currentPath = usePathname();
@@ -45,7 +44,6 @@ export default function DashboardLayout({
   const router = useRouter();
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
-  const [projectData, setProjectData] = useState({ name: "", description: "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("DEVELOPER");
@@ -53,28 +51,46 @@ export default function DashboardLayout({
   const [showProjectsList, setShowProjectsList] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
 
+  const [projectData, setProjectData] = useState<Project>({
+    id: 0, // Champ requis par l'interface, mais sera généralement défini par l'API
+    name: "",
+    description: "",
+    creationDate: "",
+    startDate: "",
+    deadline: "",
+    status: "",
+    phase: "",
+    priority: "",
+  });
+
   const handleProjectSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       if (editingProject) {
-        await axiosInstance.put(
+        const requestBody = {
+          oldName: editingProject,
+          newName: projectData.name,
+          description: projectData.description,
+          startDate: projectData.startDate,
+          deadline: projectData.deadline,
+          status: projectData.status,
+          phase: projectData.phase,
+          priority: projectData.priority,
+        };
+  
+        const response = await axiosInstance.put(
           `${PROJECT_SERVICE_URL}/api/modify-project`,
-          {
-            oldName: editingProject,
-            newName: projectData.name,
-            description: projectData.description,
-          },
+          requestBody,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           }
         );
-
-        const updatedProjects = projects.map((p) =>
-          p.name === editingProject
-            ? { name: projectData.name, description: projectData.description }
-            : p
+        console.log("Réponse de PUT /modify-project:", response.data);
+  
+        const updatedProjects: Project[] = projects.map((p) =>
+          p.name === editingProject ? { ...p, ...projectData } : p
         );
         setProjects(updatedProjects);
         setMessage("Projet modifié avec succès !");
@@ -88,15 +104,26 @@ export default function DashboardLayout({
             },
           }
         );
-        console.log("Success:", response.data);
-        setProjects([
-          ...projects,
-          { name: projectData.name, description: projectData.description },
-        ]);
+        const newProject: Project = {
+          ...projectData,
+          id: response.data.id, // L'ID est généralement renvoyé par l'API
+        };
+        setProjects([...projects, newProject]);
         setMessage("Projet créé avec succès !");
       }
 
-      setProjectData({ name: "", description: "" });
+      // Réinitialisation avec tous les champs requis par l'interface Project
+      setProjectData({
+        id: 0,
+        name: "",
+        description: "",
+        creationDate: "",
+        startDate: "",
+        deadline: "",
+        status: "START",
+        phase: "PLANIFICATION",
+        priority: "LOW",
+      });
       setEditingProject(null);
       setIsProjectModalOpen(false);
     } catch (error) {
@@ -111,7 +138,7 @@ export default function DashboardLayout({
 
   const handleEditProject = (project: Project) => {
     setEditingProject(project.name);
-    setProjectData({ name: project.name, description: project.description });
+    setProjectData(project); // Utilise toutes les propriétés du projet
     setShowProjectsList(false);
   };
 
@@ -123,6 +150,7 @@ export default function DashboardLayout({
     }
 
     try {
+      console.log("Envoi de la requête DELETE avec projectName:", projectName);
       await axiosInstance.delete(`${PROJECT_SERVICE_URL}/api/delete-project`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -140,7 +168,9 @@ export default function DashboardLayout({
     }
   };
 
-  const handleProjectChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProjectChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { id, value } = e.target;
     setProjectData((prev) => ({ ...prev, [id]: value }));
   };
@@ -238,6 +268,72 @@ export default function DashboardLayout({
     console.log("Clic détecté, isDropdownOpen avant :", isDropdownOpen);
     setIsDropdownOpen(!isDropdownOpen);
     console.log("isDropdownOpen après :", !isDropdownOpen);
+  };
+
+  // États supplémentaires
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterPriority, setFilterPriority] = useState("");
+  const [filterPhase, setFilterPhase] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const projectsPerPage = 4;
+
+  // Filtrage et recherche
+  const filteredProjects = projects.filter((project) => {
+    const matchesSearch =
+      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = filterStatus ? project.status === filterStatus : true;
+    const matchesPriority = filterPriority
+      ? project.priority === filterPriority
+      : true;
+    const matchesPhase = filterPhase ? project.phase === filterPhase : true;
+    return matchesSearch && matchesStatus && matchesPriority && matchesPhase;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProjects.length / projectsPerPage);
+  const startIndex = (currentPage - 1) * projectsPerPage;
+  const currentProjects = filteredProjects.slice(
+    startIndex,
+    startIndex + projectsPerPage
+  );
+
+  // Fonction d'export (exemple)
+  const handleExport = () => {
+    const csvContent = [
+      [
+        "Nom",
+        "Description",
+        "Date de création",
+        "Date de début",
+        "Date limite",
+        "Statut",
+        "Phase",
+        "Priorité",
+      ],
+      ...projects.map((project) => [
+        project.name,
+        project.description || "Sans description",
+        project.creationDate
+          ? new Date(project.creationDate).toLocaleDateString()
+          : "N/A",
+        new Date(project.startDate).toLocaleDateString(),
+        new Date(project.deadline).toLocaleDateString(),
+        project.status,
+        project.phase,
+        project.priority,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "projets.csv";
+    link.click();
   };
 
   if (isLoading) return <div>Chargement...</div>;
@@ -576,62 +672,158 @@ export default function DashboardLayout({
                             <button
                               type="button"
                               className="project-listButton"
-                              onClick={() => {
-                                console.log(
-                                  "Clic sur Liste des projets, showProjectsList avant :",
-                                  showProjectsList
-                                );
-                                setShowProjectsList(true);
-                                console.log("showProjectsList après :", true);
-                              }}
+                              onClick={() => setShowProjectsList(true)}
                             >
                               Liste des projets
                             </button>
-                            <div className="project-formGroup">
-                              <label htmlFor="name">Nom du projet</label>
-                              <input
-                                type="text"
-                                id="name"
-                                value={projectData.name}
-                                onChange={handleProjectChange}
-                                placeholder="Entrez le nom du projet"
-                                required
-                              />
-                            </div>
-                            <div className="project-formGroup">
-                              <label htmlFor="description">Description</label>
-                              <input
-                                type="text"
-                                id="description"
-                                value={projectData.description}
-                                onChange={handleProjectChange}
-                                placeholder="Entrez la description"
-                                required
-                              />
+
+                            <div className="project-formContainer">
+                              {/* Partie gauche : Nom et Description */}
+                              <div className="project-formLeft">
+                                <div className="project-formGroup">
+                                  <input
+                                    type="text"
+                                    id="name"
+                                    value={projectData.name}
+                                    onChange={handleProjectChange}
+                                    placeholder="Nom du projet"
+                                    required
+                                  />
+                                </div>
+                                <div className="project-formGroup">
+                                  <input
+                                    type="text"
+                                    id="description"
+                                    value={projectData.description}
+                                    onChange={handleProjectChange}
+                                    placeholder="Description du projet"
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Partie droite : Dates */}
+                              <div className="project-formRight">
+                                <div className="project-formGroup">
+                                  <label htmlFor="startDate">
+                                    Date de début
+                                  </label>
+                                  <input
+                                    type="date"
+                                    id="startDate"
+                                    value={projectData.startDate}
+                                    onChange={handleProjectChange}
+                                    required
+                                  />
+                                </div>
+                                <div className="project-formGroup">
+                                  <label htmlFor="Deadline">Date de fin</label>
+                                  <input
+                                    type="date"
+                                    id="deadline"
+                                    value={projectData.deadline}
+                                    onChange={handleProjectChange}
+                                    required
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Ligne horizontale en dessous */}
+                              <div className="project-formHorizontal">
+                                <div className="project-formGroup project-formGroup-small">
+                                  <select
+                                    id="priority"
+                                    value={projectData.priority}
+                                    onChange={handleProjectChange}
+                                    required
+                                  >
+                                    <option value="" disabled hidden>
+                                      Priorité
+                                    </option>
+                                    <option value="LOW">Basse</option>
+                                    <option value="MEDIUM">Moyenne</option>
+                                    <option value="HIGH">Haute</option>
+                                    <option value="CRITICAL">Critique</option>
+                                  </select>
+                                </div>
+                                <div className="project-formGroup project-formGroup-small">
+                                  <select
+                                    id="phase"
+                                    value={projectData.phase}
+                                    onChange={handleProjectChange}
+                                    required
+                                  >
+                                    <option value="" disabled hidden>
+                                      Phase
+                                    </option>
+                                    <option value="PLANIFICATION">
+                                      Planification
+                                    </option>
+                                    <option value="DESIGN">Design</option>
+                                    <option value="DEVELOPPEMENT">
+                                      Développement
+                                    </option>
+                                    <option value="TEST">Test</option>
+                                    <option value="DEPLOY">Déploiement</option>
+                                    <option value="MAINTENANCE">
+                                      Maintenance
+                                    </option>
+                                    <option value="CLOSE">Clôture</option>
+                                  </select>
+                                </div>
+                                <div className="project-formGroup project-formGroup-small">
+                                  <select
+                                    id="status"
+                                    value={projectData.status}
+                                    onChange={handleProjectChange}
+                                    required
+                                  >
+                                    <option value="" disabled hidden>
+                                      Statut
+                                    </option>
+                                    <option value="START">Non commencé</option>
+                                    <option value="IN_PROGRESS">
+                                      En cours
+                                    </option>
+                                    <option value="IN_PAUSE">En pause</option>
+                                    <option value="DONE">Terminé</option>
+                                    <option value="CANCEL">Annulé</option>
+                                    <option value="ARCHIVE">Archivé</option>
+                                  </select>
+                                </div>
+                              </div>
                             </div>
                             {message && (
                               <p className="project-message">{message}</p>
                             )}
-                            <div className="project-modalActions">
-                              <button
-                                type="submit"
-                                className="project-submitButton"
-                              >
-                                {editingProject
-                                  ? "Modifier le projet"
-                                  : "Créer le projet"}
-                              </button>
+
+                            <div className="project-actions">
                               <button
                                 type="button"
                                 className="project-cancelButton"
                                 onClick={() => {
                                   setIsProjectModalOpen(false);
                                   setEditingProject(null);
-                                  setProjectData({ name: "", description: "" });
-                                  setShowProjectsList(false);
+                                  setProjectData({
+                                    id: 0,
+                                    name: "",
+                                    description: "",
+                                    creationDate: "",
+                                    startDate: "",
+                                    deadline: "",
+                                    status: "START",
+                                    phase: "PLANIFICATION",
+                                    priority: "LOW",
+                                  });
                                 }}
                               >
                                 Annuler
+                              </button>
+                              <button
+                                type="submit"
+                                className="project-submitButton"
+                              >
+                                {editingProject ? "Modifier" : "Créer"}
                               </button>
                             </div>
                           </form>
@@ -640,57 +832,185 @@ export default function DashboardLayout({
                             <h3 className="project-modalTitle">
                               Liste des projets
                             </h3>
+
+                      
+
                             {loading ? (
                               <p>Chargement des projets...</p>
                             ) : error ? (
                               <p>Erreur : {error}</p>
-                            ) : projects.length > 0 ? (
+                            ) : filteredProjects.length > 0 ? (
                               <>
-                                <div className="project-modalActions">
+                                {/* Boutons d'action (Créer, Exporter, Filtrer) */}
+                         
+
+                                <div className="projects-actions-bar">
+
+                                               {/* Barre de recherche */}
+                            <div className="projects-search-bar">
+                              <i className="fa fa-search search-icon-project"></i>
+                              <input
+                                type="text"
+                                placeholder="Search"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="search-input"
+                              />
+                            </div>
+                                  <button
+                                    type="button"
+                                    className="project-exportButton"
+                                    onClick={handleExport}
+                                  >
+                                    <i className="fa fa-download"></i> Exporter
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="project-filterButton"
+                                    onClick={() => setShowFilters(!showFilters)}
+                                  >
+                                    <i className="fa fa-filter"></i> Filtrer
+                                  </button>
+
                                   <button
                                     type="button"
                                     className="project-createButton"
-                                    onClick={() => {
-                                      console.log(
-                                        "Clic sur Créer un projet, showProjectsList avant :",
-                                        showProjectsList
-                                      );
-                                      setShowProjectsList(false);
-                                      console.log(
-                                        "showProjectsList après :",
-                                        false
-                                      );
-                                    }}
+                                    onClick={() => setShowProjectsList(false)}
                                   >
-                                    Créer un projet
+                                    <i className="fa fa-plus"></i> Créer un
+                                    projet
                                   </button>
                                 </div>
+
+                                {/* Filtres (optionnels, affichés si showFilters est true) */}
+                                {showFilters && (
+                                  <div className="projects-filters">
+                                    <select
+                                      value={filterStatus}
+                                      onChange={(e) =>
+                                        setFilterStatus(e.target.value)
+                                      }
+                                    >
+                                      <option value="">Tous les statuts</option>
+                                      <option value="START">
+                                        Non commencé
+                                      </option>
+                                      <option value="IN_PROGRESS">
+                                        En cours
+                                      </option>
+                                      <option value="IN_PAUSE">En pause</option>
+                                      <option value="DONE">Terminé</option>
+                                      <option value="CANCEL">Annulé</option>
+                                      <option value="ARCHIVE">Archivé</option>
+                                    </select>
+                                    <select
+                                      value={filterPriority}
+                                      onChange={(e) =>
+                                        setFilterPriority(e.target.value)
+                                      }
+                                    >
+                                      <option value="">
+                                        Toutes les priorités
+                                      </option>
+                                      <option value="LOW">Basse</option>
+                                      <option value="MEDIUM">Moyenne</option>
+                                      <option value="HIGH">Haute</option>
+                                      <option value="CRITICAL">Critique</option>
+                                    </select>
+                                    <select
+                                      value={filterPhase}
+                                      onChange={(e) =>
+                                        setFilterPhase(e.target.value)
+                                      }
+                                    >
+                                      <option value="">
+                                        Toutes les phases
+                                      </option>
+                                      <option value="PLANIFICATION">
+                                        Planification
+                                      </option>
+                                      <option value="DESIGN">Design</option>
+                                      <option value="DEVELOPPEMENT">
+                                        Développement
+                                      </option>
+                                      <option value="TEST">Test</option>
+                                      <option value="DEPLOY">
+                                        Déploiement
+                                      </option>
+                                      <option value="MAINTENANCE">
+                                        Maintenance
+                                      </option>
+                                      <option value="CLOSE">Clôture</option>
+                                    </select>
+                                  </div>
+                                )}
+
+                                {/* Tableau des projets */}
                                 <table className="projects-table">
                                   <thead>
                                     <tr>
-                                      <th>Nom du projet</th>
+                                      <th>Nom</th>
                                       <th>Description</th>
+                                      <th>Date de création</th>
+                                      <th>Date de début</th>
+                                      <th>Date limite</th>
+                                      <th>Statut</th>
+                                      <th>Phase</th>
+                                      <th>Priorité</th>
                                       <th>Actions</th>
                                     </tr>
                                   </thead>
                                   <tbody>
-                                    {projects.map((project, index) => (
+                                    {currentProjects.map((project, index) => (
                                       <tr key={index}>
-                                        <td>{project.name}</td>
-                                        <td>
+                                        <td data-label="Nom">{project.name}</td>
+                                        <td data-label="Description">
                                           {project.description ||
-                                            "Aucune description disponible"}
+                                            "Sans description"}
                                         </td>
-                                        <td>
-                                          <div className="project-actions">
+                                        <td data-label="Date de création">
+                                          {project.creationDate
+                                            ? new Date(
+                                                project.creationDate
+                                              ).toLocaleDateString()
+                                            : "N/A"}
+                                        </td>
+                                        <td data-label="Date de début">
+                                          {new Date(
+                                            project.startDate
+                                          ).toLocaleDateString()}
+                                        </td>
+                                        <td data-label="Date limite">
+                                          {new Date(
+                                            project.deadline
+                                          ).toLocaleDateString()}
+                                        </td>
+                                        <td data-label="Statut">
+                                          <span
+                                            className={`status-badge status-${project.status.toLowerCase()}`}
+                                          >
+                                            {project.status}
+                                          </span>
+                                        </td>
+                                        <td data-label="Phase">
+                                          {project.phase}
+                                        </td>
+                                        <td data-label="Priorité">
+                                          <span
+                                            className={`priority-badge priority-${project.priority.toLowerCase()}`}
+                                          >
+                                            {project.priority}
+                                          </span>
+                                        </td>
+                                        <td data-label="Actions">
+                                          <div className="project-actions-cell">
                                             <button
                                               className="edit-button"
                                               onClick={() =>
                                                 handleEditProject(project)
                                               }
-                                              title="Modifier"
                                             >
-                                              <i className="fa fa-edit edit-style"></i>
+                                              <i className="fa fa-edit"></i>
                                             </button>
                                             <button
                                               className="delete-button"
@@ -699,9 +1019,8 @@ export default function DashboardLayout({
                                                   project.name
                                                 )
                                               }
-                                              title="Supprimer"
                                             >
-                                              <i className="fa fa-trash delete-style"></i>
+                                              <i className="fa fa-trash"></i>
                                             </button>
                                           </div>
                                         </td>
@@ -709,24 +1028,60 @@ export default function DashboardLayout({
                                     ))}
                                   </tbody>
                                 </table>
-                                <button
-                                  type="button"
-                                  className="project-cancelButton1"
-                                  onClick={() => {
-                                    setIsProjectModalOpen(false);
-                                    setEditingProject(null);
-                                    setProjectData({
-                                      name: "",
-                                      description: "",
-                                    });
-                                    setShowProjectsList(false);
-                                  }}
-                                >
-                                  Annuler
-                                </button>
+
+                                {/* Pagination */}
+                                <div className="projects-pagination">
+                                  <button
+                                    className="pagination-button"
+                                    onClick={() =>
+                                      setCurrentPage((prev) =>
+                                        Math.max(prev - 1, 1)
+                                      )
+                                    }
+                                    disabled={currentPage === 1}
+                                  >
+                                    <i className="fa fa-chevron-left"></i>{" "}
+                                    Précédent
+                                  </button>
+                                  <span className="pagination-info">
+                                    Page {currentPage} / {totalPages}
+                                  </span>
+                                  <button
+                                    className="pagination-button"
+                                    onClick={() =>
+                                      setCurrentPage((prev) =>
+                                        Math.min(prev + 1, totalPages)
+                                      )
+                                    }
+                                    disabled={currentPage === totalPages}
+                                  >
+                                    Suivant{" "}
+                                    <i className="fa fa-chevron-right"></i>
+                                  </button>
+                                </div>
+
+                                {/* Bouton Fermer */}
+                                <div className="projects-list-footer">
+                                  <button
+                                    type="button"
+                                    className="project-cancelButton"
+                                    onClick={() => setIsProjectModalOpen(false)}
+                                  >
+                                    Fermer
+                                  </button>
+                                </div>
                               </>
                             ) : (
-                              <p>Aucun projet disponible.</p>
+                              <div className="no-projects">
+                                <p>Aucun projet disponible.</p>
+                                <button
+                                  type="button"
+                                  className="project-createButton"
+                                  onClick={() => setShowProjectsList(false)}
+                                >
+                                  <i className="fa fa-plus"></i> Créer un projet
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}

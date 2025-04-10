@@ -6,19 +6,35 @@ import { AUTH_SERVICE_URL, PROJECT_SERVICE_URL } from "../config/useApi";
 
 
 
+export interface Project {
+  id?: number;
+  name: string;
+  description: string;
+  companyId?: string;
+  managerId?: string;
+  creationDate?: string;
+  startDate: string;
+  deadline: string;
+  status: "START" | "IN_PROGRESS" | "IN_PAUSE" | "DONE" | "CANCEL" | "ARCHIVE"|"";
+  phase:
+    | "PLANIFICATION"
+    | "DESIGN"
+    | "DEVELOPPEMENT"
+    | "TEST"
+    | "DEPLOY"
+    | "MAINTENANCE"
+    | "CLOSE"
+    | "";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "";
+}
+
 interface UseProjectsResult {
   projects: Project[];
-  setProjects: React.Dispatch<React.SetStateAction<Project[]>>; // Ajouter setProjects
+  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
   loading: boolean;
   error: string | null;
 }
 
-
-export interface Project {
-  id: number;
-  name: string;
-  description: string;
-}
 export const useProjects = (): UseProjectsResult => {
   const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
