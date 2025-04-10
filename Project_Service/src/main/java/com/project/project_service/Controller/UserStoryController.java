@@ -1,10 +1,12 @@
 package com.project.project_service.Controller;
 
 import com.project.project_service.DTO.UserStoryDTO;
+import com.project.project_service.DTO.UserStoryHistoryDto;
 import com.project.project_service.DTO.UserStoryRequest;
 import com.project.project_service.Entity.UserStory;
 import com.project.project_service.Entity.UserStoryHistory;
 import com.project.project_service.Repository.UserStoryHistoryRepository;
+import com.project.project_service.Service.HistoryService;
 import com.project.project_service.Service.UserStoryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,7 +23,7 @@ public class UserStoryController {
     @Autowired
     private UserStoryService userStoryService;
     @Autowired
-    private  UserStoryHistoryRepository userStoryHistoryRepo;
+    private HistoryService historyService;
 
     @PostMapping("/{projectId}/user-stories")
     public ResponseEntity<UserStoryDTO> createUserStory(
@@ -144,13 +146,20 @@ public class UserStoryController {
 
     // 🔍 Récupérer l’historique d’une User Story
     @GetMapping("/user-story/{userStoryId}/history")
-    public ResponseEntity<List<UserStoryHistory>> getUserStoryHistory(@PathVariable Long userStoryId) {
-        List<UserStoryHistory> history = userStoryHistoryRepo.findByUserStoryId(userStoryId);
-        if (history.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Retourne un code 204 si l'historique est vide
+    public ResponseEntity<List<UserStoryHistoryDto>> getUserStoryHistory(
+            @PathVariable Long userStoryId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        String userToken = authHeader.replace("Bearer ", "");
+        List<UserStoryHistoryDto> enrichedHistory = historyService.getUserStoryHistoryWithAuthorNames(userStoryId, userToken);
+
+        if (enrichedHistory.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(history); // Retourne l'historique avec un code 200
+
+        return ResponseEntity.ok(enrichedHistory);
     }
+
 
     // 🔍 Récupérer l’historique d’un Sprint
 

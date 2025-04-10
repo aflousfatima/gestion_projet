@@ -16,6 +16,7 @@ import com.project.project_service.Repository.UserStoryRepository;
 import com.project.project_service.config.AuthClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import jakarta.persistence.OptimisticLockException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -129,16 +130,15 @@ public class UserStoryService {
         }
         try {
             UserStory updatedStory = userStoryRepository.save(userStory);
-
-            // Ajout de l'historique
             historyService.addUserStoryHistory(
                     updatedStory.getId(),
                     "UPDATE", // Action
-                    userIdStr, // Auteur (ou id utilisateur décrypté)
+                    userIdStr,
                     "User Story mise à jour : " + updatedStory.getTitle()
             );
-
             return new UserStoryDTO(updatedStory);
+        } catch (OptimisticLockException e) {
+            throw new RuntimeException("Conflit de mise à jour détecté. Veuillez réessayer.", e);
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la mise à jour de la User Story", e);
         }

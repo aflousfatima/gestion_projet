@@ -17,6 +17,9 @@ public abstract class History {
     private String author;
     private String description;
 
+    @Version
+    private Long version;
+
     public Long getId() {
         return id;
     }
@@ -55,5 +58,13 @@ public abstract class History {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

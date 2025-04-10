@@ -6,5 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface SprintHistoryRepository extends JpaRepository<SprintHistory, Long> {
-    List<SprintHistory> findBySprintId(Long sprintId);
+    List<SprintHistory> findBySprintIdOrderByDateDesc(Long sprintId);
+
 }

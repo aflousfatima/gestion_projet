@@ -17,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 @RestController
@@ -46,14 +48,31 @@ public class ProjectController {
             @RequestHeader("Authorization") String authorization,
             @RequestBody Map<String, String> projectData) {
         try {
+            // Extraire l'authId depuis le token
             String authId = authClient.extractUserIdFromToken(authorization);
+
+            // Récupérer les paramètres du projet depuis le corps de la requête
             String name = projectData.get("name");
             String description = projectData.get("description");
+            String startDateStr = projectData.get("startDate");
+            String deadlineStr = projectData.get("deadline");
+            String status = projectData.get("status");
+            String phase = projectData.get("phase");
+            String priority = projectData.get("priority");
 
-            if (name == null || description == null) {
-                return ResponseEntity.badRequest().body("Nom et description du projet requis");
+            // Validation des champs obligatoires
+            if (name == null || description == null || startDateStr == null || deadlineStr == null
+                    || status == null || phase == null || priority == null) {
+                return ResponseEntity.badRequest().body("Tous les champs du projet sont requis");
             }
-            projectService.createProject(authId, name, description);
+
+            // Convertir les dates depuis String vers LocalDateTime
+            LocalDate startDate = LocalDate.parse(startDateStr);
+            LocalDate deadline = LocalDate.parse(deadlineStr);
+
+            // Appeler le service pour créer le projet
+            projectService.createProject(authId, name, description, startDate, deadline, status, phase, priority);
+
             return ResponseEntity.ok("Projet créé avec succès");
         } catch (Exception e) {
             e.printStackTrace();
@@ -72,12 +91,33 @@ public class ProjectController {
             @RequestHeader("Authorization") String authorization,
             @RequestBody Map<String, String> requestBody) {
         try {
+            // Extraire l'authId depuis le token
             String authId = authClient.extractUserIdFromToken(authorization);
+
+            // Récupérer les paramètres du projet depuis le corps de la requête
             String oldName = requestBody.get("oldName");
             String newName = requestBody.get("newName");
             String description = requestBody.get("description");
+            String startDateStr = requestBody.get("startDate");
+            String deadlineStr = requestBody.get("deadline");
+            String status = requestBody.get("status");
+            String phase = requestBody.get("phase");
+            String priority = requestBody.get("priority");
 
-            projectService.updateProject(authId, oldName, newName, description);
+            // Validation des champs obligatoires
+            if (oldName == null || newName == null || description == null || startDateStr == null || deadlineStr == null
+                    || status == null || phase == null || priority == null) {
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Tous les champs du projet sont requis");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Convertir les dates depuis String vers LocalDateTime
+            LocalDate startDate = LocalDate.parse(startDateStr);
+            LocalDate deadline = LocalDate.parse(deadlineStr);
+
+            // Appeler le service pour mettre à jour le projet
+            projectService.updateProject(authId, oldName, newName, description, startDate, deadline, status, phase, priority);
 
             Map<String, String> response = new HashMap<>();
             response.put("message", "Projet modifié avec succès");
@@ -88,6 +128,7 @@ public class ProjectController {
             return ResponseEntity.badRequest().body(errorResponse);
         }
     }
+
 
     @Operation(summary = "Supprimer un projet ",
             description = "Cette méthode permet de supprimer un projet associés à un utilisateur authentifié.")
@@ -118,38 +159,51 @@ public class ProjectController {
     @GetMapping("/projects/{projectId}")
     public ResponseEntity<ProjectDTO> getProjectById(@PathVariable Long projectId) {
         try {
+            // Récupérer le projet depuis le service
             Projet project = projectService.getProjectById(projectId);
             Client manager = project.getManager();
 
+            // Créer le ManagerDTO à partir des informations du manager
             ManagerDTO managerDTO = null;
             if (manager != null) {
                 managerDTO = new ManagerDTO(
                         manager.getId(),
                         manager.getAuthId(),
-                        null, // firstName, à récupérer via le service d'auth si nécessaire
-                        null, // lastName, à récupérer via le service d'auth si nécessaire
+                        null, // firstName à récupérer via le service d'auth si nécessaire
+                        null, // lastName à récupérer via le service d'auth si nécessaire
                         manager.getRole()
                 );
             }
 
+            // Créer le ProjectDTO en remplissant tous les champs
             ProjectDTO projetDTO = new ProjectDTO(
                     project.getId(),
                     project.getName(),
                     project.getDescription(),
-                    managerDTO
+                    managerDTO,
+                    project.getCreationDate(),
+                    project.getStartDate(),
+                    project.getDeadline(),
+                    project.getStatus().toString(), // Convertir l'énum en String
+                    project.getPhase().toString(), // Convertir l'énum en String
+                    project.getPriority().toString() // Convertir l'énum en String
             );
+
+            // Retourner la réponse avec le DTO
             return ResponseEntity.ok(projetDTO);
         } catch (Exception e) {
+            // En cas d'erreur, retourner une réponse 404 avec un corps vide
             return ResponseEntity.status(404).body(null);
         }
     }
+
     @GetMapping("/manager/{projectId}")
-    public ResponseEntity<ProjectDetailsDTO> getProjectDetails(
+    public ResponseEntity<ProjectDTO> getProjectDetails(
             @PathVariable Long projectId,
             @RequestHeader("Authorization") String authorizationHeader) {
         // Extraire le token (enlever "Bearer " du header)
         String accessToken = authorizationHeader.replace("Bearer ", "");
-        ProjectDetailsDTO projectDetails = projectService.getProjectDetails(projectId, accessToken);
+        ProjectDTO projectDetails = projectService.getProjectDetails(projectId, accessToken);
         return ResponseEntity.ok(projectDetails);
     }
 }
