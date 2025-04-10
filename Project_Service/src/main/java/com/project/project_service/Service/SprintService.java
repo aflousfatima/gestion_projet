@@ -10,6 +10,7 @@ import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.Repository.SprintRepository;
 import com.project.project_service.Repository.UserStoryRepository;
 import com.project.project_service.config.AuthClient;
+import jakarta.persistence.OptimisticLockException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -105,6 +106,8 @@ public class SprintService {
             );
 
             return new SprintDTO(updatedSprint);
+        } catch (OptimisticLockException e) {
+            throw new RuntimeException("Conflit de mise à jour détecté. Veuillez réessayer.", e);
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de la mise à jour du Sprint", e);
         }

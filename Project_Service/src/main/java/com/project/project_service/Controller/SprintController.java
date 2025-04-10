@@ -1,8 +1,11 @@
 package com.project.project_service.Controller;
 
 import com.project.project_service.DTO.SprintDTO;
+import com.project.project_service.DTO.SprintHistoryDto;
+import com.project.project_service.DTO.UserStoryHistoryDto;
 import com.project.project_service.Entity.SprintHistory;
 import com.project.project_service.Repository.SprintHistoryRepository;
+import com.project.project_service.Service.HistoryService;
 import com.project.project_service.Service.SprintService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,8 +20,8 @@ public class SprintController {
 
     @Autowired
     private SprintService sprintService;
-    @Autowired
-    private  SprintHistoryRepository sprintHistoryRepo;
+  @Autowired
+  private HistoryService historyService;
     @PostMapping("/{projectId}/sprints")
     public ResponseEntity<SprintDTO> createSprint(
             @PathVariable Long projectId,
@@ -126,11 +129,18 @@ public class SprintController {
     }
 
     @GetMapping("/sprint/{sprintId}/history")
-    public ResponseEntity<List<SprintHistory>> getSprintHistory(@PathVariable Long sprintId) {
-        List<SprintHistory> history = sprintHistoryRepo.findBySprintId(sprintId);
-        if (history.isEmpty()) {
-            return ResponseEntity.noContent().build(); // Retourne un code 204 si l'historique est vide
+    public ResponseEntity<List<SprintHistoryDto>> getSprintHistory(
+            @PathVariable Long sprintId,
+            @RequestHeader("Authorization") String authHeader) {
+
+        String userToken = authHeader.replace("Bearer ", "");
+        List<SprintHistoryDto> enrichedHistory = historyService.getSprintHistoryWithAuthorNames(sprintId, userToken);
+
+        if (enrichedHistory.isEmpty()) {
+            return ResponseEntity.noContent().build();
         }
-        return ResponseEntity.ok(history); // Retourne l'historique avec un code 200
+
+        return ResponseEntity.ok(enrichedHistory);
     }
+
 }
