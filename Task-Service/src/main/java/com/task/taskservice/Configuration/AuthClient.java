@@ -2,6 +2,7 @@ package com.task.taskservice.Configuration;
 
 
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
