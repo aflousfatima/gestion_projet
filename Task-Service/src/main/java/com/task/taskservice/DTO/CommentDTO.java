@@ -1,15 +1,8 @@
-package com.task.taskservice.Entity;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+package com.task.taskservice.DTO;
 
 import java.time.LocalDateTime;
-@Entity
-public class Comment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+public class CommentDTO {
     private Long id;
     private String content;
     private String author;
@@ -66,4 +59,3 @@ public class Comment {
         this.updatedAt = updatedAt;
     }
 }
-

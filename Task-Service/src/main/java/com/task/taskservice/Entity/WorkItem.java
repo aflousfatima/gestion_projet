@@ -5,6 +5,7 @@ import com.task.taskservice.Enumeration.WorkItemStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 @Entity
@@ -23,13 +24,34 @@ public abstract class WorkItem {
 
     protected Long estimationTime;     // in minutes or hours (depending on convention)
     protected Long timeSpent;
+    @Enumerated(EnumType.STRING)
 
     protected WorkItemStatus status;
+    @Enumerated(EnumType.STRING)
+
     protected WorkItemPriority priority;
 
     protected Double progress;         // 0.0 to 100.0
-    @ElementCollection
-    protected List<Long> assignedUser;      // L'ID de l'utilisateur (venant du User MS)
+
+    @OneToMany(mappedBy = "workItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<WorkItemHistory> history = new HashSet<>();  // Historique des tâches
+
+    @ManyToMany
+    @JoinTable(
+            name = "workitem_tags",
+            joinColumns = @JoinColumn(name = "workitem_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> itemtags = new HashSet<>();
+
+    @ManyToMany
+    @JoinTable(
+            name = "workitem_assigned_user",
+            joinColumns = @JoinColumn(name = "workitem_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> assignedUsers = new HashSet<>();
+
     protected Long userStory;
 protected String createdBy;
     protected Long projectId;         // L'ID de la User Story (venant du User Story MS)
@@ -40,8 +62,6 @@ protected String createdBy;
     @OneToMany(cascade = CascadeType.ALL)
     protected List<FileAttachment> attachments;
 
-    @ElementCollection
-    protected Set<String> tags;        // Optional tagging system
 
 
     public Long getId() {
@@ -148,13 +168,6 @@ protected String createdBy;
         this.progress = progress;
     }
 
-    public List<Long> getAssignedUser() {
-        return assignedUser;
-    }
-
-    public void setAssignedUser(List<Long> assignedUser) {
-        this.assignedUser = assignedUser;
-    }
 
     public Long getUserStory() {
         return userStory;
@@ -188,13 +201,7 @@ protected String createdBy;
         this.attachments = attachments;
     }
 
-    public Set<String> getTags() {
-        return tags;
-    }
 
-    public void setTags(Set<String> tags) {
-        this.tags = tags;
-    }
 
 
     public String getCreatedBy() {
@@ -202,6 +209,32 @@ protected String createdBy;
     }
 
     public void setCreatedBy(String createdBy) {
-        this.title = createdBy;
+        this.createdBy = createdBy;
+    }
+
+
+
+    public Set<WorkItemHistory> getHistory() {
+        return history;
+    }
+
+    public void setHistory(Set<WorkItemHistory> history) {
+        this.history = history;
+    }
+
+    public Set<Tag> getTags() {
+        return itemtags;
+    }
+
+    public void setTags(Set<Tag> workitemtags) {
+        this.itemtags = workitemtags;
+    }
+
+    public Set<User> getAssignedUsers() {
+        return assignedUsers;
+    }
+
+    public void setAssignedUsers(Set<User> assignedUsers) {
+        this.assignedUsers = assignedUsers;
     }
 }

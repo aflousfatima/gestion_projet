@@ -1,15 +1,8 @@
-package com.task.taskservice.Entity;
-
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+package com.task.taskservice.DTO;
 
 import java.time.LocalDateTime;
-@Entity
-public class FileAttachment {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+
+public class FileAttachmentDTO {
     private Long id;
     private String fileName; // e.g., "document.pdf"
     private String contentType; // e.g., "application/pdf"
@@ -18,14 +11,16 @@ public class FileAttachment {
     private String publicId; // ID unique Cloudinary pour suppression/modif
     private String uploadedBy; // Username or ID of the user who uploaded the file
     private LocalDateTime uploadedAt;
+    private Long workItemId; // ou taskId selon ta structure
+
 
     // Constructor (empty for deserialization)
-
-    public FileAttachment() {
+    public FileAttachmentDTO() {
     }
+
     // Full constructor with all fields
-    public FileAttachment(Long id, String fileName, String contentType, Long fileSize,
-                             String fileUrl, String publicId, String uploadedBy, LocalDateTime uploadedAt) {
+    public FileAttachmentDTO(Long id, String fileName, String contentType, Long fileSize,
+                             String fileUrl, String publicId, String uploadedBy, LocalDateTime uploadedAt , Long workItemId ) {
         this.id = id;
         this.fileName = fileName;
         this.contentType = contentType;
@@ -34,10 +29,11 @@ public class FileAttachment {
         this.publicId = publicId;
         this.uploadedBy = uploadedBy;
         this.uploadedAt = uploadedAt;
+        this.workItemId = workItemId ;
     }
 
     // Partial constructor for creating new attachments (without id and uploadedAt)
-    public FileAttachment(String fileName, String contentType, Long fileSize,
+    public FileAttachmentDTO(String fileName, String contentType, Long fileSize,
                              String fileUrl, String publicId, String uploadedBy) {
         this.fileName = fileName;
         this.contentType = contentType;
@@ -110,5 +106,14 @@ public class FileAttachment {
 
     public void setUploadedAt(LocalDateTime uploadedAt) {
         this.uploadedAt = uploadedAt;
+    }
+
+
+    public Long getWorkItemId() {
+        return workItemId;
+    }
+
+    public void setWorkItemId(Long workItemId) {
+        this.workItemId = workItemId;
     }
 }
