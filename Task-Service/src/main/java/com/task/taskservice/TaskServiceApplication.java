@@ -7,7 +7,6 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @EnableFeignClients
-@ComponentScan(basePackages = "com.task.taskservice.Mapper")
 public class TaskServiceApplication {
 
     public static void main(String[] args) {

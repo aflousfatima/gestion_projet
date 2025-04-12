@@ -1,127 +1,200 @@
 package com.task.taskservice.Service;
 
 import com.task.taskservice.Configuration.AuthClient;
-import com.task.taskservice.DTO.TaskDTO;
+import com.task.taskservice.Configuration.ProjectClient;
+import com.task.taskservice.DTO.TaskDTO; // Uppercase DTO
+import com.task.taskservice.Entity.Tag;
 import com.task.taskservice.Entity.Task;
-import com.task.taskservice.Entity.WorkItem;
-import com.task.taskservice.Enumeration.WorkItemStatus;
-import com.task.taskservice.Mapper.TaskMapper;
+import com.task.taskservice.Entity.User;
+import com.task.taskservice.Mapper.TaskMapper; // Uppercase Mapper
+import com.task.taskservice.Repository.TagRepository;
 import com.task.taskservice.Repository.TaskRepository;
-import org.springframework.stereotype.Service;
-
+import com.task.taskservice.Repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
 
-    @Autowired
-    private TaskRepository taskRepository;
+    private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
+    private final TagRepository tagRepository;
+    private final TaskMapper taskMapper;
+    private final AuthClient authClient;
+
+    private final ProjectClient projectClient;
+
 
     @Autowired
-    private AuthClient authClient;
-
-    @Autowired
-    private TaskMapper taskMapper; // Injecte le mapper généré par MapStruct
-
-    // Create a task
-    public TaskDTO createTask(Long userStoryId, TaskDTO taskDTO, String token) {
-        // Valider le token et extraire l'utilisateur
-        String userIdStr = authClient.decodeToken(token);
-        if (userIdStr == null) {
-            throw new IllegalArgumentException("Invalid token");
-        }
-
-        // Valider les champs obligatoires
-        if (taskDTO.getTitle() == null || taskDTO.getTitle().isBlank()) {
-            throw new IllegalArgumentException("Title is required");
-        }
-        if (userStoryId == null) {
-            throw new IllegalArgumentException("User story ID is required");
-        }
-
-        // Mapper le DTO vers l'entité
-        Task task = taskMapper.toEntity(taskDTO);
-
-        // Définir les champs gérés par le backend
-        task.setCreatedBy(userIdStr);
-        task.setCreationDate(LocalDate.now());
-        task.setLastModifiedDate(LocalDate.now());
-        task.setUserStory(userStoryId); // Lier à la user story
-
-        // Valider et définir les champs optionnels
-        if (task.getProgress() != null && (task.getProgress() < 0 || task.getProgress() > 100)) {
-            throw new IllegalArgumentException("Progress must be between 0 and 100");
-        }
-        if (task.getStatus() == null) {
-            task.setStatus(WorkItemStatus.TO_DO); // Par défaut
-        }
-        if (task.getAssignedUser() == null) {
-            task.setAssignedUser(new ArrayList<>()); // Liste vide par défaut
-        }
-        if (task.getTags() == null) {
-            task.setTags(new HashSet<>()); // Ensemble vide par défaut
-        }
-
-        // Ne pas définir ces champs lors de la création
-        task.setCompletedDate(null);
-        task.setTimeSpent(null);
-        task.setComments(new ArrayList<>());
-        task.setAttachments(new ArrayList<>());
-        task.setDependencies(new ArrayList<>()); // Pas de dépendances lors de la création
-
-        // Sauvegarder la tâche
-        Task savedTask = taskRepository.save(task);
-        return taskMapper.toDTO(savedTask);
+    public TaskService(TaskRepository taskRepository, UserRepository userRepository,
+                       TagRepository tagRepository, TaskMapper taskMapper, AuthClient authClient,ProjectClient projectClient) {
+        this.taskRepository = taskRepository;
+        this.userRepository = userRepository;
+        this.tagRepository = tagRepository;
+        this.taskMapper = taskMapper;
+        this.authClient = authClient;
+        this.projectClient = projectClient;
     }
 
-    // Update a task
-    public TaskDTO updateTask(Long id, TaskDTO taskDTO) {
-        Optional<Task> optionalTask = taskRepository.findById(id);
-        if (optionalTask.isEmpty()) {
-            throw new RuntimeException("Task not found with id: " + id);
-        }
-        Task task = optionalTask.get();
-        task.setLastModifiedDate(LocalDate.now());
-        taskMapper.updateEntity(taskDTO, task); // Utilise le mapper pour mettre à jour l'entité
+    @Transactional
+    public TaskDTO createTask(Long projectId, Long userStoryId, TaskDTO taskDTO, String token) {
+        // Validate token
+        String createdBy = authClient.decodeToken(token);
 
-        // Update dependencies if provided
-        if (taskDTO.getDependencyIds() != null) {
+        // Set defaults
+        if (taskDTO.getCreationDate() == null) {
+            taskDTO.setCreationDate(LocalDate.now());
+        }
+        taskDTO.setProjectId(projectId);
+        taskDTO.setUserStoryId(userStoryId);
+        taskDTO.setCreatedBy(createdBy);
+
+        // Convert DTO to entity
+        Task task = taskMapper.toEntity(taskDTO);
+
+        // Fetch and set dependencies
+        if (taskDTO.getDependencyIds() != null && !taskDTO.getDependencyIds().isEmpty()) {
             List<Task> dependencies = taskRepository.findAllById(taskDTO.getDependencyIds());
+            if (dependencies.size() != taskDTO.getDependencyIds().size()) {
+                throw new IllegalArgumentException("One or more dependency IDs are invalid");
+            }
             task.setDependencies(dependencies);
         }
 
-        Task updatedTask = taskRepository.save(task);
-        return taskMapper.toDTO(updatedTask); // Utilise le mapper pour renvoyer le DTO
-    }
-
-    // Delete a task
-    public void deleteTask(Long id) {
-        if (!taskRepository.existsById(id)) {
-            throw new RuntimeException("Task not found with id: " + id);
+        // Fetch and set assigned users
+        if (taskDTO.getAssignedUserIds() != null && !taskDTO.getAssignedUserIds().isEmpty()) {
+            Set<User> assignedUsers = userRepository.findAllById(taskDTO.getAssignedUserIds())
+                    .stream().collect(Collectors.toSet());
+            if (assignedUsers.size() != taskDTO.getAssignedUserIds().size()) {
+                throw new IllegalArgumentException("One or more user IDs are invalid");
+            }
+            task.setAssignedUsers(assignedUsers);
         }
-        taskRepository.deleteById(id);
-    }
 
-    // Retrieve a task by ID
-    public TaskDTO getTaskById(Long id) {
-        Optional<Task> optionalTask = taskRepository.findById(id);
-        if (optionalTask.isEmpty()) {
-            throw new RuntimeException("Task not found with id: " + id);
+        // Fetch and set tags
+        if (taskDTO.getTagIds() != null && !taskDTO.getTagIds().isEmpty()) {
+            Set<Tag> tags = tagRepository.findAllById(taskDTO.getTagIds())
+                    .stream().collect(Collectors.toSet());
+            if (tags.size() != taskDTO.getTagIds().size()) {
+                throw new IllegalArgumentException("One or more tag IDs are invalid");
+            }
+            task.setTags(tags);
         }
-        return taskMapper.toDTO(optionalTask.get()); // Utilise le mapper
+
+        // Save the task
+        Task savedTask = taskRepository.save(task);
+
+        // Convert back to DTO and return
+        return taskMapper.toDTO(savedTask);
     }
 
-    // Retrieve all tasks
-    public List<TaskDTO> getAllTasks() {
-        return taskRepository.findAll().stream()
-                .map(taskMapper::toDTO) // Utilise le mapper avec une référence de méthode
+
+    @Transactional(readOnly = true)
+    public TaskDTO getTaskById(Long projectId, Long userStoryId, Long taskId, String token) {
+        // Validate token
+        String createdBy = authClient.decodeToken(token);
+        if (createdBy == null) {
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+
+        // Fetch task
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("Task not found with ID: " + taskId));
+
+        // Verify project and user story
+        if (!task.getProjectId().equals(projectId) || !task.getUserStory().equals(userStoryId)) {
+            throw new IllegalArgumentException("Task does not belong to the specified project or user story");
+        }
+
+        // Convert to DTO
+        return taskMapper.toDTO(task);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskDTO> getTasksByProjectAndUserStory(Long projectId, Long userStoryId, String token) {
+        // Validate token
+        String createdBy = authClient.decodeToken(token);
+        if (createdBy == null) {
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+
+        // Fetch tasks
+        List<Task> tasks = taskRepository.findByProjectIdAndUserStory(projectId, userStoryId);
+
+        // Convert to DTOs
+        return tasks.stream()
+                .map(taskMapper::toDTO)
                 .collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<TaskDTO> getTasksByProjectId(Long projectId, String token) {
+        // Validate token
+        String createdBy = authClient.decodeToken(token);
+        if (createdBy == null) {
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+
+        // Fetch tasks
+        List<Task> tasks = taskRepository.findByProjectId(projectId);
+
+        // Convert to DTOs
+        return tasks.stream()
+                .map(taskMapper::toDTO)
+                .collect(Collectors.toList());
+    }
+
+
+    public List<TaskDTO> getTasksOfActiveSprint(Long projectId, String token) {
+
+        // Log initial pour indiquer que la méthode est appelée
+        System.out.println("Received request to fetch tasks for active sprint of project ID: " + projectId);
+
+        // Log pour l'appel au microservice pour obtenir les UserStory IDs
+        System.out.println("Fetching active sprint user stories for project ID: " + projectId);
+
+        List<Long> activeStoryIds = projectClient.getUserStoriesOfActiveSprint(projectId);
+
+        // Log des userStoryIds récupérés
+        if (activeStoryIds.isEmpty()) {
+            System.out.println("No active story IDs found for project ID: " + projectId);
+            return Collections.emptyList();  // Retourne une liste vide si aucune UserStory n'est trouvée
+        }
+
+        System.out.println("Found " + activeStoryIds.size() + " active story IDs for project ID: " + projectId);
+
+        // Recherche des tâches associées aux UserStories récupérées
+        List<Task> tasks = taskRepository.findByUserStoryIn(activeStoryIds);
+
+        // Log du nombre de tâches trouvées
+        System.out.println("Found " + tasks.size() + " tasks associated with the active sprint for project ID: " + projectId);
+
+        // Si aucune tâche n'est trouvée, loguer et retourner une liste vide
+        if (tasks.isEmpty()) {
+            System.out.println("No tasks found for the active sprint of project ID: " + projectId);
+            return Collections.emptyList();  // Retourne une liste vide si aucune tâche n'est associée
+        }
+
+        // Log avant de convertir les entités Task en DTOs
+        System.out.println("Converting " + tasks.size() + " tasks to DTOs for project ID: " + projectId);
+
+        // Conversion des entités Task en DTOs
+        List<TaskDTO> taskDTOs = tasks.stream()
+                .map(taskMapper::toDTO)
+                .collect(Collectors.toList());
+
+        // Log après la conversion
+        System.out.println("Successfully converted " + taskDTOs.size() + " tasks to DTOs for project ID: " + projectId);
+
+        // Retourne la liste des DTOs de tâches
+        return taskDTOs;
+    }
+
 }

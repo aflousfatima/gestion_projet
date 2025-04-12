@@ -1,8 +1,7 @@
-package com.task.taskservice.DTO;
+package com.task.taskservice.DTO; // Uppercase DTO
 
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
@@ -12,22 +11,26 @@ public class TaskDTO {
     private String title;
     private String description;
     private LocalDate creationDate;
-    private LocalDate lastModifiedDate;
     private LocalDate startDate;
     private LocalDate dueDate;
     private LocalDate completedDate;
-    private Long estimationTime; // in minutes or hours
+    private Long estimationTime;
     private Long timeSpent;
     private WorkItemStatus status;
     private WorkItemPriority priority;
-    private Double progress; // 0.0 to 100.0
-    private String createdBy; // ID of the user who created the task
-    private List<Long> assignedUser; // List of user IDs
-    private Long userStory; // ID of the User Story
-    private List<Long> dependencyIds; // IDs of dependent WorkItems
-    private Set<String> tags;
+    private Double progress;
+    private Long userStoryId;
+    private Long projectId;
+    private String createdBy;
+    private List<Long> dependencyIds;
+    private Set<Long> assignedUserIds;
+    private Set<Long> tagIds;
+    private List<CommentDTO> comments;
+    private List<FileAttachmentDTO> attachments;
 
-    // Getters and Setters
+    public TaskDTO() {
+    }
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitle() { return title; }
@@ -36,8 +39,6 @@ public class TaskDTO {
     public void setDescription(String description) { this.description = description; }
     public LocalDate getCreationDate() { return creationDate; }
     public void setCreationDate(LocalDate creationDate) { this.creationDate = creationDate; }
-    public LocalDate getLastModifiedDate() { return lastModifiedDate; }
-    public void setLastModifiedDate(LocalDate lastModifiedDate) { this.lastModifiedDate = lastModifiedDate; }
     public LocalDate getStartDate() { return startDate; }
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getDueDate() { return dueDate; }
@@ -54,14 +55,20 @@ public class TaskDTO {
     public void setPriority(WorkItemPriority priority) { this.priority = priority; }
     public Double getProgress() { return progress; }
     public void setProgress(Double progress) { this.progress = progress; }
+    public Long getUserStoryId() { return userStoryId; }
+    public void setUserStoryId(Long userStoryId) { this.userStoryId = userStoryId; }
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
     public String getCreatedBy() { return createdBy; }
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
-    public List<Long> getAssignedUser() { return assignedUser; }
-    public void setAssignedUser(List<Long> assignedUser) { this.assignedUser = assignedUser; }
-    public Long getUserStory() { return userStory; }
-    public void setUserStory(Long userStory) { this.userStory = userStory; }
     public List<Long> getDependencyIds() { return dependencyIds; }
     public void setDependencyIds(List<Long> dependencyIds) { this.dependencyIds = dependencyIds; }
-    public Set<String> getTags() { return tags; }
-    public void setTags(Set<String> tags) { this.tags = tags; }
+    public Set<Long> getAssignedUserIds() { return assignedUserIds; }
+    public void setAssignedUserIds(Set<Long> assignedUserIds) { this.assignedUserIds = assignedUserIds; }
+    public Set<Long> getTagIds() { return tagIds; }
+    public void setTagIds(Set<Long> tagIds) { this.tagIds = tagIds; }
+    public List<CommentDTO> getComments() { return comments; }
+    public void setComments(List<CommentDTO> comments) { this.comments = comments; }
+    public List<FileAttachmentDTO> getAttachments() { return attachments; }
+    public void setAttachments(List<FileAttachmentDTO> attachments) { this.attachments = attachments; }
 }
