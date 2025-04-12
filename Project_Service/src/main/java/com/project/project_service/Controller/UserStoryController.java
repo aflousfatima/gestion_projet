@@ -3,9 +3,7 @@ package com.project.project_service.Controller;
 import com.project.project_service.DTO.UserStoryDTO;
 import com.project.project_service.DTO.UserStoryHistoryDto;
 import com.project.project_service.DTO.UserStoryRequest;
-import com.project.project_service.Entity.UserStory;
-import com.project.project_service.Entity.UserStoryHistory;
-import com.project.project_service.Repository.UserStoryHistoryRepository;
+
 import com.project.project_service.Service.HistoryService;
 import com.project.project_service.Service.UserStoryService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -161,6 +159,8 @@ public class UserStoryController {
     }
 
 
-    // 🔍 Récupérer l’historique d’un Sprint
-
+    @GetMapping("/{projectId}/sprint/actif/user_stories")
+    public List<Long> getUserStoryIdsOfActiveSprint(@PathVariable Long projectId) {
+        return userStoryService.getUserStoryIdsOfActiveSprint(projectId);
+    }
 }

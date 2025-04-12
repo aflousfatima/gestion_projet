@@ -20,6 +20,7 @@ import jakarta.persistence.OptimisticLockException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class UserStoryService {
@@ -398,6 +399,18 @@ public class UserStoryService {
         );
         // Conversion en DTO
         return convertToDTO(updatedUserStory);
+    }
+
+
+
+    public List<Long> getUserStoryIdsOfActiveSprint(Long projectId) {
+        Sprint sprintActif = sprintRepository.findByProjectIdAndStatus(projectId, SprintStatus.ACTIVE);
+        if (sprintActif == null) return new ArrayList<>();
+
+        return userStoryRepository.findBySprintId(sprintActif.getId())
+                .stream()
+                .map(UserStory::getId)
+                .collect(Collectors.toList());
     }
 
 }
