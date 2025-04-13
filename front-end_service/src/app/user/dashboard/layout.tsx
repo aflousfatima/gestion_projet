@@ -77,7 +77,7 @@ export default function DashboardLayout({
           phase: projectData.phase,
           priority: projectData.priority,
         };
-  
+
         const response = await axiosInstance.put(
           `${PROJECT_SERVICE_URL}/api/modify-project`,
           requestBody,
@@ -88,7 +88,7 @@ export default function DashboardLayout({
           }
         );
         console.log("Réponse de PUT /modify-project:", response.data);
-  
+
         const updatedProjects: Project[] = projects.map((p) =>
           p.name === editingProject ? { ...p, ...projectData } : p
         );
@@ -560,7 +560,9 @@ export default function DashboardLayout({
                           alt="logo"
                           className="project-image"
                         />
-                        <Link href={`/user/dashboard/project/${project.id}`}>
+                        <Link
+                          href={`/user/dashboard/project/${project.id}/liste`}
+                        >
                           {" "}
                           {project.name ? project.name : "Nom inconnu"}
                         </Link>
@@ -833,8 +835,6 @@ export default function DashboardLayout({
                               Liste des projets
                             </h3>
 
-                      
-
                             {loading ? (
                               <p>Chargement des projets...</p>
                             ) : error ? (
@@ -842,21 +842,21 @@ export default function DashboardLayout({
                             ) : filteredProjects.length > 0 ? (
                               <>
                                 {/* Boutons d'action (Créer, Exporter, Filtrer) */}
-                         
 
                                 <div className="projects-actions-bar">
-
-                                               {/* Barre de recherche */}
-                            <div className="projects-search-bar">
-                              <i className="fa fa-search search-icon-project"></i>
-                              <input
-                                type="text"
-                                placeholder="Search"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="search-input"
-                              />
-                            </div>
+                                  {/* Barre de recherche */}
+                                  <div className="projects-search-bar">
+                                    <i className="fa fa-search search-icon-project"></i>
+                                    <input
+                                      type="text"
+                                      placeholder="Search"
+                                      value={searchQuery}
+                                      onChange={(e) =>
+                                        setSearchQuery(e.target.value)
+                                      }
+                                      className="search-input"
+                                    />
+                                  </div>
                                   <button
                                     type="button"
                                     className="project-exportButton"

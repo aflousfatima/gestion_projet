@@ -1,0 +1,261 @@
+/* styles/Dashboard-Add-Task.css */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 20, 40, 0.7), rgba(0, 40, 80, 0.7));
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.4s ease-out;
+  }
+  
+  .modal-content-task {
+    background: linear-gradient(145deg, #1a2e1b, #2a2f4e);
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideIn 0.4s ease-out;
+  }
+  
+  .modal-content-task h2 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin-bottom: 24px;
+    text-align: center;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  
+  .form-section {
+    margin-bottom: 24px;
+  }
+  
+  .form-section h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #a0b3f7;
+    margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 8px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  .form-group label {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #cbd5e0;
+    margin-bottom: 8px;
+  }
+  
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #e2e8f0;
+    transition: all 0.3s ease;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .form-group input:focus,
+  .form-group textarea:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #4dabf7;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 8px rgba(77, 171, 247, 0.4);
+  }
+  
+  .form-group textarea {
+    resize: vertical;
+    min-height: 120px;
+  }
+  
+  .form-group input::placeholder,
+  .form-group textarea::placeholder {
+    color: #94a3b8;
+  }
+  
+  .form-group input[type="number"] {
+    appearance: textfield;
+  }
+  
+  .form-group input[type="number"]::-webkit-inner-spin-button,
+  .form-group input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+  }
+  
+  /* Type toggle */
+  .type-toggle {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 24px;
+  }
+  
+  .toggle-btn {
+    padding: 8px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .toggle-btn.active,
+  .toggle-btn:hover {
+    background: #4dabf7;
+    color: #1a1f2e;
+    transform: translateY(-2px);
+  }
+  
+  /* Status toggle */
+  .status-toggle {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .status-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .status-btn.active {
+    background: #48bb78;
+    color: #ffffff;
+  }
+  
+  .status-btn:hover {
+    background: #4dabf7;
+    color: #1a1f2e;
+  }
+  
+  /* User selection */
+  .user-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    max-height: 160px;
+    overflow-y: auto;
+  }
+  
+  .user-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1rem;
+    color: #e2e8f0;
+    cursor: pointer;
+  }
+  
+  .user-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #4dabf7;
+    cursor: pointer;
+  }
+  
+  .user-avatar {
+    font-size: 1.5rem;
+    margin-right: 8px;
+  }
+  
+  .user-checkbox:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 4px;
+  }
+  
+  /* Actions */
+  .modal-actions-task {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 32px;
+  }
+  
+  .btn-task {
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .btn-task.primary {
+    background: linear-gradient(90deg, #4dabf7, #7dd3fc);
+    color: #1a1f2e;
+  }
+  
+  .btn-task.primary:hover {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  }
+  
+  .btn-task.secondary {
+    background: linear-gradient(90deg, #718096, #a0aec0);
+    color: #ffffff;
+  }
+  
+  .btn-task.secondary:hover {
+    background: linear-gradient(90deg, #4a5568, #718096);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(74, 85, 104, 0.4);
+  }
+  
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  
+  @keyframes slideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }

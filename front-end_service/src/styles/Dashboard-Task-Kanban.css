@@ -1,0 +1,110 @@
+.kanban-container {
+    padding: 5px;
+    margin-left: -150px; /* ajuste ici pour décaler */
+margin-top:-5px;
+}
+  
+  .kanban-board {
+    display: flex;
+    gap: 20px;
+    padding-bottom: 10px;
+  }
+  
+  .kanban-column {
+    flex: 0 0 310px;
+    background-color: #f3f1f1;
+    border-radius: 8px;
+    min-height: 1000px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  
+  .column-header {
+    padding: 10px;
+    border-radius: 8px 8px 0px 0px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 30px;
+  }
+  
+  .column-header h5 {
+    margin: 0;
+    font-size: 15px;
+    color: #333;
+  }
+
+  
+  .add-task-btn:hover {
+    background-color: #0056b3;
+  }
+  
+  .task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    flex-grow: 1;
+  }
+  
+  .task-card {
+    background-color: white;
+    border-radius: 6px;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+  }
+  
+  .task-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .task-card h4 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    color: #172b4d;
+  }
+  
+  .task-card p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #5e6c84;
+  }
+  
+
+  /* Couleurs spécifiques par status */
+.to_do {
+    background-color: #ffffff; /* bleu clair */
+    border-bottom: 2px solid #007bff;
+  }
+  
+  .in_progress {
+    background-color: #ffffff; /* jaune clair */
+    border-bottom: 2px solid #ffc107;
+  }
+  
+  .done {
+    background-color: #ffffff; /* vert clair */
+    border-bottom: 2px solid #28a745;
+  }
+  
+  .blocked {
+    background-color: #ffe6e6; /* rouge clair */
+    border-bottom: 2px solid #dc3545;
+  }
+  
+  .archived {
+    background-color: #f8f9fa; /* gris clair */
+    border-bottom: 2px solid #6c757d;
+  }
+  
+  .cancelled {
+    background-color: #fff0f5; /* rose clair */
+    border-bottom: 2px solid #e83e8c;
+  }
+
+  .parameters-kanban{
+    display: flex;
+  gap: 15px; /* espace entre les deux boutons */
+  }

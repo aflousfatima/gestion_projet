@@ -124,7 +124,7 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     background-color: #2E2E30;
     color: white;
     padding: 20px 20px 20px 0; /* Padding : haut 20px, droite 20px, bas 20px, gauche 0 */    
-    height: 110vh;
+    height: 200vh;
     overflow: visible; /* S'assure que rien n'est masqué */
   }
   

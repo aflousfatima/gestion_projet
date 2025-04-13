@@ -8,20 +8,10 @@ import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
 } from "../../../../../config/useApi";
-import { useParams } from "next/navigation";
+import { useParams  , usePathname} from "next/navigation";
 import { useCallback } from "react"; // Ajoutez cet import si ce n'est pas déjà fait
-// Interfaces
-interface Task {
-  id: number;
-  name: string;
-  responsible: string | null;
-  dueDate: string;
-  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "";
-  status: "TO DO" | "IN PROGRESS" | "DONE";
-  sprintId?: number;
-  userStoryId?: number;
-}
-
+import { useRouter } from "next/navigation";
+import Link from 'next/link'
 interface TeamMember {
   id: string;
   firstName: string;
@@ -69,29 +59,6 @@ interface Sprint {
   status: "PLANNED" | "ACTIVE" | "COMPLETED" | "ARCHIVED" | "CANCELED"; // Nouveau champ
 }
 
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    name: "Rédiger le brief",
-    responsible: "Fatima",
-    dueDate: "6 avril",
-    priority: "LOW",
-    status: "TO DO",
-    sprintId: 1,
-    userStoryId: 1,
-  },
-  {
-    id: 2,
-    name: "Planifier réunion",
-    responsible: "Fatima",
-    dueDate: "7 avril",
-    priority: "MEDIUM",
-    status: "TO DO",
-    sprintId: 1,
-    userStoryId: 1,
-  },
-];
-
 interface History {
   id: number;
   action: string; // ex: "CREATE", "UPDATE", "DELETE"
@@ -107,7 +74,10 @@ interface UserStoryHistory extends History {
 interface SprintHistory extends History {
   sprintId: number;
 }
-export default function Tasks() {
+
+export default function ProjectLayout({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const { accessToken, isLoading: authLoading } = useAuth();
   const axiosInstance = useAxios();
   const [backlog, setBacklog] = useState<UserStory[]>([]);
@@ -258,26 +228,16 @@ export default function Tasks() {
   const [editingUserStory, setEditingUserStory] = useState<UserStory | null>(
     null
   );
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(
     "backlog"
   );
-  const [newTask, setNewTask] = useState<Task>({
-    id: 0,
-    name: "",
-    responsible: null,
-    dueDate: "",
-    priority: "",
-    status: "TO DO",
-  });
+
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [manager, setManager] = useState<Manager | null>(null);
   const [showAllMembers, setShowAllMembers] = useState(false);
   const [projectName, setProjectName] = useState<string>("Projet 1");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filterMyTasks, setFilterMyTasks] = useState(false);
   const [expandedSprintStories, setExpandedSprintStories] = useState<
     number | null
   >(null);
@@ -306,15 +266,11 @@ export default function Tasks() {
     status: "PLANNED",
   });
   const [activeSprint, setActiveSprint] = useState<Sprint | null>(null);
-  const [selectedUserStoryId, setSelectedUserStoryId] = useState<number | null>(
-    null
-  ); // Pour le mini-modal
-
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<{
     id: number;
     type: "userStory" | "sprint";
-    title: string
+    title: string;
   } | null>(null);
   const [history, setHistory] = useState<(UserStoryHistory | SprintHistory)[]>(
     []
@@ -432,29 +388,6 @@ export default function Tasks() {
       document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, [showAllMembers, isAgilePanelOpen]);
-
-  const handleAddTask = (
-    e: React.FormEvent<HTMLFormElement>,
-    userStoryId?: number
-  ) => {
-    e.preventDefault();
-    const task: Task = {
-      ...newTask,
-      id: tasks.length + 1,
-      sprintId: activeSprint?.id,
-      userStoryId,
-    };
-    setTasks([...tasks, task]);
-    setNewTask({
-      id: 0,
-      name: "",
-      responsible: null,
-      dueDate: "",
-      priority: "",
-      status: "TO DO",
-    });
-    setSelectedUserStoryId(null); // Ferme le mini-modal
-  };
 
   const handleAddUserStory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -592,10 +525,6 @@ export default function Tasks() {
       console.error("Erreur lors de la suppression de la User Story :", error);
       alert("Erreur lors de la suppression de la User Story.");
     }
-  };
-
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) setIsModalOpen(false);
   };
 
   useEffect(() => {
@@ -753,20 +682,6 @@ export default function Tasks() {
     syncActiveSprint();
   }, [sprints, activeSprint, fetchData, projectId, accessToken]); // Ajoutez projectId et accessToken comme dépendances
 
-  // Déclenche à chaque changement de sprints ou activeSprint
-  const getTasksByStatus = (status: "TO DO" | "IN PROGRESS" | "DONE") => {
-    let filteredTasks = activeSprint
-      ? tasks.filter(
-          (task) => task.sprintId === activeSprint.id && task.status === status
-        )
-      : tasks.filter((task) => task.status === status);
-    if (filterMyTasks) {
-      // Since 'user' is removed, we'll skip filtering by user for now
-      // You can reintroduce this logic if you add user data back to AuthContext
-    }
-    return filteredTasks;
-  };
-
   const [editingTagsUserStory, setEditingTagsUserStory] =
     useState<UserStory | null>(null);
 
@@ -801,8 +716,10 @@ export default function Tasks() {
     }
   };
 
+
   if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
+
 
   return (
     <div className="project-container">
@@ -900,39 +817,53 @@ export default function Tasks() {
       </div>
 
       <div className="tasks-header">
-        <div className="tasks-tabs">
-          <button className="tasks-tab active">
-            <i className="fa fa-list"></i> List
-          </button>
-          <button className="tasks-tab active">
-            <i className="fa fa-chart-simple"></i> Kanban
-          </button>
-          <button className="tasks-tab">
-            <i className="fa fa-table"></i> Table
-          </button>
-          <button className="tasks-tab">
-            <i className="fa fa-chart-line"></i> Dashboard
-          </button>
-          <button className="tasks-tab">
-            <i className="fa fa-calendar"></i> Calendar
-          </button>
-          <button className="tasks-tab">
-            <i className="fa fa-comment"></i> Messages
-          </button>
-          <button className="tasks-tab">
-            <i className="fa fa-file"></i> Files
-          </button>
-          <button className="tasks-tab">
-            <i className="fa fa-plus"></i>
-          </button>
-        </div>
-      </div>
+      <div className="tasks-tabs">
+        <Link
+          className={`tasks-tab ${pathname.includes('/liste') ? 'active' : ''}`}
+          href={`/user/dashboard/project/${projectId}/liste`}
+        >
+          <i className="fa fa-list"></i> List
+        </Link>
 
-      {/* Actions */}
-      <div className="tasks-actions">
+        <Link
+          className={`tasks-tab ${pathname.includes('/kanban') ? 'active' : ''}`}
+          href={`/user/dashboard/project/${projectId}/kanban`}
+        >
+          <i className="fa fa-list"></i> Kanban
+        </Link>
+
+        <button className="tasks-tab">
+          <i className="fa fa-chart-line"></i> Dashboard
+        </button>
+
+        <Link
+          className={`tasks-tab ${pathname.includes('/calendar') ? 'active' : ''}`}
+          href={`/user/dashboard/project/${projectId}/calendar`}
+        >
+          <i className="fa fa-calendar"></i> Calendar
+        </Link>
+
+        <button className="tasks-tab">
+          <i className="fa fa-comment"></i> Messages
+        </button>
+
+        <button className="tasks-tab">
+          <i className="fa fa-file"></i> Files
+        </button>
+
+        <button className="tasks-tab">
+          <i className="fa fa-plus"></i>
+        </button>
+      </div>
+    </div>
+
+     
+
+     
+{/* Actions */}
+    <div className="tasks-actions">
         <button
           className="tasks-add-button"
-          onClick={() => setIsModalOpen(true)}
         >
           <i className="fa fa-plus"></i> Add Task{" "}
           <span className="second-button">
@@ -944,7 +875,8 @@ export default function Tasks() {
           <button className="tasks-option">
             <i className="fa fa-filter"></i> Filter
           </button>
-          <button className="tasks-option">
+
+<button className="tasks-option">
             <i className="fa fa-sort"></i> Sort
           </button>
           <button
@@ -959,172 +891,8 @@ export default function Tasks() {
         </div>
       </div>
 
-      {/* En-tête de la liste */}
-      <div className="tasks-list-header">
-        <span className="tasks-list-header-item-principal">
-          Task{"'"}s Name
-        </span>
-        <span className="tasks-list-header-item">Responsable</span>
-        <span className="tasks-list-header-item">Due Date</span>
-        <span className="tasks-list-header-item">Priority</span>
-        <span className="tasks-list-header-item">Status</span>
-      </div>
 
-      {/* Liste des tâches */}
-      <div className="tasks-list">
-        {["À faire", "En cours", "Terminé"].map((status) => (
-          <div key={status} className="dashboard-task-section">
-            <h2
-              className={`dashboard-task-section-title ${
-                status === "En cours" || status === "Terminé"
-                  ? "section-encours"
-                  : ""
-              }`}
-            >
-              <i className="fa fa-caret-down"></i> {status}
-            </h2>
-            {getTasksByStatus(status as "TO DO" | "IN PROGRESS" | "DONE").map(
-              (task) => (
-                <div key={task.id} className="task-row">
-                  <div className="task-checkbox">
-                    <input type="checkbox" checked={task.status === "DONE"} />
-                    <span>{task.name}</span>
-                  </div>
-                  <div className="task-details">
-                    <span className="task-responsible">
-                      {task.responsible ? (
-                        <span className="responsible-circle">
-                          {task.responsible.charAt(0)}
-                        </span>
-                      ) : (
-                        <span className="responsible-circle empty">?</span>
-                      )}
-                      {task.responsible || "Non assigné"}
-                    </span>
-                    <span className="task-due-date">{task.dueDate}</span>
-                    <span className={`task-priority priority-${task.priority}`}>
-                      {task.priority}
-                    </span>
-                    <span className="task-status">
-                      {task.dueDate.includes("Aujourd'hui")
-                        ? "Dans les délais"
-                        : "En retard"}
-                    </span>
-                  </div>
-                </div>
-              )
-            )}
-            <button
-              className="tasks-add-subtask"
-              onClick={() => setIsModalOpen(true)}
-            >
-              Add Task...
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {/* Modal pour ajouter une tâche (page principale) */}
-      {isModalOpen && (
-        <div className="tasks-modal-overlay" onClick={handleOverlayClick}>
-          <div className="tasks-modal">
-            <h2 className="tasks-modal-title">Add Task</h2>
-            <form onSubmit={(e) => handleAddTask(e)} className="tasks-form">
-              <div className="tasks-form-group">
-                <label htmlFor="name">Task{"'"}s Name</label>
-                <input
-                  type="text"
-                  id="name"
-                  value={newTask.name}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, name: e.target.value })
-                  }
-                  placeholder="Entrez le nom de la tâche"
-                  required
-                />
-              </div>
-              <div className="tasks-form-group">
-                <label htmlFor="responsible">Responsable</label>
-                <input
-                  type="text"
-                  id="responsible"
-                  value={newTask.responsible || ""}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, responsible: e.target.value })
-                  }
-                  placeholder="Entrez le nom du responsable"
-                />
-              </div>
-              <div className="tasks-form-group">
-                <label htmlFor="dueDate">Due date</label>
-                <input
-                  type="text"
-                  id="dueDate"
-                  value={newTask.dueDate}
-                  onChange={(e) =>
-                    setNewTask({ ...newTask, dueDate: e.target.value })
-                  }
-                  placeholder="Ex: 5 - 7 fév"
-                />
-              </div>
-              <div className="tasks-form-group">
-                <label htmlFor="priority">Priority</label>
-                <select
-                  id="priority"
-                  value={newTask.priority}
-                  onChange={(e) =>
-                    setNewTask({
-                      ...newTask,
-                      priority: e.target.value as
-                        | "LOW"
-                        | "MEDIUM"
-                        | "HIGH"
-                        | "",
-                    })
-                  }
-                >
-                  <option value="">Selecy a priority</option>
-                  <option value="LOW">LOW</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HIGH">HIGH</option>
-                </select>
-              </div>
-              <div className="tasks-form-group">
-                <label htmlFor="status">Status</label>
-                <select
-                  id="status"
-                  value={newTask.status}
-                  onChange={(e) =>
-                    setNewTask({
-                      ...newTask,
-                      status: e.target.value as
-                        | "TO DO"
-                        | "IN PROGRESS"
-                        | "DONE",
-                    })
-                  }
-                >
-                  <option value="À faire">TO DO</option>
-                  <option value="En cours">IN PROGRESS</option>
-                  <option value="Terminé">DONE</option>
-                </select>
-              </div>
-              <div className="tasks-modal-actions">
-                <button type="submit" className="tasks-submit-button">
-                  Add
-                </button>
-                <button
-                  type="button"
-                  className="tasks-cancel-button"
-                  onClick={() => setIsModalOpen(false)}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <div className="main-content">{children}</div>
 
       {isAgilePanelOpen && (
         <div className="agile-sidebar" onClick={(e) => e.stopPropagation()}>
@@ -1152,7 +920,7 @@ export default function Tasks() {
             </div>
             <div className="dashboard-card-task">
               <i className="fa fa-clock"></i>
-              <span>Tâches: {tasks.length}</span>
+              <span>Tâches:</span>
             </div>
           </div>
 
@@ -1474,7 +1242,7 @@ export default function Tasks() {
                                         setSelectedItem({
                                           id: story.id,
                                           type: "userStory",
-                                          title:story.title
+                                          title: story.title,
                                         });
                                         fetchHistory(story.id, "userStory");
                                       }}
@@ -2211,7 +1979,7 @@ export default function Tasks() {
                                     setSelectedItem({
                                       id: sprint.id,
                                       type: "sprint",
-                                      title:sprint.name
+                                      title: sprint.name,
                                     });
                                     fetchHistory(sprint.id, "sprint");
                                   }}
@@ -2491,23 +2259,28 @@ export default function Tasks() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(displayedSprint.userStories || []).map((story) => (
-                            <tr key={story.id}>
-                              <td>{story.title}</td>{" "}
-                              {/* Remplacez "title" par "name" si nécessaire */}
-                              <td>{story.effortPoints}</td>
-                              <td>
-                                <button
-                                  onClick={() =>
-                                    setSelectedUserStoryId(story.id)
-                                  }
-                                  className="btn-add-task"
-                                >
-                                  + Task
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
+                          {(displayedSprint.userStories || []).map((story) => {
+                            const userStoryId = story.id; // Créer une variable storyId
+                            return (
+                              <tr key={userStoryId}>
+                                <td>{story.title}</td>
+                                <td>{story.effortPoints}</td>
+                                <td>
+                                  <button
+                                    onClick={
+                                      () =>
+                                        router.push(
+                                          `/user/dashboard/tasks/AddTaskModal/${projectId}/${userStoryId}`
+                                        ) // Utiliser storyId dans l'URL
+                                    }
+                                    className="btn-add-task"
+                                  >
+                                    + Task
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -2538,152 +2311,66 @@ export default function Tasks() {
 
           {/* Mini-modal pour afficher l'historique */}
           {isHistoryModalOpen && selectedItem && (
-  <div
-    className="modal-overlay-history"
-    onClick={() => setIsHistoryModalOpen(false)}
-  >
-    <div
-      className="modal-content-history"
-      onClick={(e) => e.stopPropagation()}
-    >
-      <h4>
-        Historique{" "}
-        {selectedItem.type === "userStory" ? "User Story" : "Sprint"}{" "}
-        {selectedItem.title}
-      </h4>
-      {history.length > 0 ? (
-        <div className="history-timeline">
-          {history.map((entry, index) => (
             <div
-              className={`history-event ${entry.action.toLowerCase()}`}
-              key={index}
-            >
-              <div className="event-date">
-                {new Date(entry.date).toLocaleString()}
-              </div>
-              <div className="event-details-container">
-                <div className="event-details">
-                  <div className="top-row">
-                    <div className="author">
-                      <i className="fa fa-user"></i>
-                      <strong>Auteur:</strong> <span>{entry.authorFullName}</span>
-                    </div>
-                    <div className="action">
-                      <i className="fa fa-bolt"></i>
-                      <strong>Action:</strong> <span className={entry.action.toLowerCase()}>{entry.action}</span>
-                    </div>
-                  </div>
-                  <div className="description-row">
-                    <div className="description">
-                      <i className="fa fa-comment"></i>
-                      <strong>Description:</strong> <span>{entry.description}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p>Aucun historique disponible.</p>
-      )}
-      <button
-        className="action-btn secondary"
-        onClick={() => setIsHistoryModalOpen(false)}
-      >
-        Fermer
-      </button>
-    </div>
-  </div>
-)}
-          {/* Mini-modal pour ajouter une tâche */}
-          {selectedUserStoryId && (
-            <div
-              className="modal-overlay"
-              onClick={() => setSelectedUserStoryId(null)}
+              className="modal-overlay-history"
+              onClick={() => setIsHistoryModalOpen(false)}
             >
               <div
-                className="modal-content"
+                className="modal-content-history"
                 onClick={(e) => e.stopPropagation()}
               >
-                <h4>Add Task</h4>
-                <form
-                  onSubmit={(e) => handleAddTask(e, selectedUserStoryId)}
-                  className="modern-form"
-                >
-                  <input
-                    type="text"
-                    placeholder="Task Name"
-                    value={newTask.name}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, name: e.target.value })
-                    }
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Responsible"
-                    value={newTask.responsible || ""}
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, responsible: e.target.value })
-                    }
-                  />
-                  <input
-                    type="date"
-                    id="dueDate"
-                    value={newTask.dueDate} // garder la date brute ici
-                    onChange={(e) =>
-                      setNewTask({ ...newTask, dueDate: e.target.value })
-                    }
-                  />
-
-                  <select
-                    value={newTask.priority}
-                    onChange={(e) =>
-                      setNewTask({
-                        ...newTask,
-                        priority: e.target.value as
-                          | "LOW"
-                          | "MEDIUM"
-                          | "HIGH"
-                          | "",
-                      })
-                    }
-                  >
-                    <option value="">Priority</option>
-                    <option value="LOW">Low</option>
-                    <option value="MEDIUM">Medium</option>
-                    <option value="HIGH">High</option>
-                  </select>
-                  <select
-                    value={newTask.status}
-                    onChange={(e) =>
-                      setNewTask({
-                        ...newTask,
-                        status: e.target.value as
-                          | "TO DO"
-                          | "IN PROGRESS"
-                          | "DONE",
-                      })
-                    }
-                  >
-                    <option value="TO DO">To Do</option>
-                    <option value="IN PROGRESS">In Progress</option>
-                    <option value="DONE">Done</option>
-                  </select>
-                  <div className="modal-actions">
-                    <button type="submit" className="action-btn primary">
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      className="action-btn secondary"
-                      onClick={() => setSelectedUserStoryId(null)}
-                    >
-                      Cancel
-                    </button>
+                <h4>
+                  Historique{" "}
+                  {selectedItem.type === "userStory" ? "User Story" : "Sprint"}{" "}
+                  {selectedItem.title}
+                </h4>
+                {history.length > 0 ? (
+                  <div className="history-timeline">
+                    {history.map((entry, index) => (
+                      <div
+                        className={`history-event ${entry.action.toLowerCase()}`}
+                        key={index}
+                      >
+                        <div className="event-date">
+                          {new Date(entry.date).toLocaleString()}
+                        </div>
+                        <div className="event-details-container">
+                          <div className="event-details">
+                            <div className="top-row">
+                              <div className="author">
+                                <i className="fa fa-user"></i>
+                                <strong>Auteur:</strong>{" "}
+                                <span>{entry.authorFullName}</span>
+                              </div>
+                              <div className="action">
+                                <i className="fa fa-bolt"></i>
+                                <strong>Action:</strong>{" "}
+                                <span className={entry.action.toLowerCase()}>
+                                  {entry.action}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="description-row">
+                              <div className="description">
+                                <i className="fa fa-comment"></i>
+                                <strong>Description:</strong>{" "}
+                                <span>{entry.description}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </form>
+                ) : (
+                  <p>Aucun historique disponible.</p>
+                )}
+                <button
+                  className="action-btn secondary"
+                  onClick={() => setIsHistoryModalOpen(false)}
+                >
+                  Fermer
+                </button>
               </div>
             </div>
           )}
