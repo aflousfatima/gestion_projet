@@ -1,6 +1,8 @@
 package com.auth.authentification_service.DTO;
 
 public class UserDto {
+
+    private String id;
     private String firstName;
     private String lastName;
     private String username;
@@ -54,5 +56,13 @@ public class UserDto {
 
     public void setToken(String token) {
         this.token = token;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
     }
 }

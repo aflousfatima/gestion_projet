@@ -496,4 +496,56 @@ public class KeycloakService {
             throw new RuntimeException("Erreur lors de la récupération de l'utilisateur depuis Keycloak", e);
         }
     }
+
+
+    public List<UserDto> getUsersByIds(List<String> userIds) {
+        String adminToken = getAdminToken();
+        List<UserDto> users = new ArrayList<>();
+
+        if (userIds == null || userIds.isEmpty()) {
+            System.out.println("⚠️ Liste d'IDs vide ou null");
+            return users;
+        }
+
+        for (String userId : userIds) {
+            String userUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + userId;
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(adminToken);
+            HttpEntity<String> request = new HttpEntity<>(headers);
+
+            try {
+                ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
+                        userUrl,
+                        HttpMethod.GET,
+                        request,
+                        new ParameterizedTypeReference<Map<String, Object>>() {}
+                );
+                Map<String, Object> userInfo = userResponse.getBody();
+
+                if (userInfo == null) {
+                    System.out.println("⚠️ Utilisateur non trouvé dans Keycloak : " + userId);
+                    continue;
+                }
+
+                String firstName = (String) userInfo.get("firstName");
+                String lastName = (String) userInfo.get("lastName");
+
+                // Gérer les cas où firstName ou lastName sont null
+                firstName = firstName != null ? firstName : "Inconnu";
+                lastName = lastName != null ? lastName : "Inconnu";
+
+                UserDto userDTO = new UserDto();
+                userDTO.setId(userId);
+                userDTO.setFirstName(firstName);
+                userDTO.setLastName(lastName);
+
+                users.add(userDTO);
+            } catch (Exception e) {
+                System.out.println("❌ Erreur lors de la récupération de l'utilisateur " + userId +
+                        " depuis Keycloak : " + e.getMessage());
+            }
+        }
+
+        return users;
+    }
 }

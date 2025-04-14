@@ -296,4 +296,15 @@ public class AuthController {
         }
     }
 
+
+    @PostMapping("/tasks_reponsibles/by-ids")
+    public List<UserDto> getUsersByIds(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody List<String> userIds
+    ) {
+        System.out.println("Received Authorization header: " + authorizationHeader);
+        System.out.println("Received userIds: " + userIds);
+        return keycloakService.getUsersByIds(userIds);
+    }
+
 }
