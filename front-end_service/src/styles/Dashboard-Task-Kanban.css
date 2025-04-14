@@ -1,6 +1,6 @@
 .kanban-container {
     padding: 5px;
-    margin-left: -150px; /* ajuste ici pour décaler */
+    margin-left: -12px; /* ajuste ici pour décaler */
 margin-top:-5px;
 }
   
@@ -50,27 +50,127 @@ margin-top:-5px;
   
   .task-card {
     background-color: white;
-    border-radius: 6px;
-    padding: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
   }
   
   .task-card:hover {
     transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
   }
   
   .task-card h4 {
-    margin: 0 0 10px;
+    margin: 0 0 8px;
     font-size: 16px;
+    font-weight: 600;
     color: #172b4d;
+    line-height: 1.4;
   }
   
-  .task-card p {
-    margin: 5px 0;
+  .task-description {
+    margin: 0 0 8px;
     font-size: 14px;
     color: #5e6c84;
+    line-height: 1.5;
   }
+  
+  .priority-tag {
+    display: inline-block;
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    text-transform: capitalize;
+  }
+  
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  
+  .task-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: #34495e;
+    background-color: #e6e6fa;
+    border-radius: 10px;
+  }
+  
+  .task-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  
+  .date-container {
+    position: relative;
+  }
+  
+  .calendar-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+  }
+  
+  .date-popup {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #fff;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    z-index: 10;
+    min-width: 150px;
+  }
+  
+  .date-item {
+    margin: 4px 0;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .date-item span {
+    font-weight: 500;
+    color: #34495e;
+  }
+  
+  .date-item.created::before {
+    content: "✔";
+    color: #4caf50;
+  }
+  
+  .date-item.due::before {
+    content: "✔";
+    color: #f44336;
+  }
+  
+  .estimation-time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: #fff;
+    background-color: #0288d1;
+    padding: 4px 8px;
+    border-radius: 12px;
+  }
+
+
+
   
 
   /* Couleurs spécifiques par status */

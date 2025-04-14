@@ -37,6 +37,7 @@ export default function Kanban() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showDates, setShowDates] = useState(false);
 
   // Define Kanban columns with background colors
   const columns = [
@@ -83,34 +84,72 @@ export default function Kanban() {
   }, [projectId, accessToken, authLoading, axiosInstance]);
 
   // Render a single task card
-  const renderTaskCard = (task: Task) => (
-    <div className="task-card" key={task.id}>
-      <h4>{task.title}</h4>
-      <p>
-        <strong>Priority:</strong> {task.priority || "None"}
-      </p>
-      <p>
-        <strong>Description:</strong> {task.description || "None"}
-      </p>
-      <p>
-        <strong>Tags:</strong>{" "}
-        {task.tags?.length > 0 ? task.tags.join(", ") : "None"}
-      </p>
-      <p>
-        <strong>Created:</strong> {task.creationDate}
-      </p>
-      {task.dueDate && (
-        <p>
-          <strong>Due:</strong> {task.dueDate}
-        </p>
-      )}
-      {task.estimationTime !== null && (
-        <p>
-          <strong>Estimated:</strong> {task.estimationTime} min
-        </p>
-      )}
-    </div>
-  );
+  const renderTaskCard = (task: Task) => {
+
+    // Priority color mapping
+    const priorityColors: { [key: string]: string } = {
+      LOW: "#4caf50", // Green
+      MEDIUM: "#ff9800", // Orange
+      HIGH: "#f44336", // Red
+      CRITICAL: "#d81b60", // Deep pink
+      "": "#b0bec5", // Gray for None
+    };
+
+    return (
+      <div className="task-card" key={task.id}>
+        <h4>{task.title}</h4>
+        {task.description && <p className="task-description">{task.description}</p>}
+        {task.priority && (
+          <span
+            className="priority-tag"
+            style={{ backgroundColor: priorityColors[task.priority] }}
+          >
+            {task.priority}
+          </span>
+        )}
+        {task.tags?.length > 0 && (
+          <div className="tags-container">
+            {task.tags.map((tags, index) => (
+              <span key={index} className="task-tag">
+                {tags}
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="task-footer">
+          {(task.creationDate || task.dueDate) && (
+            <div className="date-container">
+              <button
+                className="calendar-btn"
+                onClick={() => setShowDates(!showDates)}
+              >
+                📅
+              </button>
+              {showDates && (
+                <div className="date-popup">
+                  {task.creationDate && (
+                    <p className="date-item created">
+                      <span>Created:</span> {task.creationDate}
+                    </p>
+                  )}
+                  {task.dueDate && (
+                    <p className="date-item due">
+                      <span>Due:</span> {task.dueDate}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          {task.estimationTime !== null && (
+            <span className="estimation-time">
+              ⏱️ {task.estimationTime} hours
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="kanban-container">

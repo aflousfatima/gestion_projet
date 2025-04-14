@@ -8,10 +8,10 @@ import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
 } from "../../../../../config/useApi";
-import { useParams  , usePathname} from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useCallback } from "react"; // Ajoutez cet import si ce n'est pas déjà fait
 import { useRouter } from "next/navigation";
-import Link from 'next/link'
+import Link from "next/link";
 interface TeamMember {
   id: string;
   firstName: string;
@@ -75,7 +75,11 @@ interface SprintHistory extends History {
   sprintId: number;
 }
 
-export default function ProjectLayout({ children }: { children: React.ReactNode }) {
+export default function ProjectLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const { accessToken, isLoading: authLoading } = useAuth();
@@ -716,10 +720,8 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
     }
   };
 
-
   if (loading) return <p>Loading...</p>;
   if (error) return <p>{error}</p>;
-
 
   return (
     <div className="project-container">
@@ -817,54 +819,55 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
       </div>
 
       <div className="tasks-header">
-      <div className="tasks-tabs">
-        <Link
-          className={`tasks-tab ${pathname.includes('/liste') ? 'active' : ''}`}
-          href={`/user/dashboard/project/${projectId}/liste`}
-        >
-          <i className="fa fa-list"></i> List
-        </Link>
+        <div className="tasks-tabs">
+          <Link
+            className={`tasks-tab ${
+              pathname.includes("/liste") ? "active" : ""
+            }`}
+            href={`/user/dashboard/project/${projectId}/liste`}
+          >
+            <i className="fa fa-list"></i> List
+          </Link>
 
-        <Link
-          className={`tasks-tab ${pathname.includes('/kanban') ? 'active' : ''}`}
-          href={`/user/dashboard/project/${projectId}/kanban`}
-        >
-          <i className="fa fa-list"></i> Kanban
-        </Link>
+          <Link
+            className={`tasks-tab ${
+              pathname.includes("/kanban") ? "active" : ""
+            }`}
+            href={`/user/dashboard/project/${projectId}/kanban`}
+          >
+            <i className="fa fa-list"></i> Kanban
+          </Link>
 
-        <button className="tasks-tab">
-          <i className="fa fa-chart-line"></i> Dashboard
-        </button>
+          <button className="tasks-tab">
+            <i className="fa fa-chart-line"></i> Dashboard
+          </button>
 
-        <Link
-          className={`tasks-tab ${pathname.includes('/calendar') ? 'active' : ''}`}
-          href={`/user/dashboard/project/${projectId}/calendar`}
-        >
-          <i className="fa fa-calendar"></i> Calendar
-        </Link>
+          <Link
+            className={`tasks-tab ${
+              pathname.includes("/calendar") ? "active" : ""
+            }`}
+            href={`/user/dashboard/project/${projectId}/calendar`}
+          >
+            <i className="fa fa-calendar"></i> Calendar
+          </Link>
 
-        <button className="tasks-tab">
-          <i className="fa fa-comment"></i> Messages
-        </button>
+          <button className="tasks-tab">
+            <i className="fa fa-comment"></i> Messages
+          </button>
 
-        <button className="tasks-tab">
-          <i className="fa fa-file"></i> Files
-        </button>
+          <button className="tasks-tab">
+            <i className="fa fa-file"></i> Files
+          </button>
 
-        <button className="tasks-tab">
-          <i className="fa fa-plus"></i>
-        </button>
+          <button className="tasks-tab">
+            <i className="fa fa-plus"></i>
+          </button>
+        </div>
       </div>
-    </div>
 
-     
-
-     
-{/* Actions */}
-    <div className="tasks-actions">
-        <button
-          className="tasks-add-button"
-        >
+      {/* Actions */}
+      <div className="tasks-actions">
+        <button className="tasks-add-button">
           <i className="fa fa-plus"></i> Add Task{" "}
           <span className="second-button">
             {"       "}
@@ -876,7 +879,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
             <i className="fa fa-filter"></i> Filter
           </button>
 
-<button className="tasks-option">
+          <button className="tasks-option">
             <i className="fa fa-sort"></i> Sort
           </button>
           <button
@@ -890,7 +893,6 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
           </button>
         </div>
       </div>
-
 
       <div className="main-content">{children}</div>
 
@@ -1261,6 +1263,7 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                                           ? story.tags.join(", ")
                                           : "No tags"}
                                       </td>
+                                    
                                       <td onClick={(e) => e.stopPropagation()}>
                                         <button
                                           className="story-count-btn"
@@ -1402,6 +1405,21 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
                                           </div>
                                         )}
 
+<button
+  onClick={(e) => {
+    e.stopPropagation();
+    router.push(
+      `/user/dashboard/tasks/AddTaskModal/${projectId}/${story.id}`
+    );
+  }}
+  className="story-action-btn"
+  title="Add a task to this story"
+>
+  <i className="fa fa-plus"></i>
+</button>
+
+
+                                 
                                         <select
                                           onClick={(e) => e.stopPropagation()}
                                           onChange={async (e) => {
