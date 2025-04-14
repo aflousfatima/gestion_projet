@@ -36,7 +36,7 @@ public abstract class WorkItem {
     @OneToMany(mappedBy = "workItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<WorkItemHistory> history = new HashSet<>();  // Historique des tâches
 
-    @ManyToMany
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
             name = "workitem_tags",
             joinColumns = @JoinColumn(name = "workitem_id"),
@@ -44,14 +44,13 @@ public abstract class WorkItem {
     )
     private Set<Tag> itemtags = new HashSet<>();
 
-    @ManyToMany
-    @JoinTable(
+    @ElementCollection
+    @CollectionTable(
             name = "workitem_assigned_user",
-            joinColumns = @JoinColumn(name = "workitem_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
+            joinColumns = @JoinColumn(name = "workitem_id")
     )
-    private Set<User> assignedUsers = new HashSet<>();
-
+    @Column(name = "user_id")
+    private Set<String> assignedUserIds = new HashSet<>();
     protected Long userStory;
 protected String createdBy;
     protected Long projectId;         // L'ID de la User Story (venant du User Story MS)
@@ -61,7 +60,6 @@ protected String createdBy;
 
     @OneToMany(cascade = CascadeType.ALL)
     protected List<FileAttachment> attachments;
-
 
 
     public Long getId() {
@@ -230,11 +228,37 @@ protected String createdBy;
         this.itemtags = workitemtags;
     }
 
-    public Set<User> getAssignedUsers() {
-        return assignedUsers;
+    // Getters and setters
+    public Set<String> getAssignedUserIds() {
+        return assignedUserIds;
     }
 
-    public void setAssignedUsers(Set<User> assignedUsers) {
-        this.assignedUsers = assignedUsers;
+    public void setAssignedUserIds(Set<String> assignedUserIds) {
+        this.assignedUserIds = assignedUserIds;
+    }
+
+
+
+    public void addTag(Tag tag) {
+        itemtags.add(tag);
+        tag.getWorkItems().add(this);
+    }
+
+    // Getters et setters
+    public Set<Tag> getItemtags() {
+        return itemtags;
+    }
+
+    public void setItemtags(Set<Tag> itemtags) {
+        this.itemtags = itemtags;
+    }
+
+    @Override
+    public String toString() {
+        return "Task{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", attachments=" + attachments +
+                '}';
     }
 }
