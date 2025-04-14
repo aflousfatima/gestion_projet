@@ -1,5 +1,6 @@
 package com.task.taskservice.DTO; // Uppercase DTO
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import java.time.LocalDate;
@@ -23,8 +24,17 @@ public class TaskDTO {
     private Long projectId;
     private String createdBy;
     private List<Long> dependencyIds;
-    private Set<Long> assignedUserIds;
-    private Set<Long> tagIds;
+    @JsonProperty("assignedUser")
+    private List<String> assignedUserIds;
+
+
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    private List<UserDTO> assignedUsers; // Pour envoyer les détails en sortie (GET)
+
+    private Set<Long> tagIds; // Conserver si utilisé ailleurs
+
+    @JsonProperty("tags")
+    private Set<String> tags; // Nouveau champ pour recevoir ["testing", "newtag"]
     private List<CommentDTO> comments;
     private List<FileAttachmentDTO> attachments;
 
@@ -63,12 +73,20 @@ public class TaskDTO {
     public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
     public List<Long> getDependencyIds() { return dependencyIds; }
     public void setDependencyIds(List<Long> dependencyIds) { this.dependencyIds = dependencyIds; }
-    public Set<Long> getAssignedUserIds() { return assignedUserIds; }
-    public void setAssignedUserIds(Set<Long> assignedUserIds) { this.assignedUserIds = assignedUserIds; }
+    public List<String> getAssignedUserIds() { return assignedUserIds; }
+    public void setAssignedUserIds(List<String> assignedUserIds) { this.assignedUserIds = assignedUserIds; }
     public Set<Long> getTagIds() { return tagIds; }
     public void setTagIds(Set<Long> tagIds) { this.tagIds = tagIds; }
+
+    public Set<String> getTags() { return tags; }
+    public void setTags(Set<String> tags) { this.tags = tags; }
+
+
     public List<CommentDTO> getComments() { return comments; }
     public void setComments(List<CommentDTO> comments) { this.comments = comments; }
     public List<FileAttachmentDTO> getAttachments() { return attachments; }
     public void setAttachments(List<FileAttachmentDTO> attachments) { this.attachments = attachments; }
+
+    public List<UserDTO> getAssignedUsers() { return assignedUsers; }
+    public void setAssignedUsers(List<UserDTO> assignedUsers) { this.assignedUsers = assignedUsers; }
 }

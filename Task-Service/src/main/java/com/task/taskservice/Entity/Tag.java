@@ -16,7 +16,7 @@ public class Tag {
     @ManyToMany(mappedBy = "itemtags")
     private Set<WorkItem> workItems = new HashSet<>();
 
-    // Getters and Setters
+    // Getters et setters
     public Long getId() {
         return id;
     }

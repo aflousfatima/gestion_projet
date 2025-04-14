@@ -16,10 +16,6 @@ public class WorkItemHistory {
     @JoinColumn(name = "workitem_id")
     private WorkItem workItem;  // Référence vers la tâche associée
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;  // Utilisateur qui a effectué le changement
-
     private String action;  // Type d'action effectuée (ex: "modification du statut", "ajout de commentaire", etc.)
 
     private LocalDateTime date;  // Date et heure de l'action
@@ -38,9 +34,6 @@ public class WorkItemHistory {
     public void setWorkItem(WorkItem workItem) {
         this.workItem = workItem;
     }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
 
     public String getAction() { return action; }
     public void setAction(String action) { this.action = action; }

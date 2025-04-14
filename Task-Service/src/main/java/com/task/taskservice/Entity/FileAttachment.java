@@ -111,4 +111,19 @@ public class FileAttachment {
     public void setUploadedAt(LocalDateTime uploadedAt) {
         this.uploadedAt = uploadedAt;
     }
+
+
+    @Override
+    public String toString() {
+        return "FileAttachment{" +
+                "id=" + id +
+                ", fileName='" + fileName + '\'' +
+                ", contentType='" + contentType + '\'' +
+                ", fileSize=" + fileSize +
+                ", fileUrl='" + fileUrl + '\'' +
+                ", publicId='" + publicId + '\'' +
+                ", uploadedBy='" + uploadedBy + '\'' +
+                ", uploadedAt=" + uploadedAt +
+                '}';
+    }
 }

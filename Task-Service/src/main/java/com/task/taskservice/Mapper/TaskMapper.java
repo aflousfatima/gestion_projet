@@ -1,16 +1,23 @@
 package com.task.taskservice.Mapper; // Uppercase Mapper
 
+import com.task.taskservice.DTO.FileAttachmentDTO;
+import com.task.taskservice.Entity.FileAttachment;
 import com.task.taskservice.Entity.Task;
-import com.task.taskservice.Entity.User;
 import com.task.taskservice.Entity.Tag;
 import com.task.taskservice.DTO.TaskDTO; // Uppercase DTO
+import com.task.taskservice.Service.CloudinaryService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 public class TaskMapper {
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
     public TaskDTO toDTO(Task task) {
         if (task == null) {
             return null;
@@ -39,20 +46,32 @@ public class TaskMapper {
                     .collect(Collectors.toList()));
         }
 
-        if (task.getAssignedUsers() != null) {
-            taskDTO.setAssignedUserIds(task.getAssignedUsers().stream()
-                    .map(User::getId)
-                    .collect(Collectors.toSet()));
+        if (task.getAssignedUserIds() != null) {
+            taskDTO.setAssignedUserIds(task.getAssignedUserIds().stream()
+                    .collect(Collectors.toList())); // Set<String> to List<String>
         }
 
         if (task.getTags() != null) {
+            // Mapper les IDs des tags
             taskDTO.setTagIds(task.getTags().stream()
                     .map(Tag::getId)
                     .collect(Collectors.toSet()));
+            // Mapper les noms des tags
+            taskDTO.setTags(task.getTags().stream()
+                    .map(Tag::getName)
+                    .collect(Collectors.toSet()));
+        }
+
+        // Map attachments
+        if (task.getAttachments() != null) {
+            taskDTO.setAttachments(task.getAttachments().stream()
+                    .map(this::toFileAttachmentDTO)
+                    .collect(Collectors.toList()));
         }
 
         return taskDTO;
     }
+
 
     public Task toEntity(TaskDTO taskDTO) {
         if (taskDTO == null) {
@@ -74,7 +93,30 @@ public class TaskMapper {
         task.setUserStory(taskDTO.getUserStoryId());
         task.setProjectId(taskDTO.getProjectId());
         task.setCreatedBy(taskDTO.getCreatedBy());
+        if (taskDTO.getAssignedUserIds() != null) {
+            task.setAssignedUserIds(new HashSet<>(taskDTO.getAssignedUserIds())); // List<String> to Set<String>
+        }
 
         return task;
     }
+
+
+    private FileAttachmentDTO toFileAttachmentDTO(FileAttachment attachment) {
+        FileAttachmentDTO dto = new FileAttachmentDTO();
+        dto.setId(attachment.getId());
+        dto.setFileName(attachment.getFileName());
+        dto.setFileType(attachment.getContentType());
+        dto.setFileSize(attachment.getFileSize());
+        // Generate signed URL for PDFs
+        if ("application/pdf".equals(attachment.getContentType())) {
+            dto.setFileUrl(cloudinaryService.generateSignedUrl(attachment.getPublicId()));
+        } else {
+            dto.setFileUrl(attachment.getFileUrl());
+        }
+        dto.setPublicId(attachment.getPublicId());
+        dto.setUploadedBy(attachment.getUploadedBy());
+        dto.setUploadedAt(attachment.getUploadedAt());
+        return dto;
+    }
+
 }
