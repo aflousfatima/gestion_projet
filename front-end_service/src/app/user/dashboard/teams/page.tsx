@@ -182,7 +182,7 @@ export default function Teams() {
   };
 
   if (loading) {
-    return <div>Chargement des projets...</div>;
+    return <div><img src="/loading.svg" alt="Loading" className="loading-img" /></div>;
   }
 
   if (error) {
@@ -221,7 +221,7 @@ export default function Teams() {
 
         <div className="teams-teamList">
           {teamLoading ? (
-            <p>Chargement des membres...</p>
+            <p><img src="/loading.svg" alt="Loading" className="loading-img" /></p>
           ) : teamError ? (
             <p style={{ color: "red" }}>{teamError}</p>
           ) : teamMembers.length > 0 ? (
@@ -303,6 +303,10 @@ export default function Teams() {
                     <option value="TESTER">Testeur</option>
                     <option value="DEVOPS">DevOps</option>
                     <option value="DESIGNER">Designer</option>
+                    <option value="CLOUD_ENGINEER">Ingenieur Cloud</option>
+                    <option value="FRONTEND_DEVELOPPER">Develppeur Front End </option>
+                    <option value="SCRUM_MASTER">Scrum Master</option>
+                    <option value="PRODUCT_OWNER">Product Owner</option>
                   </select>
                 </div>
                 {message && <p className="teams-message">{message}</p>}

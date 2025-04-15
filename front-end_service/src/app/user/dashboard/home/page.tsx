@@ -58,7 +58,7 @@ const Home = () => {
   }, [accessToken, authLoading]);
 
   if (loading || projectsLoading) {
-    return <div>Chargement...</div>;
+    return <div><img src="/loading.svg" alt="Loading" className="loading-img" />.</div>;
   }
 
   if (projectsError) {

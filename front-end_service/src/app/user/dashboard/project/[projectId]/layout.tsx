@@ -720,7 +720,12 @@ export default function ProjectLayout({
     }
   };
 
-  if (loading) return <p>Loading...</p>;
+  if (loading)
+    return (
+      <p>
+        <img src="/loading.svg" alt="Loading" className="loading-img" />
+      </p>
+    );
   if (error) return <p>{error}</p>;
 
   return (
@@ -1263,7 +1268,7 @@ export default function ProjectLayout({
                                           ? story.tags.join(", ")
                                           : "No tags"}
                                       </td>
-                                    
+
                                       <td onClick={(e) => e.stopPropagation()}>
                                         <button
                                           className="story-count-btn"
@@ -1405,21 +1410,19 @@ export default function ProjectLayout({
                                           </div>
                                         )}
 
-<button
-  onClick={(e) => {
-    e.stopPropagation();
-    router.push(
-      `/user/dashboard/tasks/AddTaskModal/${projectId}/${story.id}`
-    );
-  }}
-  className="story-action-btn"
-  title="Add a task to this story"
->
-  <i className="fa fa-plus"></i>
-</button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            router.push(
+                                              `/user/dashboard/tasks/AddTaskModal/${projectId}/${story.id}`
+                                            );
+                                          }}
+                                          className="story-action-btn"
+                                          title="Add a task to this story"
+                                        >
+                                          <i className="fa fa-plus"></i>
+                                        </button>
 
-
-                                 
                                         <select
                                           onClick={(e) => e.stopPropagation()}
                                           onChange={async (e) => {

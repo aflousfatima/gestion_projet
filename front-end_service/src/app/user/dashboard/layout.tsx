@@ -336,7 +336,8 @@ export default function DashboardLayout({
     link.click();
   };
 
-  if (isLoading) return <div>Chargement...</div>;
+  if (isLoading) return <div>              <img src="/loading.svg" alt="Loading" className="loading-img" />
+</div>;
 
   return (
     <ProtectedRoute>
@@ -836,8 +837,7 @@ export default function DashboardLayout({
                             </h3>
 
                             {loading ? (
-                              <p>Chargement des projets...</p>
-                            ) : error ? (
+                              <img src="/loading.svg" alt="Loading" className="loading-img" />                            ) : error ? (
                               <p>Erreur : {error}</p>
                             ) : filteredProjects.length > 0 ? (
                               <>
