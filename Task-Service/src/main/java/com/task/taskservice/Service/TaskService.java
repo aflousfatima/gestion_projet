@@ -136,6 +136,58 @@ public class TaskService {
     }
 
 
+
+    @Transactional
+    public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
+        // Validate token
+        String updatedBy = authClient.decodeToken(token);
+
+        // Fetch existing task
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+
+        // Update fields
+        if (taskDTO.getTitle() != null) task.setTitle(taskDTO.getTitle());
+        if (taskDTO.getDescription() != null) task.setDescription(taskDTO.getDescription());
+        if (taskDTO.getDueDate() != null) task.setDueDate(taskDTO.getDueDate());
+        if (taskDTO.getPriority() != null) task.setPriority(taskDTO.getPriority()); // Ajout pour la priorité
+        if (taskDTO.getStatus() != null) task.setStatus(taskDTO.getStatus());
+        if (taskDTO.getEstimationTime() != null) task.setEstimationTime(taskDTO.getEstimationTime());
+        if (taskDTO.getStartDate() != null) task.setStartDate(taskDTO.getStartDate());
+        task.setUpdatedBy(updatedBy);
+        task.setLastModifiedDate(LocalDate.now());
+
+        // Update dependencies
+        if (taskDTO.getDependencyIds() != null) {
+            List<Task> dependencies = taskRepository.findAllById(taskDTO.getDependencyIds());
+            if (dependencies.size() != taskDTO.getDependencyIds().size()) {
+                throw new IllegalArgumentException("One or more dependency IDs are invalid");
+            }
+            task.setDependencies(dependencies);
+        }
+
+        // Update assigned user IDs
+        if (taskDTO.getAssignedUserIds() != null) {
+            Set<String> userIdsSet = new HashSet<>(taskDTO.getAssignedUserIds());
+            task.setAssignedUserIds(userIdsSet);
+        }
+
+        // Update tags
+        if (taskDTO.getTags() != null) {
+            Set<Tag> tags = taskDTO.getTags().stream().map(tagName ->
+                    tagRepository.findByName(tagName)
+                            .orElseGet(() -> tagRepository.save(new Tag()))
+            ).collect(Collectors.toSet());
+            task.setTags(tags);
+        }
+
+        // Save the updated task
+        Task updatedTask = taskRepository.save(task);
+
+        // Convert back to DTO
+        return taskMapper.toDTO(updatedTask);
+    }
+
     @Transactional(readOnly = true)
     public TaskDTO getTaskById(Long projectId, Long userStoryId, Long taskId, String token) {
         // Validate token
@@ -155,6 +207,15 @@ public class TaskService {
 
         // Convert to DTO
         return taskMapper.toDTO(task);
+    }
+
+
+
+    @Transactional
+    public void deleteTask(Long taskId) {
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+        taskRepository.delete(task);
     }
 
     @Transactional(readOnly = true)

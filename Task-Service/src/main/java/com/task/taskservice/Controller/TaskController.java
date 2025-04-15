@@ -41,6 +41,20 @@ public class TaskController {
     }
 
     // Update a task
+    @PutMapping("/{taskId}/updateTask")
+    public ResponseEntity<TaskDTO> updateTask(
+            @PathVariable Long taskId,
+            @RequestBody TaskDTO taskDTO,
+            @RequestHeader("Authorization") String token) {
+        TaskDTO updatedTask = taskService.updateTask(taskId, taskDTO, token);
+        return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/{taskId}/deleteTask")
+    public ResponseEntity<Void> deleteTask(@PathVariable Long taskId) {
+        taskService.deleteTask(taskId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 
     // Get a task by ID
     @GetMapping("/{projectId}/{userStoryId}/{taskId}")
@@ -108,6 +122,7 @@ public class TaskController {
         } catch (IllegalArgumentException e) {
             logger.warn("File not found for publicId: {}", publicId);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+        } catch (IOException e) {
             logger.error("Failed to delete file from Cloudinary for publicId: {}", publicId, e);
             return new ResponseEntity<>(e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         } catch (Exception e) {

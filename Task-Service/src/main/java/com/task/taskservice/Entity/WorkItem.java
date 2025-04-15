@@ -33,6 +33,9 @@ public abstract class WorkItem {
 
     protected Double progress;         // 0.0 to 100.0
 
+    protected String updatedBy;
+
+
     @OneToMany(mappedBy = "workItem", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Set<WorkItemHistory> history = new HashSet<>();  // Historique des tâches
 
@@ -251,6 +254,20 @@ protected String createdBy;
 
     public void setItemtags(Set<Tag> itemtags) {
         this.itemtags = itemtags;
+    }
+
+    public String getUpdatedBy() {
+        return updatedBy;
+    }
+
+    public void setUpdatedBy(String updatedBy) {
+        this.updatedBy = updatedBy;
+    }
+
+    public void updateStatus(WorkItemStatus newStatus, String userId) {
+        this.status = newStatus;
+        this.lastModifiedDate = LocalDate.now();
+        this.updatedBy = userId;
     }
 
     @Override
