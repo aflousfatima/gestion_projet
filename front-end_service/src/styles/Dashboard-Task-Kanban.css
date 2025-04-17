@@ -1,7 +1,7 @@
 .kanban-container {
     padding: 5px;
-    margin-left: -12px; /* ajuste ici pour décaler */
 margin-top:-5px;
+margin-left: 160px;
 }
   
   .kanban-board {
@@ -18,6 +18,10 @@ margin-top:-5px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    transition: background 0.2s ease;
+  }
+  .kanban-column:hover {
+    background: #f8f9fa; /* Fond gris clair pour indiquer la zone de drop */
   }
   
   .column-header {
@@ -55,8 +59,17 @@ margin-top:-5px;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
+    cursor: grab;
   }
   
+  .kanban-column.drag-active {
+    background: #e6f0ff; /* Fond bleu clair pour indiquer la zone active */
+    border: 2px dashed #007bff; /* Bordure en pointillés bleue */
+  }
+
+  .task-card:active {
+    cursor: grabbing;
+  }
   .task-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
@@ -64,68 +77,29 @@ margin-top:-5px;
   
   .task-card h4 {
     margin: 0 0 8px;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
-    color: #172b4d;
+    color: #333;
     line-height: 1.4;
   }
   
   .task-description {
     margin: 0 0 8px;
-    font-size: 14px;
-    color: #5e6c84;
+    font-size: 11px;
+    color: #282828;
     line-height: 1.5;
   }
+
   
-  .priority-tag {
-    display: inline-block;
-    padding: 4px 8px;
-    font-size: 12px;
-    font-weight: 500;
-    color: white;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    text-transform: capitalize;
-  }
+ 
   
-  .tags-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 8px;
-  }
+
   
-  .task-tag {
-    display: inline-block;
-    padding: 3px 8px;
-    font-size: 12px;
-    color: #34495e;
-    background-color: #e6e6fa;
-    border-radius: 10px;
-  }
-  
-  .task-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 8px;
-  }
-  
-  .date-container {
-    position: relative;
-  }
-  
-  .calendar-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 4px;
-  }
-  
+
   .date-popup {
     position: absolute;
-    top: 100%;
+    margin-top: -100px;
+    margin-left: -90px;
     left: 0;
     background-color: #fff;
     border-radius: 6px;
@@ -135,39 +109,6 @@ margin-top:-5px;
     min-width: 150px;
   }
   
-  .date-item {
-    margin: 4px 0;
-    font-size: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-  
-  .date-item span {
-    font-weight: 500;
-    color: #34495e;
-  }
-  
-  .date-item.created::before {
-    content: "✔";
-    color: #4caf50;
-  }
-  
-  .date-item.due::before {
-    content: "✔";
-    color: #f44336;
-  }
-  
-  .estimation-time {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 12px;
-    color: #fff;
-    background-color: #0288d1;
-    padding: 4px 8px;
-    border-radius: 12px;
-  }
 
 
 
@@ -213,26 +154,7 @@ margin-top:-5px;
   /* Conteneur pour les avatars */
 /* Conteneur pour les avatars */
 /* Conteneur principal pour les utilisateurs assignés */
-.assigned-users-container {
-  position: relative;
-  margin-top: 8px;
-}
 
-/* Pile d'avatars */
-.avatars-stack {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
-/* Conteneur individuel pour chaque avatar */
-.avatar-wrapper {
-  margin-left: -10px; /* Superposition des avatars */
-}
-
-.avatar-wrapper:first-child {
-  margin-left: 0; /* Pas de marge pour le premier avatar */
-}
 
 /* Style des avatars dans la pile */
 .user-avatar-stack {
@@ -244,43 +166,14 @@ margin-top:-5px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
-/* Placeholder pour les utilisateurs sans avatar */
-.user-avatar-placeholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #007bff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: bold;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
 
 /* Indicateur pour plus d'utilisateurs */
-.avatar-more {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: #e0e0e0;
-  color: #333;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: bold;
-  border: 2px solid #fff;
-  margin-left: -10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
+
 
 /* Style de la carte popup */
 .users-card-popup {
   position: absolute;
-  top: -100px;
+  top: -140px;
   left: 0;
   background-color: #fff;
   width: 200px;
@@ -292,44 +185,7 @@ margin-top:-5px;
   z-index: 1000;
 }
 
-/* Élément individuel dans la carte popup */
-.user-card-item {
-  display: flex;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
 
-.user-card-item:last-child {
-  border-bottom: none;
-}
-
-/* Avatar dans la carte popup */
-.user-card-avatar {
-  margin-right: 12px;
-}
-
-.user-card-avatar-img {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #f0f0f0;
-}
-
-.user-card-avatar-placeholder {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background-color: #007bff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  font-weight: bold;
-  border: 2px solid #f0f0f0;
-}
 
 /* Nom dans la carte popup */
 .user-card-info {
@@ -368,57 +224,12 @@ margin-top:-5px;
 }
 
 
-.attachment-section {
-  margin-top: 10px;
-}
-
-.attach-file-btn {
-  cursor: pointer;
-  color: #007bff;
-  text-decoration: underline;
-  font-size: 14px;
-}
-
-.attach-file-btn:hover {
-  color: #0056b3;
-}
-
-
-.attachment-item {
-  margin: 5px 0;
-}
 
 .attachment-item a {
   color: #007bff;
   text-decoration: none;
 }
 
-.attachment-item a:hover {
-  text-decoration: underline;
-}
-
-.attachment-preview {
-  margin: 5px 0;
-  max-width: 150px;
-}
-
-.attachment-image {
-  max-width: 100%;
-  height: auto;
-  border-radius: 4px;
-}
-
-.pdf-preview {
-  max-width: 150px;
-  overflow: hidden;
-}
-
-.attachment-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 5px 0;
-}
 
 .delete-file-btn {
   background: none;
@@ -439,84 +250,558 @@ margin-top:-5px;
 }
 
 
-.download-btn {
-  margin-left: 10px;
-  font-size: 16px;
-  text-decoration: none;
-  color: #007bff;
+
+
+.close-modal-btn {
+  position: absolute;
+  top: -20px;
+  right: -20px;
+  background: #fff;
+  border: none;
+  font-size: 20px;
   cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 50%;
 }
+
 
 .download-btn:hover {
   color: #0056b3;
 }
 
 
+/* Désactiver l'effet hover lorsque le modal est ouvert */
+.task-card.modal-open,
+.task-card.modal-open:hover {
+  transform: none !important;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1) !important;
+}
 
+
+/* Garantir que le modal reste stable */
+.image-modal,
+.image-modal:hover {
+  opacity: 1 !important;
+  transform: none !important;
+  display: flex !important;
+}
+
+
+
+/* Ajout pour l'en-tête de la carte */
+.task-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.task-card-header h4 {
+  margin: 0;
+  flex-grow: 1;
+}
+
+/* Style pour le bouton des points de suspension */
+.task-menu {
+  position: relative;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 5px;
+}
+
+/* Style pour le menu déroulant */
+.task-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background-color: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+  min-width: 120px;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.menu-item:hover {
+  background-color: #f0f0f0;
+}
+
+
+
+
+.task-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+}
+
+.right-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.date-container {
+  position: relative;
+}
+
+.calendar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.estimation-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+}
+
+.date-item {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.date-item span {
+  font-weight: bold;
+}
+
+.assigned-users-container {
+  position: relative;
+}
+
+.avatars-stack {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.avatar-wrapper {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-left: -10px;
+  border: 2px solid white;
+  background: #f0f0f0;
+}
+
+.avatar-wrapper:first-child {
+  margin-left: 0;
+}
+
+.user-avatar-stack,
+.user-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1895ee;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.avatar-more {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #666;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  margin-left: -10px;
+  border: 2px solid white;
+}
+
+
+.user-card-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.user-card-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.user-card-avatar-img,
+.user-card-avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-card-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ccc;
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+
+.calendar-style {
+  font-size: 16px;
+  color: #FF584A;
+}
+
+
+
+
+
+
+
+
+.attachment-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.attachment-container {
+  display: flex;
+  justify-content: space-between; /* Place attachments-list à gauche et attachment-controls à droite */
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  min-height: 100px; /* Ensures card has a minimum height */
+}
+
+.attachments-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  flex: 1; /* Permet à la liste de prendre l'espace disponible à gauche */
+  max-width: 60%; /* Limite la largeur pour éviter que la liste ne s'étende trop */
+}
+
+.attachment-item {
+  border: 1px solid #e8dddd;
+  border-radius: 6px;
+  padding: 5px;
+  width: 130px;
+  height:140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.attachment-item:hover {
+  border-color: #007bff;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+}
+
+.attachment-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 90%;
+}
+
+.attachment-image {
+  width: 90%;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pdf-preview {
+  width: 90%;
+  max-height: 90px;
+  overflow: hidden;
+}
+
+.pdf-preview canvas {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.file-info {
+  font-size: 13px;
+  word-break: break-all;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.attachment-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.attachment-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0; /* Empêche le contrôle de se compresser */
+}
+
+.attach-file-btn {
+  color: black;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.2s, transform 0.2s;
+  text-align: center;
+}
+
+.attach-file-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
+}
+
+.download-btn,
+.delete-file-btn {
+  background: #ffffff;
+  border: 1px solid #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.download-btn:hover,
+.delete-file-btn:hover {
+  background: #f5f5f5;
+  transform: translateY(-2px);
+}
+
+.download-btn:disabled,
+.delete-file-btn:disabled {
+  background: #f0f0f0;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+.status-message,
+.error-message {
+  margin: 10px 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+.error-message {
+  color: #dc3545;
+}
 
 .image-modal {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(207, 38, 38, 0.9);
-  display:block;
+  width: 100%;
+  height: 100%;
+  display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
-  pointer-events: auto;
+  z-index: 1000;
 }
 
 .image-modal-content {
-  max-width: 95vw;
-  max-height: 90vh;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 90%;
+  max-height: 90%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 15px;
-  background-color: transparent;
-  pointer-events: auto;
+  position: relative;
 }
 
 .enlarged-image {
   max-width: 100%;
-  max-height: 80vh;
+  max-height: 70vh;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(203, 15, 15, 0.3);
+  border-radius: 4px;
 }
 
 .modal-actions {
+  margin-top: 15px;
   display: flex;
-  gap: 15px;
-  justify-content: center;
+  gap: 12px;
+}
+
+.download-image-btn,
+.close-modal-btn {
+  background: #007bff;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.download-image-btn:hover,
+.close-modal-btn:hover {
+  background: #0056b3;
+  transform: translateY(-2px);
 }
 
 .close-modal-btn {
-  background: #ffffff;
-  border: none;
-  font-size: 18px;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 6px 12px;
+  font-size: 16px;
+  z-index: 10;
+}
+
+
+.attach-file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 50%;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-.close-modal-btn:hover {
-  background-color: #f0f0f0;
-}
-
-.download-image-btn {
-  padding: 8px 14px;
-  background-color: #007bff;
-  color: white;
+.btn-attach {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Espacement entre l'icône et le texte */
+  padding: 10px 18px;
+  background: #f0f0ed; /* Couleur principale, cohérente avec le thème */
+  color: rgb(0, 0, 0);
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.download-image-btn:hover {
-  background-color: #0056b3;
+.btn-attach:hover {
+  background: #0056b3; /* Assombrissement au survol */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Ombre subtile au survol */
 }
+
+.btn-attach:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-attach i.fa-paperclip {
+  font-size: 16px; /* Taille de l'icône */
+  transform: rotate(-45deg); /* Rotation pour un look plus naturel */
+}
+
+
+
+
+
+
+
+
+
+
+.priority-tags-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 800px; /* Matches AttachmentSection for consistency */
+  margin: 10px 0;
+  padding: 0 10px;
+}
+
+.priority-tag {
+  padding: 3px 9px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  text-transform: capitalize;
+  transition: transform 0.2s;
+}
+
+.priority-tag:hover {
+  transform: translateY(-2px);
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.task-tag {
+  background: #f0f0f0;
+  color: #333;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.task-tag:hover {
+  background: #e0e0e0;
+  transform: translateY(-2px);
+}
+.delete-file-style{
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #f44336;
+  font-size: 12px;
+  padding: 2px;
+}
+
+
+
+
+
+
+
+
+
+
