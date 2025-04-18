@@ -1,5 +1,6 @@
 package com.task.taskservice.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import jakarta.persistence.*;
@@ -59,6 +60,7 @@ protected String createdBy;
     protected Long projectId;         // L'ID de la User Story (venant du User Story MS)
 
     @OneToMany(cascade = CascadeType.ALL)
+    @JsonIgnore
     protected List<Comment> comments;
 
     @OneToMany(cascade = CascadeType.ALL)
