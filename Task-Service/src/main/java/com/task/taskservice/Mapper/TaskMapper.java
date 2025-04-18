@@ -1,6 +1,10 @@
 package com.task.taskservice.Mapper; // Uppercase Mapper
 
+import com.task.taskservice.Configuration.AuthClient;
+import com.task.taskservice.DTO.CommentDTO;
 import com.task.taskservice.DTO.FileAttachmentDTO;
+import com.task.taskservice.DTO.UserDTO;
+import com.task.taskservice.Entity.Comment;
 import com.task.taskservice.Entity.FileAttachment;
 import com.task.taskservice.Entity.Task;
 import com.task.taskservice.Entity.Tag;
@@ -9,12 +13,15 @@ import com.task.taskservice.Service.CloudinaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Component
 public class TaskMapper {
+
 
     @Autowired
     private CloudinaryService cloudinaryService;
@@ -49,7 +56,10 @@ public class TaskMapper {
         if (task.getAssignedUserIds() != null) {
             taskDTO.setAssignedUserIds(task.getAssignedUserIds().stream()
                     .collect(Collectors.toList())); // Set<String> to List<String>
+        } else {
+            taskDTO.setAssignedUserIds(Collections.emptyList());
         }
+
 
         if (task.getTags() != null) {
             // Mapper les IDs des tags
@@ -94,7 +104,7 @@ public class TaskMapper {
         task.setProjectId(taskDTO.getProjectId());
         task.setCreatedBy(taskDTO.getCreatedBy());
         if (taskDTO.getAssignedUserIds() != null) {
-            task.setAssignedUserIds(new HashSet<>(taskDTO.getAssignedUserIds())); // List<String> to Set<String>
+            task.setAssignedUserIds(new HashSet<>(taskDTO.getAssignedUserIds()));
         }
 
         return task;
@@ -116,6 +126,18 @@ public class TaskMapper {
         dto.setPublicId(attachment.getPublicId());
         dto.setUploadedBy(attachment.getUploadedBy());
         dto.setUploadedAt(attachment.getUploadedAt());
+        return dto;
+    }
+
+
+    public CommentDTO mapToDTO(Comment comment) {
+        CommentDTO dto = new CommentDTO();
+        dto.setId(comment.getId());
+        dto.setContent(comment.getContent());
+        dto.setAuthor(comment.getAuthor());
+        dto.setWorkItemId(comment.getWorkItem().getId());
+        dto.setCreatedAt(comment.getCreatedAt());
+        dto.setUpdatedAt(comment.getUpdatedAt());
         return dto;
     }
 

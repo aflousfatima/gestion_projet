@@ -15,7 +15,6 @@ public interface ProjectClient {
     List<Long> getUserStoriesOfActiveSprint(@PathVariable("projectId") Long projectId);
 
 
-
 }
 
 

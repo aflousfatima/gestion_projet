@@ -138,6 +138,7 @@ public class TaskService {
 
 
     @Transactional
+
     public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
         // Validate token
         String updatedBy = authClient.decodeToken(token);
@@ -150,7 +151,7 @@ public class TaskService {
         if (taskDTO.getTitle() != null) task.setTitle(taskDTO.getTitle());
         if (taskDTO.getDescription() != null) task.setDescription(taskDTO.getDescription());
         if (taskDTO.getDueDate() != null) task.setDueDate(taskDTO.getDueDate());
-        if (taskDTO.getPriority() != null) task.setPriority(taskDTO.getPriority()); // Ajout pour la priorité
+        if (taskDTO.getPriority() != null) task.setPriority(taskDTO.getPriority());
         if (taskDTO.getStatus() != null) task.setStatus(taskDTO.getStatus());
         if (taskDTO.getEstimationTime() != null) task.setEstimationTime(taskDTO.getEstimationTime());
         if (taskDTO.getStartDate() != null) task.setStartDate(taskDTO.getStartDate());
@@ -166,10 +167,13 @@ public class TaskService {
             task.setDependencies(dependencies);
         }
 
-        // Update assigned user IDs
-        if (taskDTO.getAssignedUserIds() != null) {
+        // Update assigned user IDs only if explicitly provided and non-empty
+        if (taskDTO.getAssignedUserIds() != null && !taskDTO.getAssignedUserIds().isEmpty()) {
             Set<String> userIdsSet = new HashSet<>(taskDTO.getAssignedUserIds());
             task.setAssignedUserIds(userIdsSet);
+        } else {
+            // Preserve existing assignedUserIds
+            task.setAssignedUserIds(task.getAssignedUserIds() != null ? task.getAssignedUserIds() : new HashSet<>());
         }
 
         // Update tags
@@ -184,10 +188,26 @@ public class TaskService {
         // Save the updated task
         Task updatedTask = taskRepository.save(task);
 
-        // Convert back to DTO
-        return taskMapper.toDTO(updatedTask);
-    }
+        // Convert to DTO
+        TaskDTO responseDTO = taskMapper.toDTO(updatedTask);
 
+        // Populate assignedUsers with user details
+        if (updatedTask.getAssignedUserIds() != null && !updatedTask.getAssignedUserIds().isEmpty()) {
+            try {
+                List<String> userIdList = updatedTask.getAssignedUserIds().stream().collect(Collectors.toList());
+                String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                List<UserDTO> assignedUsers = authClient.getUsersByIds(authHeader, userIdList);
+                responseDTO.setAssignedUsers(assignedUsers != null ? assignedUsers : Collections.emptyList());
+            } catch (Exception e) {
+                System.err.println("Failed to fetch user details: " + e.getMessage());
+                responseDTO.setAssignedUsers(Collections.emptyList());
+            }
+        } else {
+            responseDTO.setAssignedUsers(Collections.emptyList());
+        }
+
+        return responseDTO;
+    }
     @Transactional(readOnly = true)
     public TaskDTO getTaskById(Long projectId, Long userStoryId, Long taskId, String token) {
         // Validate token
