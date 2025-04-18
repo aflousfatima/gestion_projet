@@ -1,7 +1,8 @@
 .kanban-container {
     padding: 5px;
 margin-top:-5px;
-margin-left: 160px;
+margin-left: 110px;
+
 }
   
   .kanban-board {
@@ -17,7 +18,6 @@ margin-left: 160px;
     min-height: 1000px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
     transition: background 0.2s ease;
   }
   .kanban-column:hover {
@@ -236,8 +236,8 @@ margin-left: 160px;
   border: none;
   cursor: pointer;
   color: #f44336;
-  font-size: 16px;
-  padding: 2px;
+  font-size: 14px;
+  padding:10px;
 }
 
 .delete-file-btn:hover {
@@ -354,7 +354,7 @@ margin-left: 160px;
 .right-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 0px;
 }
 
 .date-container {
@@ -365,14 +365,7 @@ margin-left: 160px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 5px;
-}
-
-.estimation-time {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 14px;
+  padding: 1px;
 }
 
 .date-item {
@@ -514,8 +507,8 @@ margin-left: 160px;
   border: 1px solid #e8dddd;
   border-radius: 6px;
   padding: 5px;
-  width: 130px;
-  height:140px;
+  width: 110px;
+  height:135px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -546,7 +539,6 @@ margin-left: 160px;
 .pdf-preview {
   width: 90%;
   max-height: 90px;
-  overflow: hidden;
 }
 
 .pdf-preview canvas {
@@ -574,7 +566,28 @@ margin-left: 160px;
   flex-shrink: 0; /* Empêche le contrôle de se compresser */
 }
 
+
+
+.btn-attach {
+  display: flex;
+  align-items: center;
+  gap: 8px; /* Espacement entre l'icône et le texte */
+  padding: 10px 18px;
+  background: #f0f0ed; /* Couleur principale, cohérente avec le thème */
+  color: rgb(0, 0, 0);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
 .attach-file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   color: black;
   padding: 8px 16px;
   border-radius: 6px;
@@ -587,17 +600,25 @@ margin-left: 160px;
   text-align: center;
 }
 
-.attach-file-btn:hover {
-  background: #0056b3;
+.btn-attach:hover {
+  background: #d3e5f8; /* Assombrissement au survol */
   transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Ombre subtile au survol */
 }
+
+.btn-attach:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+
 
 .download-btn,
 .delete-file-btn {
   background: #ffffff;
-  border: 1px solid #ffffff;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding:12px 8px;
   cursor: pointer;
   font-size: 13px;
   transition: background 0.2s, transform 0.2s;
@@ -605,7 +626,6 @@ margin-left: 160px;
 
 .download-btn:hover,
 .delete-file-btn:hover {
-  background: #f5f5f5;
   transform: translateY(-2px);
 }
 
@@ -693,45 +713,8 @@ margin-left: 160px;
 }
 
 
-.attach-file-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
 
-.btn-attach {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Espacement entre l'icône et le texte */
-  padding: 10px 18px;
-  background: #f0f0ed; /* Couleur principale, cohérente avec le thème */
-  color: rgb(0, 0, 0);
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-}
 
-.btn-attach:hover {
-  background: #0056b3; /* Assombrissement au survol */
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Ombre subtile au survol */
-}
-
-.btn-attach:disabled {
-  background: #cccccc;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.btn-attach i.fa-paperclip {
-  font-size: 16px; /* Taille de l'icône */
-  transform: rotate(-45deg); /* Rotation pour un look plus naturel */
-}
 
 
 
@@ -799,9 +782,343 @@ margin-left: 160px;
 
 
 
+:root {
+  --status-to-do: #6b7280; /* Grey for TO_DO */
+  --status-done: #22c55e; /* Green for DONE */
+  --btn-bg-to-do: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%); /* Subtle grey gradient */
+  --btn-bg-done: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); /* Light green gradient */
+  --btn-bg-hover: rgba(0, 0, 0, 0.05); /* Hover overlay */
+  --btn-disabled: #d1d5db; /* Disabled background */
+  --popup-bg: #ffffff; /* White background for popup */
+  --popup-shadow: rgba(0, 0, 0, 0.15);
+  --popup-border: #e5e7eb; /* Light grey border */
+}
+
+/* Button styles */
+.toggle-status-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; /* Compact width */
+  height: 20px; /* Slim height */
+  border-radius: 14px; /* Pill shape */
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Subtle border */
+  background: var(--btn-bg-to-do);
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Minimal shadow */
+}
+
+/* DONE state */
+.toggle-status-btn.done {
+  background: var(--btn-bg-done);
+}
+
+/* Hover effect */
+.toggle-status-btn:hover:not(:disabled) {
+  background-blend-mode: darken;
+  background: linear-gradient(
+    var(--btn-bg-to-do),
+    var(--btn-bg-hover)
+  ); /* Darken on hover */
+  transform: scale(1.05);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* DONE hover */
+.toggle-status-btn.done:hover:not(:disabled) {
+  background: linear-gradient(
+    var(--btn-bg-done),
+    var(--btn-bg-hover)
+  );
+}
+
+/* Disabled state */
+.toggle-status-btn:disabled {
+  background: var(--btn-disabled);
+  cursor: not-allowed;
+  opacity: 0.7;
+  box-shadow: none;
+}
+
+/* Icon styles */
+.status-icon {
+  font-size: 12px; /* Compact but bold */
+  font-weight: 900; /* Bolder icon */
+  transition: color 0.3s ease; /* Smooth color change */
+}
+
+/* TO_DO: Grey icon */
+.toggle-status-btn.to-do .status-icon {
+  color: var(--status-to-do);
+}
+
+/* DONE: Green icon */
+.toggle-status-btn.done .status-icon {
+  color: var(--status-done);
+}
+
+/* Spinner */
+.toggle-status-btn .fa-spinner {
+  font-size: 14px;
+  color: var(--status-to-do);
+}
+
+/* Status toggle animation */
+.toggle-status-btn.done {
+  animation: togglePulse 0.3s ease;
+}
+
+@keyframes togglePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
 
 
 
 
 
 
+
+
+
+/* Wrapper for positioning */
+.estimation-time-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Button with bell icon */
+.estimation-time-btn {
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px; /* Rounded for modern look */
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+/* Hover effect */
+.estimation-time-btn:hover {
+  background: rgba(0, 0, 0, 0.05); /* Subtle hover */
+  transform: scale(1.1);
+}
+
+/* Bell icon */
+.estimation-time-btn .fa-bell {
+  font-size: 16px; /* Match TaskCard icon size */
+  color:   #FF584A;
+
+}
+
+
+/* Popup content */
+.estimation-popup {
+  background: var(--popup-bg);
+  border: 1px solid var(--popup-border);
+  border-radius: 8px; /* Rounded corners */
+  padding: 8px 12px;
+  box-shadow: 0 4px 12px var(--popup-shadow); /* Subtle shadow */
+  font-size: 14px;
+  color: #1f2937; /* Dark text for contrast */
+  animation: popupFadeIn 0.2s ease; /* Smooth appearance */
+  position: absolute;
+  top: -200%;
+  left: -50%;
+  transform: translateX(-50%); /* Center horizontally */
+  white-space: nowrap;
+
+}
+
+/* Popup animation */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+
+
+
+
+
+/* Conteneur du bouton commentaires */
+.comments-container {
+  position: relative;
+  align-items: center;
+}
+
+/* Bouton pour afficher/masquer les commentaires */
+.comments-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.comments-btn:hover {
+  background: var(--btn-bg-hover);
+  transform: scale(1.1);
+}
+
+.comments-btn .fa-comment {
+  font-size: 16px;
+  color: #FF584A;
+}
+
+/* Popup des commentaires */
+.comments-popup {
+  position: absolute;
+  right: -220;
+  bottom:-300%;
+  background: rgb(255, 255, 255);
+  border: 1px solid var(--popup-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px var(--popup-shadow);
+  width: 500px;
+  height: 350px;
+  overflow-y: auto;
+  z-index: 999;
+  animation: popupFadeIn 0.2s ease;
+  padding: 12px;
+}
+
+/* Animation d’apparition */
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* En-tête des commentaires */
+.comments-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.comments-header h5 {
+  margin: 0;
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.close-comments-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--status-to-do);
+  padding: 4px;
+}
+
+.close-comments-btn:hover {
+  color: #1f2937;
+}
+
+/* Message sans commentaires */
+.no-comments {
+  font-size: 12px;
+  color: var(--status-to-do);
+  margin: 8px 0;
+}
+
+/* Liste des commentaires */
+.comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.comment-item {
+  background: #f9fafb;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.comment-content {
+  font-size: 14px;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.comment-meta {
+  font-size: 12px;
+  color: var(--status-to-do);
+}
+
+/* Formulaire de commentaire */
+.comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+
+
+.comment-input {
+  margin-bottom: 10px;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+
+.comment-input .ql-toolbar.ql-snow {
+  border: 1px solid #e5e7eb;
+  border-radius: 4px 4px 0 0;
+  background: #f9fafb;
+}
+
+.comment-input .ql-container.ql-snow {
+  border: 1px solid #e5e7eb;
+  border-radius: 0 0 4px 4px;
+  min-height: 100px;
+}
+
+.comment-input .ql-editor {
+  font-size: 14px;
+  color: #1f2937;
+}
+
+.submit-comment-btn {
+  background: #007bff ;/* #22c55e */
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.submit-comment-btn:hover {
+  background: #16a34a;
+}

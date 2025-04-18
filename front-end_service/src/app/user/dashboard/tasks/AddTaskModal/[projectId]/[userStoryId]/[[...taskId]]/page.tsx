@@ -29,7 +29,7 @@ interface Task {
   estimationTime: number | null;
   status: string;
   priority: string | null;
-  assignedUsers: { id: string }[];
+  assignedUser: string[]; // Changed from assignedUsers: { id: string }[]  
   tags: string[];
   type: "TASK" | "BUG";
   severity: string | null;
@@ -154,16 +154,18 @@ export default function AddTaskModalPage() {
           }
         );
         console.log("Raw response:", response);
-        console.log(
-          "Task data received:",
-          JSON.stringify(response.data, null, 2)
-        );
-
-        const task: Task = response.data;
+        const taskData = {
+          ...response.data,
+          assignedUsers: response.data.assignedUser
+            ? response.data.assignedUser.map((id: string) => ({ id }))
+            : [],
+        };
+        console.log("Transformed task data:", JSON.stringify(taskData, null, 2));
+  
+        const task: Task = taskData;
         if (!task) {
           throw new Error("No task data received from API");
         }
-
         setWorkItemType(task.type || "TASK");
         setWorkItem({
           title: task.title || "",
@@ -172,8 +174,8 @@ export default function AddTaskModalPage() {
           dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
           estimationTime: task.estimationTime?.toString() || "",
           status: task.status || "TO_DO",
-          priority: task.priority || "",
-          assignedUser: task.assignedUsers?.map((user) => user.id) || [],
+          priority: task.priority || "",          
+          assignedUser: task.assignedUser || [], // Changed from task.assignedUsers?.map((user) => user.id)
           tags: task.tags || [],
           severity: task.severity || "",
         });
@@ -185,7 +187,7 @@ export default function AddTaskModalPage() {
           estimationTime: task.estimationTime,
           status: task.status,
           priority: task.priority,
-          assignedUser: task.assignedUsers?.map((user) => user.id),
+          assignedUser: task.assignedUser?.map((user) => user.id),
           tags: task.tags,
           severity: task.severity,
         });
@@ -203,6 +205,7 @@ export default function AddTaskModalPage() {
 
     fetchTask();
   }, [taskId, accessToken, axiosInstance, projectId, userStoryId]);
+  
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement

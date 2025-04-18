@@ -7,4 +7,14 @@ const nextConfig: NextConfig = {
 }, /* config options here */
 };
 
+module.exports = {
+  async rewrites() {
+    return [
+      {
+        source: "/ws/:path*",
+        destination: "http://localhost:8086/ws/:path*",
+      },
+    ];
+  },
+};
 export default nextConfig;

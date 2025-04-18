@@ -3,15 +3,34 @@ import { useParams } from "next/navigation";
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../../../../../context/AuthContext";
 import useAxios from "../../../../../../hooks/useAxios";
-import { TASK_SERVICE_URL } from "../../../../../../config/useApi";
+import { useWebSocket } from "../../../../../../hooks/useWebSocket"; // Nouveau hook
+import { AUTH_SERVICE_URL , TASK_SERVICE_URL } from "../../../../../../config/useApi";
 import "../../../../../../styles/Dashboard-Task-Kanban.css";
+import sanitizeHtml from "sanitize-html";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import { useRouter } from "next/navigation";
-
+import { toast } from "react-toastify";
+import { useForm } from "react-hook-form";
+import ReactQuill from "react-quill-new";
+import "react-quill-new/dist/quill.snow.css";
 // Set up the PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+const quillModules = {
+  toolbar: [
+    [{ header: [1, 2, false] }],
+    ["bold", "italic", "underline"],
+    [{ list: "ordered" }, { list: "bullet" }],
+    ["link"],
+    ["clean"],
+  ],
+};
+// Interface pour le formulaire
+interface CommentForm {
+  content: string;
+}
 
 interface User {
   id: string;
@@ -63,10 +82,7 @@ interface TaskCardProps {
   onTaskUpdate?: (updatedTask: Partial<Task> & { deleted?: boolean }) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({
-  task,
-  onTaskUpdate,
-}) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, onTaskUpdate }) => {
   const { accessToken } = useAuth();
   const axiosInstance = useAxios();
   const [showUsersPopup, setShowUsersPopup] = useState(false);
@@ -82,12 +98,182 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const router = useRouter();
+  const { handleSubmit, watch, setValue, reset } = useForm<CommentForm>({
+    defaultValues: {
+      content: "",
+    },
+  });
+  const [showComments, setShowComments] = useState(false);
+  const toggleComments = () => setShowComments(!showComments);
+  const { comments, setComments } = useWebSocket(task.id, accessToken);
+  const [users, setUsers] = useState<Map<string, User>>(new Map());
+
+  // Récupérer les utilisateurs associés aux commentaires
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!comments.length || !accessToken) return;
+
+      // Extraire les IDs uniques des auteurs
+      const userIds = [...new Set(comments.map((comment) => comment.author))];
+      try {
+        const response = await axiosInstance.post<User[]>(
+       
+          `${AUTH_SERVICE_URL}/api/tasks_reponsibles/by-ids`,
+          userIds,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        // Créer une map pour un accès rapide par ID
+        const userMap = new Map<string, User>();
+        response.data.forEach((user) =>
+          userMap.set(user.id, user)
+        );
+        setUsers(userMap);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des utilisateurs :", error);
+      }
+    };
+
+    fetchUsers();
+  }, [comments, accessToken, axiosInstance]);
+  // Charger les commentaires initiaux
+  useEffect(() => {
+    if (!task.id || !accessToken) return;
+
+    const fetchComments = async () => {
+      try {
+        const response = await axiosInstance.get(
+          `${TASK_SERVICE_URL}/api/project/task/comments/getComment/${task.id}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        setComments(response.data); // response.data is now List<CommentDTO>
+      } catch (err) {
+        console.error("Error fetching comments:", err);
+        toast.error("Failed to load comments");
+      }
+    };
+
+    fetchComments();
+  }, [task.id, accessToken, axiosInstance, setComments]);
+  // Gérer l’envoi d’un commentaire
+  const onSubmitComment = async (data: { content: string }) => {
+    if (!task.id || !accessToken) return;
+
+    const sanitizedContent = sanitizeHtml(data.content, {
+      allowedTags: ["p", "b", "i", "u", "ul", "ol", "li", "a", "span"],
+      allowedAttributes: { a: ["href"] },
+    });
+
+    try {
+      await axiosInstance.post(
+        `${TASK_SERVICE_URL}/api/project/task/comments/createComment`,
+        {
+          content: sanitizedContent,
+          workItem: { id: task.id },
+        },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      reset();
+      toast.success("Comment added!");
+    } catch (err) {
+      console.error("Error adding comment:", err);
+      toast.error("Failed to add comment");
+    }
+  };
   const priorityColors: { [key: string]: string } = {
     LOW: "#4caf50",
     MEDIUM: "#ff9800",
     HIGH: "#f44336",
     CRITICAL: "#d81b60",
     "": "#b0bec5",
+  };
+
+  const [isTogglingStatus, setIsTogglingStatus] = useState(false);
+  const [isEstimationPopupOpen, setIsEstimationPopupOpen] = useState(false);
+  const toggleEstimationPopup = () => {
+    setIsEstimationPopupOpen((prev) => !prev);
+  };
+
+  // Handle clicking outside to close popup
+  const handleToggleStatus = async () => {
+    if (!task.id || isTogglingStatus) return;
+
+    setIsTogglingStatus(true);
+    setUploadError(null);
+
+    const newStatus = task.status === "DONE" ? "TO_DO" : "DONE";
+
+    // Prepare the TaskDTO for the API call
+    const taskDTO = {
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      creationDate: task.creationDate,
+      startDate: task.startDate,
+      dueDate: task.dueDate,
+      estimationTime: task.estimationTime,
+      status: newStatus,
+      priority: task.priority,
+      userStoryId: task.userStoryId,
+      createdBy: task.createdBy,
+      projectId: task.projectId,
+      tags: task.tags || [],
+      assignedUsers: (task.assignedUsers || []).map((user) => ({
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar,
+      })),
+      attachments: (task.attachments || []).map((attachment) => ({
+        id: attachment.id,
+        fileName: attachment.fileName,
+        fileType: attachment.fileType,
+        fileSize: attachment.fileSize,
+        fileUrl: attachment.fileUrl,
+        publicId: attachment.publicId,
+        uploadedBy: attachment.uploadedBy,
+        uploadedAt: attachment.uploadedAt,
+      })),
+    };
+
+    try {
+      const response = await axiosInstance.put(
+        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/updateTask`,
+        taskDTO,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      console.log("Status Toggle Response:", response.data);
+      onTaskUpdate?.(response.data);
+    } catch (err: any) {
+      let errorMessage = "Failed to toggle task status";
+      if (err.response?.data) {
+        errorMessage =
+          typeof err.response.data === "string"
+            ? err.response.data
+            : err.response.data.error ||
+              err.response.data.message ||
+              errorMessage;
+      }
+      setUploadError(errorMessage);
+      console.error("Error toggling task status:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+    } finally {
+      setIsTogglingStatus(false);
+    }
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
@@ -159,7 +345,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const handleImageDownload = async (imageUrl: string, defaultFileName: string) => {
+  const handleImageDownload = async (
+    imageUrl: string,
+    defaultFileName: string
+  ) => {
     try {
       const response = await fetch(imageUrl, { mode: "cors" });
       if (!response.ok) throw new Error("Failed to fetch image");
@@ -187,7 +376,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
       console.error("Missing userStory or task ID");
       return;
     }
-    router.push(`/user/dashboard/tasks/AddTaskModal/${task.projectId}/${task.userStoryId}/${task.id}`);
+    router.push(
+      `/user/dashboard/tasks/AddTaskModal/${task.projectId}/${task.userStoryId}/${task.id}`
+    );
   };
 
   const toggleUsersPopup = () => {
@@ -270,7 +461,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
     try {
       console.log("Deleting file with publicId:", publicId);
       await axiosInstance.delete(
-        `${TASK_SERVICE_URL}/api/project/tasks/delete?publicId=${encodeURIComponent(publicId)}`,
+        `${TASK_SERVICE_URL}/api/project/tasks/delete?publicId=${encodeURIComponent(
+          publicId
+        )}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -392,7 +585,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
                           alt={attachment.fileName}
                           className="attachment-image"
                           onClick={() => {
-                            console.log("Opening image modal for:", attachment.fileUrl);
+                            console.log(
+                              "Opening image modal for:",
+                              attachment.fileUrl
+                            );
                             openModal(attachment.fileUrl);
                           }}
                         />
@@ -413,7 +609,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
                             width={150}
                             renderTextLayer={false}
                             renderAnnotationLayer={false}
-                            onLoadError={(error) => console.error("Page Load Error:", error)}
+                            onLoadError={(error) =>
+                              console.error("Page Load Error:", error)
+                            }
                           />
                         </Document>
                         {numPages === null && !uploadError && (
@@ -432,7 +630,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
                       <button
                         className="download-btn"
                         onClick={() =>
-                          handleFileDownload(attachment.fileUrl, attachment.fileName)
+                          handleFileDownload(
+                            attachment.fileUrl,
+                            attachment.fileName
+                          )
                         }
                         title="Download file"
                       >
@@ -452,11 +653,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
               })}
           </div>
           <div className="attachment-controls">
-            <label htmlFor={`file-upload-${task.id}`} className="attach-file-btn">
-              <button className="btn-attach" disabled={uploading}>
+            <label
+              htmlFor={`file-upload-${task.id}`}
+              className="btn-attach"
+            >
                 Attach File
                 <i className="fa fa-paperclip"></i>
-              </button>
+    
             </label>
             <input
               id={`file-upload-${task.id}`}
@@ -481,7 +684,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <div
               className="image-modal-content"
               onClick={(e) => {
-                console.log("Clicked inside modal content, stopping propagation");
+                console.log(
+                  "Clicked inside modal content, stopping propagation"
+                );
                 e.stopPropagation();
               }}
             >
@@ -575,6 +780,88 @@ const TaskCard: React.FC<TaskCardProps> = ({
           </div>
         )}
         <div className="right-container">
+          <button
+            className={`toggle-status-btn ${
+              task.status === "DONE" ? "done" : "to-do"
+            }`}
+            onClick={handleToggleStatus}
+            disabled={isTogglingStatus}
+            title={task.status === "DONE" ? "Mark as To Do" : "Mark as Done"}
+            data-status={task.status}
+          >
+            {isTogglingStatus ? (
+              <i className="fa fa-spinner fa-spin status-icon"></i>
+            ) : (
+              <i className="fa fa-check status-icon"></i>
+            )}
+          </button>
+
+          <div className="comments-container">
+            <button
+              className="comments-btn"
+              onClick={toggleComments}
+              title="View comments"
+            >
+              <i className="fa fa-comment calendar-style"></i>
+            </button>
+            {showComments && (
+              <div className="comments-popup">
+                <div className="comments-header">
+                  <h5>Comments</h5>
+                  <button
+                    className="close-comments-btn"
+                    onClick={toggleComments}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {comments.length === 0 ? (
+                  <p className="no-comments">
+                    Aucun commentaire pour linstant.
+                  </p>
+                ) : (
+                  <div className="comments-list">
+                    {comments.map((comment) => {
+                    const user = users.get(comment.author);
+                    const authorName = user
+                      ? `${user.firstName} ${user.lastName}`
+                      : "Utilisateur inconnu";
+                    return (
+                      <div key={comment.id} className="comment-item">
+                        <div
+                          className="comment-content"
+                          dangerouslySetInnerHTML={{ __html: comment.content }}
+                        />
+                        <div className="comment-meta">
+                          <small>
+                            By {authorName} the {" "}
+                            {new Date(comment.createdAt).toLocaleString()}
+                          </small>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  </div>
+                )}
+                <form
+                  onSubmit={handleSubmit(onSubmitComment)}
+                  className="comment-form"
+                >
+                  <ReactQuill
+                    value={watch("content")}
+                    onChange={(value) => setValue("content", value)}
+                    modules={quillModules}
+                    placeholder="Add a comemnt ..."
+                    className="comment-input"
+                  />
+                  <button type="submit" className="submit-comment-btn">
+                    Envoyer
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
+          
           {(task.creationDate || task.dueDate) && (
             <div className="date-container">
               <button
@@ -600,10 +887,25 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
           {task.estimationTime !== null && (
-            <span className="estimation-time">
-              <i className="fa fa-bell calendar-style"></i> {task.estimationTime} hours
-            </span>
+            <div className="estimation-time-wrapper">
+              <button
+                className="estimation-time-btn"
+                onClick={toggleEstimationPopup}
+                title="View estimation time"
+              >
+                <i className="fa fa-clock calendar-style"></i>
+              </button>
+              {isEstimationPopupOpen && (
+                <div className="estimation-popup-wrapper">
+                  <div className="estimation-popup">
+                    <span>{task.estimationTime} hours</span>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
+
+        
         </div>
       </div>
     </div>
@@ -619,7 +921,7 @@ export default function Kanban() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showDates, setShowDates] = useState(false);
-  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const [setDraggingTaskId] = useState<number | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
@@ -669,7 +971,9 @@ export default function Kanban() {
     fetchTasksByProjectId();
   }, [projectId, accessToken, authLoading, axiosInstance]);
 
-  const handleTaskUpdate = (updatedTask: Partial<Task> & { deleted?: boolean }) => {
+  const handleTaskUpdate = (
+    updatedTask: Partial<Task> & { deleted?: boolean }
+  ) => {
     setTasks((prevTasks) => {
       if (updatedTask.deleted && updatedTask.id) {
         console.log("Removing task with ID:", updatedTask.id);
@@ -682,7 +986,10 @@ export default function Kanban() {
     });
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, columnStatus: string) => {
+  const handleDragOver = (
+    e: React.DragEvent<HTMLDivElement>,
+    columnStatus: string
+  ) => {
     e.preventDefault();
     e.stopPropagation();
     setDragOverColumn(columnStatus);
@@ -715,9 +1022,7 @@ export default function Kanban() {
 
     const originalTasks = [...tasks];
     setTasks((prevTasks) =>
-      prevTasks.map((t) =>
-        t.id === task.id ? { ...t, status: newStatus } : t
-      )
+      prevTasks.map((t) => (t.id === task.id ? { ...t, status: newStatus } : t))
     );
 
     // Construire un TaskDTO complet basé sur la tâche actuelle
@@ -797,7 +1102,9 @@ export default function Kanban() {
           {columns.map((column) => (
             <div
               key={column.status}
-              className={`kanban-column ${dragOverColumn === column.status ? "drag-active" : ""}`}
+              className={`kanban-column ${
+                dragOverColumn === column.status ? "drag-active" : ""
+              }`}
               onDragOver={(e) => handleDragOver(e, column.status)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, column.status as Task["status"])}
