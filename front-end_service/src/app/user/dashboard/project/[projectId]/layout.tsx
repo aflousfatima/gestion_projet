@@ -843,9 +843,25 @@ export default function ProjectLayout({
             <i className="fa fa-list"></i> Kanban
           </Link>
 
-          <button className="tasks-tab">
+          <Link
+            className={`tasks-tab ${
+              pathname.includes("/gantt") ? "active" : ""
+            }`}
+            href={`/user/dashboard/project/${projectId}/gantt`}
+          >
+            <i className="fa fa-list"></i> Gantt
+          </Link>
+
+          <Link
+            className={`tasks-tab ${
+              pathname === `/user/dashboard/project/${projectId}/dashboard`
+                ? "active"
+                : ""
+            }`}
+            href={`/user/dashboard/project/${projectId}/dashboard`}
+          >
             <i className="fa fa-chart-line"></i> Dashboard
-          </button>
+          </Link>
 
           <Link
             className={`tasks-tab ${

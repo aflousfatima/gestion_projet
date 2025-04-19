@@ -1,13 +1,18 @@
 
+
+.style-page-home-dash{
+  background-color: #E0DEDC;
+  height: 100%;
+}
   /* Header */
   .header {
-    margin-bottom: 20px;
+    margin-bottom: 50px;
     width: 100%;
     max-width: 380px; /* Limite la largeur pour un centrage cohérent */
     display: flex;
     justify-content: center; /* Centre horizontalement */
     text-align: center; /* Centre le texte à l'intérieur */
-    margin-left: 250px;
+    margin-left: 320px;
   }
    /* En-tête des sections */
    .section-header {
@@ -15,7 +20,7 @@
     justify-content: center; /* Centre le titre */
     align-items: center;
     position: relative;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
   }
   
   .welcome-message p {
@@ -63,8 +68,7 @@
   .content {
     display: flex;
     gap: 20px;
-    width: 100%; /* Prend toute la largeur disponible */
-    max-width: 2200px; /* Limite la largeur maximale pour éviter un étirement excessif */
+    width: 90%; /* Prend toute la largeur disponible */
     margin: 0 auto; /* Centre horizontalement */
   }
   

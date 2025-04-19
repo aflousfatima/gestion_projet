@@ -14,7 +14,7 @@
     display: flex;
     flex-direction: column; /* Permet d'empiler la topbar et le reste */
     min-height: 100vh;
-    background-color: #E0DEDC;
+    background-color: #ffffff;
     
   }
   
@@ -120,6 +120,7 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
     width: 100%; /* S'assure que main-content prend toute la largeur disponible */
   }
   .sidebar {
+    box-sizing: border-box;
     width: 230px;
     background-color: #2E2E30;
     color: white;
@@ -211,11 +212,9 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
  /* styles/ManagerDashboard.css */
 .main-content {
   flex: 1;
-  padding: 20px;
   overflow-y: auto;
   display: flex;
   flex-direction: column; /* Aligne les enfants (header et content) en colonne */
-  align-items: center; /* Centre horizontalement */
   width: 100%; /* S'assure que main-content prend toute la largeur disponible */
 }
   .sidebar nav ul li a {

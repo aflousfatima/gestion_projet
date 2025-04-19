@@ -1,12 +1,4 @@
-/* styles/Dashboard-Project.css */
-.project-container {
-  padding: 10px 20px;
-    font-family: "Arial", sans-serif;
-    background-color: #ffffff;
-    min-height: 110vh;
-    width:105%;
-    margin-top: -20px;
-  }
+
   
   .tasks-header {
     display: flex;
@@ -73,7 +65,6 @@
     justify-content: space-between;
     align-items: center;
     margin-top: 10px;
-    border-bottom: 1px solid #e0e0e0;
   }
   
   .tasks-add-button {
@@ -115,111 +106,21 @@
     background-color: #e0e0e0;
   }
   
-  .tasks-list-header {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid #e0e0e0;
-    border-top: 1px solid #e0e0e0;
-    border-right:1px solid #e0e0e0;
-    font-size: 12px;
-    font-weight:ighter;
-    color: #666;
-    margin-top: 10px;
-    width: 100%; /* Assure que la largeur est prise sur toute la ligne */
-    padding: 1px 10px;
 
-  }
-  .tasks-list-header-item,
-  .tasks-list-header-item-principal {
-    text-align: left;
-    padding: 5px; /* Optionnel pour ajouter un peu de padding à l'intérieur des éléments */
-    border-right: 1px solid #ccc; /* Bordure droite */
-  }
-  
-  .tasks-list-header-item:last-child,
-  .tasks-list-header-item-principal:last-child {
-    border-right: none; /* Enlève la bordure à droite du dernier élément */
-  }
-  
-  .tasks-list-header-item-principal {
-    flex: 3; /* Le principal prend plus d'espace */
-  }
-  
-  .tasks-list-header-item {
-    flex: 1; /* Les autres éléments prennent moins d'espace */
-  }
-  
-  .tasks-list {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    background-color: #ffffff;
-  }
   
   
 /* Styles pour la section */
 
 
-.task-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: stretch; /* S'assurer que les enfants s'étendent sur toute la hauteur */
-  border-top: 1px solid #e0e0e0; /* Bordure horizontale pour chaque ligne */
-  min-height: 10px; /* Hauteur minimale pour s'assurer que les bordures s'étendent */
-}
 
-/* Colonne "Nom de la tâche" */
-.task-checkbox {
-  flex: 3;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 0; /* Déplacer le padding ici */
-  border-right: 1px solid #e0e0e0; /* Bordure entre "Nom de la tâche" et "Responsable" */
-}
 
-.task-checkbox input {
-  width: 16px;
-  height: 16px;
-}
-
-.task-checkbox span {
-  font-size: 14px;
-  color: #333;
-}
 
 /* Conteneur des détails */
-.task-details {
-  flex: 4.17;
-  display: flex;
-  justify-content: space-between;
-  align-items: stretch; /* S'étendre sur toute la hauteur */
-  font-size: 12px;
-  color: #666;
-}
 
-/* Ajuster les colonnes avec des bordures verticales sur toute la hauteur */
-.task-responsible {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 10px 0; /* Déplacer le padding ici */
-  border-right: 1px solid #e0e0e0; /* Bordure entre "Responsable" et "Échéance" */
-}
 
-.task-due-date {
-  flex: 1;
-  color: #666;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 
-  padding: 10px 0; /* Déplacer le padding ici */
-  border-right: 1px solid #e0e0e0; /* Bordure entre "Échéance" et "Priorité" */
-}
+
+
 .task-priority {
   flex: 1;
   font-size: 12px;
@@ -311,22 +212,7 @@
 }
 
 /* Styles pour la section */
-.dashboard-task-section {
-  padding: 1px 10px;
-}
 
-.dashboard-task-section-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-  margin-top: 20px;
-
-}
 
 /* ... (autres styles inchangés) ... */
 
@@ -362,22 +248,7 @@
   background-color: #d0d0d0;
 }
 
-.responsible-circle {
-  width: 20px;
-  height: 20px;
-  background-color: #f0c14b;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
 
-.responsible-circle.empty {
-  background-color: #e0e0e0;
-  color: #666;
-}
   .project-icon-card{
     background-color: #bdf1fa;
     padding: 8px;
@@ -388,11 +259,9 @@
   }
     
 
-  .tasks-add-subtask{
-    color: #6e6d6d;
-    font-size: 13px;
-    margin-left:30px;
-  }
+.project-container{
+  padding:10px 10px;
+}
 
   .section-encours{
     border-bottom: 1px solid #e0e0e0; /* Bordure horizontale pour chaque ligne */

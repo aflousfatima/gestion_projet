@@ -67,7 +67,7 @@ const Home = () => {
 
   return (
     <ProtectedRoute>
-      <div>
+      <div className="style-page-home-dash">
         <div className="header">
           <div className="welcome-message">
             <h1>Hello, {userName}</h1>
