@@ -1,5 +1,6 @@
 package com.task.taskservice.Service;
 import com.task.taskservice.DTO.DashboardStatsDTO;
+import com.task.taskservice.DTO.TaskCalendarDTO;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import org.slf4j.Logger;
@@ -471,5 +472,28 @@ public class TaskService {
 
         // Return DTO with stats
         return new DashboardStatsDTO(completedTasks, notCompletedTasks, overdueTasks, totalTasks, tasksByStatus , tasksByPriority);
+    }
+
+
+
+    @Transactional(readOnly = true)
+    public List<TaskCalendarDTO> getTasksForCalendar(Long projectId, String token) {
+        // Fetch tasks for the active sprint
+        List<Long> activeStoryIds = projectClient.getUserStoriesOfActiveSprint(projectId);
+        if (activeStoryIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Task> tasks = taskRepository.findByUserStoryIn(activeStoryIds);
+
+        // Map tasks to TaskCalendarDTO
+        return tasks.stream()
+                .map(task -> new TaskCalendarDTO(
+                        task.getId(),
+                        task.getTitle(),
+                        task.getStartDate(),
+                        task.getDueDate()
+                ))
+                .collect(Collectors.toList());
     }
 }
