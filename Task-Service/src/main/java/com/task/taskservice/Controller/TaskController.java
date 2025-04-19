@@ -1,5 +1,6 @@
 package com.task.taskservice.Controller;
 
+import com.task.taskservice.DTO.DashboardStatsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,5 +130,14 @@ public class TaskController {
             logger.error("Failed to delete file for publicId: {}", publicId, e);
             return new ResponseEntity<>("Failed to delete file: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
+    }
+
+
+    @GetMapping("/dashboard/{projectId}")
+    public ResponseEntity<DashboardStatsDTO> getDashboardStats(
+            @PathVariable Long projectId,
+            @RequestHeader("Authorization") String token) {
+        DashboardStatsDTO stats = taskService.getDashboardStats(projectId, token);
+        return new ResponseEntity<>(stats, HttpStatus.OK);
     }
 }
