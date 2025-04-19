@@ -1,6 +1,7 @@
 package com.task.taskservice.Controller;
 
 import com.task.taskservice.DTO.DashboardStatsDTO;
+import com.task.taskservice.DTO.TaskCalendarDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -139,5 +140,13 @@ public class TaskController {
             @RequestHeader("Authorization") String token) {
         DashboardStatsDTO stats = taskService.getDashboardStats(projectId, token);
         return new ResponseEntity<>(stats, HttpStatus.OK);
+    }
+
+    @GetMapping("/calendar/{projectId}")
+    public ResponseEntity<List<TaskCalendarDTO>> getTasksForCalendar(
+            @PathVariable Long projectId,
+            @RequestHeader("Authorization") String token) {
+        List<TaskCalendarDTO> tasks = taskService.getTasksForCalendar(projectId, token);
+        return new ResponseEntity<>(tasks, HttpStatus.OK);
     }
 }
