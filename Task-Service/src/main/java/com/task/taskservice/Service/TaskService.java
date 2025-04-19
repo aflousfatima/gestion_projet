@@ -1,4 +1,7 @@
 package com.task.taskservice.Service;
+import com.task.taskservice.DTO.DashboardStatsDTO;
+import com.task.taskservice.Enumeration.WorkItemPriority;
+import com.task.taskservice.Enumeration.WorkItemStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -435,4 +438,38 @@ public class TaskService {
         logger.info("Deleted file attachment from database with publicId: {}", publicId);
     }
 
+
+
+    @Transactional(readOnly = true)
+    public DashboardStatsDTO getDashboardStats(Long projectId, String token) {
+        // Fetch tasks for the active sprint
+        List<Long> activeStoryIds = projectClient.getUserStoriesOfActiveSprint(projectId);
+        if (activeStoryIds.isEmpty()) {
+            return new DashboardStatsDTO(0, 0, 0, 0,Map.of(), Map.of());
+        }
+
+        // Calculate existing metrics
+        long completedTasks = taskRepository.countByUserStoryInAndStatus(activeStoryIds, WorkItemStatus.DONE);
+        long notCompletedTasks = taskRepository.countByUserStoryInAndStatusNot(activeStoryIds, WorkItemStatus.DONE);
+        long overdueTasks = taskRepository.countOverdueByUserStoryIn(activeStoryIds, WorkItemStatus.DONE, LocalDate.now());
+        long totalTasks = taskRepository.countByUserStoryIn(activeStoryIds);
+
+        // Calculate tasks by status
+        Map<String, Long> tasksByStatus = taskRepository.countTasksByStatus(activeStoryIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((WorkItemStatus) row[0]).name(),
+                        row -> (Long) row[1]
+                ));
+
+        Map<String, Long> tasksByPriority = taskRepository.countTasksByPriority(activeStoryIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        row -> ((WorkItemPriority) row[0]).name(),
+                        row -> (Long) row[1]
+                ));
+
+        // Return DTO with stats
+        return new DashboardStatsDTO(completedTasks, notCompletedTasks, overdueTasks, totalTasks, tasksByStatus , tasksByPriority);
+    }
 }
