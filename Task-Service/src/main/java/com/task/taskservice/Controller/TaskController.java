@@ -2,6 +2,7 @@ package com.task.taskservice.Controller;
 
 import com.task.taskservice.DTO.DashboardStatsDTO;
 import com.task.taskservice.DTO.TaskCalendarDTO;
+import com.task.taskservice.DTO.TimeEntryDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,6 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/project/tasks")
 public class TaskController {
@@ -148,5 +152,41 @@ public class TaskController {
             @RequestHeader("Authorization") String token) {
         List<TaskCalendarDTO> tasks = taskService.getTasksForCalendar(projectId, token);
         return new ResponseEntity<>(tasks, HttpStatus.OK);
+    }
+
+    @PostMapping("/{taskId}/time-entry")
+    public ResponseEntity<Void> addManualTimeEntry(
+            @PathVariable Long taskId,
+            @RequestParam Long duration,
+            @RequestParam String type,
+            @RequestHeader("Authorization") String token) {
+        taskService.addManualTimeEntry(taskId, duration, type, token);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/{taskId}/time-entries")
+    public ResponseEntity<List<TimeEntryDTO>> getTimeEntries(
+            @PathVariable Long taskId,
+            @RequestHeader("Authorization") String token) {
+        List<TimeEntryDTO> timeEntryDTOs = taskService.getTimeEntries(taskId, token);
+        return new ResponseEntity<>(timeEntryDTOs, HttpStatus.OK);
+    }
+
+    @PostMapping("/tasks/{taskId}/dependencies/{dependencyId}")
+    public ResponseEntity<TaskDTO> addDependency(
+            @PathVariable Long taskId,
+            @PathVariable Long dependencyId,
+            @RequestHeader("Authorization") String token) {
+        TaskDTO updatedTask = taskService.addDependency(taskId, dependencyId, token);
+        return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+    }
+
+    @DeleteMapping("/tasks/{taskId}/dependencies/{dependencyId}")
+    public ResponseEntity<TaskDTO> removeDependency(
+            @PathVariable Long taskId,
+            @PathVariable Long dependencyId,
+            @RequestHeader("Authorization") String token) {
+        TaskDTO updatedTask = taskService.removeDependency(taskId, dependencyId, token);
+        return new ResponseEntity<>(updatedTask, HttpStatus.OK);
     }
 }

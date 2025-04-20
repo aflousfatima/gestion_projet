@@ -39,7 +39,8 @@ public class TaskMapper {
         taskDTO.setDueDate(task.getDueDate());
         taskDTO.setCompletedDate(task.getCompletedDate());
         taskDTO.setEstimationTime(task.getEstimationTime());
-        taskDTO.setTimeSpent(task.getTimeSpent());
+        taskDTO.setTotalTimeSpent(task.getTotalTimeSpent());
+        taskDTO.setStartTime(task.getStartTime()); // Ajouter startTime
         taskDTO.setStatus(task.getStatus());
         taskDTO.setPriority(task.getPriority());
         taskDTO.setProgress(task.getProgress());
@@ -96,10 +97,11 @@ public class TaskMapper {
         task.setDueDate(taskDTO.getDueDate());
         task.setCompletedDate(taskDTO.getCompletedDate());
         task.setEstimationTime(taskDTO.getEstimationTime());
-        task.setTimeSpent(taskDTO.getTimeSpent());
+        task.setTotalTimeSpent(taskDTO.getTotalTimeSpent());
         task.setStatus(taskDTO.getStatus());
         task.setPriority(taskDTO.getPriority());
         task.setProgress(taskDTO.getProgress());
+        task.setStartTime(taskDTO.getStartTime()); // Ajouter startTime
         task.setUserStory(taskDTO.getUserStoryId());
         task.setProjectId(taskDTO.getProjectId());
         task.setCreatedBy(taskDTO.getCreatedBy());

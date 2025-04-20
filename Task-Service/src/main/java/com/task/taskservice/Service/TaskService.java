@@ -1,6 +1,6 @@
 package com.task.taskservice.Service;
-import com.task.taskservice.DTO.DashboardStatsDTO;
-import com.task.taskservice.DTO.TaskCalendarDTO;
+import com.task.taskservice.DTO.*;
+import com.task.taskservice.Entity.*;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import org.slf4j.Logger;
@@ -8,11 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import com.task.taskservice.Configuration.AuthClient;
 import com.task.taskservice.Configuration.ProjectClient;
-import com.task.taskservice.DTO.TaskDTO; // Uppercase DTO
-import com.task.taskservice.DTO.UserDTO;
-import com.task.taskservice.Entity.FileAttachment;
-import com.task.taskservice.Entity.Tag;
-import com.task.taskservice.Entity.Task;
 import com.task.taskservice.Mapper.TaskMapper; // Uppercase Mapper
 import com.task.taskservice.Repository.FileAttachmentRepository;
 import com.task.taskservice.Repository.TagRepository;
@@ -27,6 +22,7 @@ import com.task.taskservice.Entity.Task;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -80,9 +76,9 @@ public class TaskService {
             if (dependencies.size() != taskDTO.getDependencyIds().size()) {
                 throw new IllegalArgumentException("One or more dependency IDs are invalid");
             }
+            checkForDependencyCycles(task, dependencies);
             task.setDependencies(dependencies);
         }
-
         // Directly set user IDs without validation
         if (taskDTO.getAssignedUserIds() != null) {
             System.out.println("➡️ Liste des userIds assignés reçue : " + taskDTO.getAssignedUserIds());
@@ -131,7 +127,7 @@ public class TaskService {
             System.out.println("⚠️ Aucun tag reçu pour la tâche.");
         }
 
-
+        updateProgress(task);
         // Save the task
         Task savedTask = taskRepository.save(task);
 
@@ -142,7 +138,6 @@ public class TaskService {
 
 
     @Transactional
-
     public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
         // Validate token
         String updatedBy = authClient.decodeToken(token);
@@ -151,23 +146,80 @@ public class TaskService {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
 
+        // Valider les dépendances si le statut change à IN_PROGRESS ou DONE
+        if (taskDTO.getStatus() != null &&
+                (taskDTO.getStatus() == WorkItemStatus.IN_PROGRESS || taskDTO.getStatus() == WorkItemStatus.DONE)) {
+            validateDependencies(task);
+        }
+
+
+        // Gérer le chronomètre pour le timeSpent
+        if (taskDTO.getStatus() != null) {
+            WorkItemStatus newStatus = taskDTO.getStatus();
+            WorkItemStatus currentStatus = task.getStatus();
+
+            // Si on passe à IN_PROGRESS, démarrer le chronomètre
+            if (newStatus == WorkItemStatus.IN_PROGRESS && currentStatus != WorkItemStatus.IN_PROGRESS) {
+                task.setStartTime(LocalDateTime.now());
+            }
+            // Si on quitte IN_PROGRESS
+            else if (currentStatus == WorkItemStatus.IN_PROGRESS && newStatus != WorkItemStatus.IN_PROGRESS) {
+                if (task.getStartTime() != null) {
+                    long minutes = ChronoUnit.MINUTES.between(task.getStartTime(), LocalDateTime.now());
+                    if (minutes > 0) {
+                        // Ajouter au totalTimeSpent
+                        task.setTotalTimeSpent(task.getTotalTimeSpent() != null ? task.getTotalTimeSpent() + minutes : minutes);
+
+                        // Enregistrer dans l'historique
+                        TimeEntry timeEntry = new TimeEntry();
+                        timeEntry.setTask(task);
+                        timeEntry.setDuration(minutes);
+                        timeEntry.setAddedBy(updatedBy);
+                        timeEntry.setAddedAt(LocalDateTime.now());
+                        timeEntry.setType("travail");
+                        task.getTimeEntries().add(timeEntry);
+                    }
+                    task.setStartTime(null); // Réinitialiser
+                }
+            }
+
+            // Mettre à jour le statut
+            task.setStatus(newStatus);
+
+            // Si DONE, définir completedDate
+            if (newStatus == WorkItemStatus.DONE) {
+                task.setCompletedDate(LocalDate.now());
+            }
+        }
+
+
         // Update fields
         if (taskDTO.getTitle() != null) task.setTitle(taskDTO.getTitle());
         if (taskDTO.getDescription() != null) task.setDescription(taskDTO.getDescription());
         if (taskDTO.getDueDate() != null) task.setDueDate(taskDTO.getDueDate());
         if (taskDTO.getPriority() != null) task.setPriority(taskDTO.getPriority());
-        if (taskDTO.getStatus() != null) task.setStatus(taskDTO.getStatus());
+        if (taskDTO.getStatus() != null) {
+            task.setStatus(taskDTO.getStatus());
+            // Gérer completedDate
+            if (taskDTO.getStatus() == WorkItemStatus.DONE) {
+                task.setCompletedDate(LocalDate.now());
+            } else {
+                task.setCompletedDate(null); // Réinitialiser si le statut change
+            }
+        }
         if (taskDTO.getEstimationTime() != null) task.setEstimationTime(taskDTO.getEstimationTime());
         if (taskDTO.getStartDate() != null) task.setStartDate(taskDTO.getStartDate());
         task.setUpdatedBy(updatedBy);
         task.setLastModifiedDate(LocalDate.now());
 
-        // Update dependencies
+        // Mise à jour des dépendances
         if (taskDTO.getDependencyIds() != null) {
             List<Task> dependencies = taskRepository.findAllById(taskDTO.getDependencyIds());
             if (dependencies.size() != taskDTO.getDependencyIds().size()) {
                 throw new IllegalArgumentException("One or more dependency IDs are invalid");
             }
+            // Vérifier les cycles
+            checkForDependencyCycles(task, dependencies);
             task.setDependencies(dependencies);
         }
 
@@ -188,7 +240,7 @@ public class TaskService {
             ).collect(Collectors.toSet());
             task.setTags(tags);
         }
-
+        updateProgress(task);
         // Save the updated task
         Task updatedTask = taskRepository.save(task);
 
@@ -234,11 +286,28 @@ public class TaskService {
     }
 
 
+    @Transactional(readOnly = true)
+    public TaskDTO getTaskByTaskId(Long taskId, String token) {
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+        return taskMapper.toDTO(task);
+    }
+
 
     @Transactional
     public void deleteTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+        List<Task> dependentTasks = taskRepository.findByDependenciesId(taskId);
+        for (Task dependent : dependentTasks) {
+            dependent.getDependencies().remove(task);
+            updateProgress(dependent);
+            taskRepository.save(dependent);
+        }
         taskRepository.delete(task);
     }
 
@@ -495,5 +564,232 @@ public class TaskService {
                         task.getDueDate()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    private void validateDependencies(Task task) {
+        if (task.getDependencies() != null && !task.getDependencies().isEmpty()) {
+            for (Task dependency : task.getDependencies()) {
+                if (dependency.getStatus() != WorkItemStatus.DONE) {
+                    throw new IllegalStateException("Cannot proceed: Dependency task ID " + dependency.getId() + " is not completed.");
+                }
+            }
+        }
+    }
+
+    private void checkForDependencyCycles(Task task, List<Task> newDependencies) {
+        Set<Long> visited = new HashSet<>();
+        checkForCycles(task, newDependencies, visited);
+    }
+
+    private void checkForCycles(Task task, List<Task> dependencies, Set<Long> visited) {
+        if (task.getId() != null && visited.contains(task.getId())) {
+            throw new IllegalArgumentException("Dependency cycle detected involving task ID: " + task.getId());
+        }
+        visited.add(task.getId());
+        for (Task dependency : dependencies) {
+            if (dependency.getDependencies() != null) {
+                checkForCycles(dependency, dependency.getDependencies(), visited);
+            }
+        }
+        visited.remove(task.getId());
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<TimeEntryDTO> getTimeEntries(Long taskId, String token) {
+        // Valider l'existence de la tâche
+        getTaskByTaskId(taskId, token);
+
+        // Récupérer l'entité Task
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+
+        // Convertir les TimeEntry en TimeEntryDTO
+        return task.getTimeEntries().stream()
+                .map(te -> {
+                    TimeEntryDTO dto = new TimeEntryDTO();
+                    dto.setId(te.getId());
+                    dto.setDuration(te.getDuration());
+                    dto.setAddedBy(te.getAddedBy());
+                    dto.setAddedAt(te.getAddedAt());
+                    dto.setType(te.getType());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public void addManualTimeEntry(Long taskId, Long duration, String type, String token) {
+        String addedBy = authClient.decodeToken(token);
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+        if (duration <= 0) {
+            throw new IllegalArgumentException("Duration must be positive");
+        }
+        task.setTotalTimeSpent(task.getTotalTimeSpent() != null ? task.getTotalTimeSpent() + duration : duration);
+        TimeEntry timeEntry = new TimeEntry();
+        timeEntry.setTask(task);
+        timeEntry.setDuration(duration);
+        timeEntry.setAddedBy(addedBy);
+        timeEntry.setAddedAt(LocalDateTime.now());
+        timeEntry.setType(type);
+        task.getTimeEntries().add(timeEntry);
+        updateProgress(task);
+        taskRepository.save(task);
+    }
+
+
+    private void updateProgress(Task task) {
+        if (task.getStatus() == WorkItemStatus.TO_DO) {
+            task.setProgress(0.0);
+        } else if (task.getStatus() == WorkItemStatus.DONE) {
+            task.setProgress(100.0);
+        } else if (task.getStatus() == WorkItemStatus.IN_PROGRESS || task.getStatus() == WorkItemStatus.BLOCKED) {
+            if (task.getEstimationTime() != null && task.getEstimationTime() > 0 && task.getTotalTimeSpent() != null) {
+                double progress = (task.getTotalTimeSpent().doubleValue() / task.getEstimationTime()) * 100;
+                task.setProgress(Math.min(progress, 90.0));
+            } else {
+                task.setProgress(0.0); // Par défaut si estimationTime est absent
+            }
+        }
+    }
+
+
+
+
+    // Nouvelle méthode : Ajouter une dépendance
+    @Transactional
+    public TaskDTO addDependency(Long taskId, Long dependencyId, String token) {
+        logger.info("Adding dependency ID {} to task ID {}", dependencyId, taskId);
+
+        // Valider le token
+        String updatedBy = authClient.decodeToken(token);
+        if (updatedBy == null) {
+            logger.error("Invalid token: unable to extract user");
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+
+        // Vérifier que les tâches existent
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> {
+                    logger.error("Task not found with ID: {}", taskId);
+                    return new NoSuchElementException("Task not found with ID: " + taskId);
+                });
+        Task dependency = taskRepository.findById(dependencyId)
+                .orElseThrow(() -> {
+                    logger.error("Dependency task not found with ID: {}", dependencyId);
+                    return new NoSuchElementException("Dependency task not found with ID: " + dependencyId);
+                });
+
+        // Vérifier que la dépendance n'est pas déjà présente
+        if (task.getDependencies().stream().anyMatch(dep -> dep.getId().equals(dependencyId))) {
+            logger.warn("Task ID {} is already a dependency of task ID {}", dependencyId, taskId);
+            throw new IllegalArgumentException("Task ID " + dependencyId + " is already a dependency of task ID " + taskId);
+        }
+
+        // Vérifier que taskId et dependencyId ne sont pas identiques
+        if (taskId.equals(dependencyId)) {
+            logger.error("A task cannot depend on itself: task ID {}", taskId);
+            throw new IllegalArgumentException("A task cannot depend on itself");
+        }
+        // Vérifier si les 2 taches sont dans le meme projet
+        if (!dependency.getProjectId().equals(task.getProjectId())) {
+            throw new IllegalArgumentException("Dependency task ID " + dependencyId + " does not belong to the same project");
+        }
+        // Ajouter la dépendance
+        task.getDependencies().add(dependency);
+        logger.debug("Added dependency ID {} to task ID {}", dependencyId, taskId);
+
+        // Vérifier les cycles de dépendances
+        try {
+            checkForDependencyCycles(task, task.getDependencies());
+        } catch (IllegalArgumentException e) {
+            // Revertir l'ajout en cas de cycle
+            task.getDependencies().remove(dependency);
+            logger.error("Failed to add dependency due to cycle: {}", e.getMessage());
+            throw e;
+        }
+
+        // Mettre à jour progress
+        updateProgress(task);
+
+        // Sauvegarder la tâche
+        Task updatedTask = taskRepository.save(task);
+        logger.info("Successfully added dependency ID {} to task ID {}", dependencyId, taskId);
+
+        // Convertir en DTO et retourner
+        TaskDTO responseDTO = taskMapper.toDTO(updatedTask);
+        if (updatedTask.getAssignedUserIds() != null && !updatedTask.getAssignedUserIds().isEmpty()) {
+            try {
+                List<String> userIdList = updatedTask.getAssignedUserIds().stream().collect(Collectors.toList());
+                String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                List<UserDTO> assignedUsers = authClient.getUsersByIds(authHeader, userIdList);
+                responseDTO.setAssignedUsers(assignedUsers != null ? assignedUsers : Collections.emptyList());
+            } catch (Exception e) {
+                logger.error("Failed to fetch user details: {}", e.getMessage());
+                responseDTO.setAssignedUsers(Collections.emptyList());
+            }
+        } else {
+            responseDTO.setAssignedUsers(Collections.emptyList());
+        }
+        return responseDTO;
+    }
+
+    // Nouvelle méthode : Supprimer une dépendance
+    @Transactional
+    public TaskDTO removeDependency(Long taskId, Long dependencyId, String token) {
+        logger.info("Removing dependency ID {} from task ID {}", dependencyId, taskId);
+
+        // Valider le token
+        String updatedBy = authClient.decodeToken(token);
+        if (updatedBy == null) {
+            logger.error("Invalid token: unable to extract user");
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+
+        // Vérifier que la tâche existe
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> {
+                    logger.error("Task not found with ID: {}", taskId);
+                    return new NoSuchElementException("Task not found with ID: " + taskId);
+                });
+
+        // Trouver la dépendance à supprimer
+        Task dependency = task.getDependencies().stream()
+                .filter(dep -> dep.getId().equals(dependencyId))
+                .findFirst()
+                .orElseThrow(() -> {
+                    logger.warn("Dependency ID {} is not a dependency of task ID {}", dependencyId, taskId);
+                    return new IllegalArgumentException("Dependency ID " + dependencyId + " is not a dependency of task ID " + taskId);
+                });
+
+        // Supprimer la dépendance
+        task.getDependencies().remove(dependency);
+        logger.debug("Removed dependency ID {} from task ID {}", dependencyId, taskId);
+
+        // Mettre à jour progress
+        updateProgress(task);
+
+        // Sauvegarder la tâche
+        Task updatedTask = taskRepository.save(task);
+        logger.info("Successfully removed dependency ID {} from task ID {}", dependencyId, taskId);
+
+        // Convertir en DTO et retourner
+        TaskDTO responseDTO = taskMapper.toDTO(updatedTask);
+        if (updatedTask.getAssignedUserIds() != null && !updatedTask.getAssignedUserIds().isEmpty()) {
+            try {
+                List<String> userIdList = updatedTask.getAssignedUserIds().stream().collect(Collectors.toList());
+                String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                List<UserDTO> assignedUsers = authClient.getUsersByIds(authHeader, userIdList);
+                responseDTO.setAssignedUsers(assignedUsers != null ? assignedUsers : Collections.emptyList());
+            } catch (Exception e) {
+                logger.error("Failed to fetch user details: {}", e.getMessage());
+                responseDTO.setAssignedUsers(Collections.emptyList());
+            }
+        } else {
+            responseDTO.setAssignedUsers(Collections.emptyList());
+        }
+        return responseDTO;
     }
 }
