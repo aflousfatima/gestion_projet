@@ -25,6 +25,8 @@ public class TaskDTO {
     private Long projectId;
     private String createdBy;
     private List<Long> dependencyIds;
+    private List<TaskSummaryDTO> dependencies; // Nouveau champ
+
     @JsonProperty("assignedUser")
     private List<String> assignedUserIds;
     private LocalDateTime startTime;
@@ -84,6 +86,14 @@ public class TaskDTO {
     public void setTags(Set<String> tags) { this.tags = tags; }
 
 
+    // Getters et setters
+    public List<TaskSummaryDTO> getDependencies() {
+        return dependencies;
+    }
+
+    public void setDependencies(List<TaskSummaryDTO> dependencies) {
+        this.dependencies = dependencies;
+    }
     public List<CommentDTO> getComments() { return comments; }
     public void setComments(List<CommentDTO> comments) { this.comments = comments; }
     public List<FileAttachmentDTO> getAttachments() { return attachments; }

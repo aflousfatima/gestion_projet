@@ -18,6 +18,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     // New method to find Task by attachment
     Optional<Task> findByAttachmentsContaining(FileAttachment attachment);
 
+    List<Task> findByDependenciesId(Long taskId);
 
 
     @Query("SELECT COUNT(t) FROM Task t WHERE t.userStory IN :userStoryIds AND t.status = :status")
@@ -37,4 +38,5 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
 
     @Query("SELECT t.priority AS priority, COUNT(t) AS count FROM Task t WHERE t.userStory IN :userStoryIds GROUP BY t.priority")
     List<Object[]> countTasksByPriority(List<Long> userStoryIds);
+
 }

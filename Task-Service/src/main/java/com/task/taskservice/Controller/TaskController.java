@@ -189,4 +189,12 @@ public class TaskController {
         TaskDTO updatedTask = taskService.removeDependency(taskId, dependencyId, token);
         return new ResponseEntity<>(updatedTask, HttpStatus.OK);
     }
+
+    @GetMapping("/{taskId}/potential-dependencies")
+    public ResponseEntity<List<TaskDTO>> getPotentialDependencies(
+            @PathVariable Long taskId,
+            @RequestHeader("Authorization") String token) {
+        List<TaskDTO> potentialDependencies = taskService.getPotentialDependencies(taskId, token);
+        return new ResponseEntity<>(potentialDependencies, HttpStatus.OK);
+    }
 }
