@@ -1,14 +1,11 @@
 package com.task.taskservice.Mapper; // Uppercase Mapper
 
 import com.task.taskservice.Configuration.AuthClient;
-import com.task.taskservice.DTO.CommentDTO;
-import com.task.taskservice.DTO.FileAttachmentDTO;
-import com.task.taskservice.DTO.UserDTO;
+import com.task.taskservice.DTO.*;
 import com.task.taskservice.Entity.Comment;
 import com.task.taskservice.Entity.FileAttachment;
 import com.task.taskservice.Entity.Task;
 import com.task.taskservice.Entity.Tag;
-import com.task.taskservice.DTO.TaskDTO; // Uppercase DTO
 import com.task.taskservice.Service.CloudinaryService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -48,10 +45,23 @@ public class TaskMapper {
         taskDTO.setProjectId(task.getProjectId());
         taskDTO.setCreatedBy(task.getCreatedBy());
 
+        // Mapper les dépendances
         if (task.getDependencies() != null) {
             taskDTO.setDependencyIds(task.getDependencies().stream()
                     .map(Task::getId)
                     .collect(Collectors.toList()));
+            taskDTO.setDependencies(task.getDependencies().stream()
+                    .map(dep -> new TaskSummaryDTO(
+                            dep.getId(),
+                            dep.getTitle(),
+                            dep.getStatus(),
+                            dep.getProjectId(),
+                            dep.getUserStory()
+                    ))
+                    .collect(Collectors.toList()));
+        } else {
+            taskDTO.setDependencyIds(Collections.emptyList());
+            taskDTO.setDependencies(Collections.emptyList());
         }
 
         if (task.getAssignedUserIds() != null) {

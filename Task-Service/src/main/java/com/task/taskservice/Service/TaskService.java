@@ -659,81 +659,76 @@ public class TaskService {
 
 
     // Nouvelle méthode : Ajouter une dépendance
+
     @Transactional
     public TaskDTO addDependency(Long taskId, Long dependencyId, String token) {
         logger.info("Adding dependency ID {} to task ID {}", dependencyId, taskId);
 
-        // Valider le token
+        // Validate token
         String updatedBy = authClient.decodeToken(token);
         if (updatedBy == null) {
             logger.error("Invalid token: unable to extract user");
-            throw new IllegalArgumentException("Invalid token: unable to extract user");
+            throw new IllegalArgumentException("Invalid authentication token");
         }
 
-        // Vérifier que les tâches existent
+        // Verify tasks exist
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> {
                     logger.error("Task not found with ID: {}", taskId);
-                    return new NoSuchElementException("Task not found with ID: " + taskId);
+                    return new NoSuchElementException("Task with ID " + taskId + " not found");
                 });
         Task dependency = taskRepository.findById(dependencyId)
                 .orElseThrow(() -> {
                     logger.error("Dependency task not found with ID: {}", dependencyId);
-                    return new NoSuchElementException("Dependency task not found with ID: " + dependencyId);
+                    return new NoSuchElementException("Dependency task with ID " + dependencyId + " not found");
                 });
 
-        // Vérifier que la dépendance n'est pas déjà présente
-        if (task.getDependencies().stream().anyMatch(dep -> dep.getId().equals(dependencyId))) {
-            logger.warn("Task ID {} is already a dependency of task ID {}", dependencyId, taskId);
-            throw new IllegalArgumentException("Task ID " + dependencyId + " is already a dependency of task ID " + taskId);
-        }
-
-        // Vérifier que taskId et dependencyId ne sont pas identiques
+        // Prevent self-dependency
         if (taskId.equals(dependencyId)) {
             logger.error("A task cannot depend on itself: task ID {}", taskId);
             throw new IllegalArgumentException("A task cannot depend on itself");
         }
-        // Vérifier si les 2 taches sont dans le meme projet
-        if (!dependency.getProjectId().equals(task.getProjectId())) {
-            throw new IllegalArgumentException("Dependency task ID " + dependencyId + " does not belong to the same project");
+
+        // Verify same project
+        if (!task.getProjectId().equals(dependency.getProjectId())) {
+            logger.error("Dependency task ID {} is not in the same project as task ID {}", dependencyId, taskId);
+            throw new IllegalArgumentException("Dependency task must belong to the same project");
         }
-        // Ajouter la dépendance
+
+        // Optional: Verify same user story (uncomment if required)
+        /*
+        if (!task.getUserStory().equals(dependency.getUserStory())) {
+            logger.error("Dependency task ID {} is not in the same user story as task ID {}", dependencyId, taskId);
+            throw new IllegalArgumentException("Dependency task must belong to the same user story");
+        }
+        */
+
+        // Check if dependency already exists
+        if (task.getDependencies().stream().anyMatch(dep -> dep.getId().equals(dependencyId))) {
+            logger.warn("Task ID {} is already a dependency of task ID {}", dependencyId, taskId);
+            throw new IllegalArgumentException("Task ID " + dependencyId + " is already a dependency");
+        }
+
+        // Add dependency
         task.getDependencies().add(dependency);
         logger.debug("Added dependency ID {} to task ID {}", dependencyId, taskId);
 
-        // Vérifier les cycles de dépendances
+        // Check for dependency cycles
         try {
             checkForDependencyCycles(task, task.getDependencies());
         } catch (IllegalArgumentException e) {
-            // Revertir l'ajout en cas de cycle
             task.getDependencies().remove(dependency);
             logger.error("Failed to add dependency due to cycle: {}", e.getMessage());
             throw e;
         }
 
-        // Mettre à jour progress
+        // Update progress
         updateProgress(task);
 
-        // Sauvegarder la tâche
+        // Save and return
         Task updatedTask = taskRepository.save(task);
         logger.info("Successfully added dependency ID {} to task ID {}", dependencyId, taskId);
-
-        // Convertir en DTO et retourner
-        TaskDTO responseDTO = taskMapper.toDTO(updatedTask);
-        if (updatedTask.getAssignedUserIds() != null && !updatedTask.getAssignedUserIds().isEmpty()) {
-            try {
-                List<String> userIdList = updatedTask.getAssignedUserIds().stream().collect(Collectors.toList());
-                String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
-                List<UserDTO> assignedUsers = authClient.getUsersByIds(authHeader, userIdList);
-                responseDTO.setAssignedUsers(assignedUsers != null ? assignedUsers : Collections.emptyList());
-            } catch (Exception e) {
-                logger.error("Failed to fetch user details: {}", e.getMessage());
-                responseDTO.setAssignedUsers(Collections.emptyList());
-            }
-        } else {
-            responseDTO.setAssignedUsers(Collections.emptyList());
-        }
-        return responseDTO;
+        return toTaskDTOWithUsers(updatedTask, token);
     }
 
     // Nouvelle méthode : Supprimer une dépendance
@@ -780,6 +775,59 @@ public class TaskService {
         if (updatedTask.getAssignedUserIds() != null && !updatedTask.getAssignedUserIds().isEmpty()) {
             try {
                 List<String> userIdList = updatedTask.getAssignedUserIds().stream().collect(Collectors.toList());
+                String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
+                List<UserDTO> assignedUsers = authClient.getUsersByIds(authHeader, userIdList);
+                responseDTO.setAssignedUsers(assignedUsers != null ? assignedUsers : Collections.emptyList());
+            } catch (Exception e) {
+                logger.error("Failed to fetch user details: {}", e.getMessage());
+                responseDTO.setAssignedUsers(Collections.emptyList());
+            }
+        } else {
+            responseDTO.setAssignedUsers(Collections.emptyList());
+        }
+        return responseDTO;
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<TaskDTO> getPotentialDependencies(Long taskId, String token) {
+        logger.info("Fetching potential dependencies for task ID {}", taskId);
+
+        // Validate token
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            logger.error("Invalid token: unable to extract user");
+            throw new IllegalArgumentException("Invalid authentication token");
+        }
+
+        // Verify task exists
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> {
+                    logger.error("Task not found with ID: {}", taskId);
+                    return new NoSuchElementException("Task with ID " + taskId + " not found");
+                });
+
+        // Fetch all tasks in the same project, excluding the task itself and its current dependencies
+        List<Task> potentialDependencies = taskRepository.findByProjectId(task.getProjectId())
+                .stream()
+                .filter(t -> !t.getId().equals(taskId))
+                .filter(t -> task.getDependencies().stream().noneMatch(dep -> dep.getId().equals(t.getId())))
+                .collect(Collectors.toList());
+
+        // Convert to DTOs
+        List<TaskDTO> taskDTOs = potentialDependencies.stream()
+                .map(taskMapper::toDTO)
+                .collect(Collectors.toList());
+
+        logger.info("Found {} potential dependencies for task ID {}", taskDTOs.size(), taskId);
+        return taskDTOs;
+    }
+
+    private TaskDTO toTaskDTOWithUsers(Task task, String token) {
+        TaskDTO responseDTO = taskMapper.toDTO(task);
+        if (task.getAssignedUserIds() != null && !task.getAssignedUserIds().isEmpty()) {
+            try {
+                List<String> userIdList = task.getAssignedUserIds().stream().collect(Collectors.toList());
                 String authHeader = token.startsWith("Bearer ") ? token : "Bearer " + token;
                 List<UserDTO> assignedUsers = authClient.getUsersByIds(authHeader, userIdList);
                 responseDTO.setAssignedUsers(assignedUsers != null ? assignedUsers : Collections.emptyList());
