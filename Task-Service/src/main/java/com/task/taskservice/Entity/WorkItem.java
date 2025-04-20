@@ -6,6 +6,8 @@ import com.task.taskservice.Enumeration.WorkItemStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -24,7 +26,6 @@ public abstract class WorkItem {
     protected LocalDate completedDate;
 
     protected Long estimationTime;     // in minutes or hours (depending on convention)
-    protected Long timeSpent;
     @Enumerated(EnumType.STRING)
 
     protected WorkItemStatus status;
@@ -66,6 +67,24 @@ protected String createdBy;
     @OneToMany(cascade = CascadeType.ALL)
     protected List<FileAttachment> attachments;
 
+
+
+    @Column(name = "start_time")
+    private LocalDateTime startTime;
+
+    @Column(name = "total_time_spent")
+    private Long totalTimeSpent = 0L; // En minutes
+
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TimeEntry> timeEntries = new ArrayList<>();
+
+    // Getters et setters
+    public LocalDateTime getStartTime() { return startTime; }
+    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
+    public Long getTotalTimeSpent() { return totalTimeSpent; }
+    public void setTotalTimeSpent(Long totalTimeSpent) { this.totalTimeSpent = totalTimeSpent; }
+    public List<TimeEntry> getTimeEntries() { return timeEntries; }
+    public void setTimeEntries(List<TimeEntry> timeEntries) { this.timeEntries = timeEntries; }
 
     public Long getId() {
         return id;
@@ -139,13 +158,6 @@ protected String createdBy;
         this.estimationTime = estimationTime;
     }
 
-    public Long getTimeSpent() {
-        return timeSpent;
-    }
-
-    public void setTimeSpent(Long timeSpent) {
-        this.timeSpent = timeSpent;
-    }
 
     public WorkItemStatus getStatus() {
         return status;

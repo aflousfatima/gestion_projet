@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -16,7 +17,7 @@ public class TaskDTO {
     private LocalDate dueDate;
     private LocalDate completedDate;
     private Long estimationTime;
-    private Long timeSpent;
+    private Long totalTimeSpent;
     private WorkItemStatus status;
     private WorkItemPriority priority;
     private Double progress;
@@ -26,6 +27,7 @@ public class TaskDTO {
     private List<Long> dependencyIds;
     @JsonProperty("assignedUser")
     private List<String> assignedUserIds;
+    private LocalDateTime startTime;
 
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
@@ -57,8 +59,8 @@ public class TaskDTO {
     public void setCompletedDate(LocalDate completedDate) { this.completedDate = completedDate; }
     public Long getEstimationTime() { return estimationTime; }
     public void setEstimationTime(Long estimationTime) { this.estimationTime = estimationTime; }
-    public Long getTimeSpent() { return timeSpent; }
-    public void setTimeSpent(Long timeSpent) { this.timeSpent = timeSpent; }
+    public Long getTotalTimeSpent() { return totalTimeSpent; }
+    public void setTotalTimeSpent(Long totalTimeSpent) { this.totalTimeSpent = totalTimeSpent; }
     public WorkItemStatus getStatus() { return status; }
     public void setStatus(WorkItemStatus status) { this.status = status; }
     public WorkItemPriority getPriority() { return priority; }
@@ -89,4 +91,12 @@ public class TaskDTO {
 
     public List<UserDTO> getAssignedUsers() { return assignedUsers; }
     public void setAssignedUsers(List<UserDTO> assignedUsers) { this.assignedUsers = assignedUsers; }
+
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
 }
