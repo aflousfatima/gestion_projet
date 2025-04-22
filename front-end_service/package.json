@@ -18,6 +18,7 @@
     "chart.js": "^4.4.9",
     "curlrequest": "^1.0.1",
     "date-fns": "^4.1.0",
+    "dhtmlx-gantt": "^9.0.9",
     "dotenv": "^16.4.7",
     "font-awesome": "^4.7.0",
     "next": "15.2.0",
@@ -44,6 +45,7 @@
     "@types/sockjs-client": "^1.5.4",
     "eslint": "^9",
     "eslint-config-next": "15.2.0",
+    "sass": "^1.87.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

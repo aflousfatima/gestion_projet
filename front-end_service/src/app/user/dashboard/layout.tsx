@@ -571,7 +571,7 @@ export default function DashboardLayout({
                     ))}
                   </div>
                 ) : (
-                  <p>Aucun projet disponible.</p>
+                  <p>No project available.</p>
                 )}
 
                 <span className="section-title"></span>
@@ -1073,7 +1073,7 @@ export default function DashboardLayout({
                               </>
                             ) : (
                               <div className="no-projects">
-                                <p>Aucun projet disponible.</p>
+                                <p>No project available.</p>
                                 <button
                                   type="button"
                                   className="project-createButton"

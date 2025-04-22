@@ -45,6 +45,9 @@ interface Task {
   tags: string[];
   assignedUsers: User[];
   attachments: FileAttachment[];
+  progress: number;
+  dependencyIds: number[];
+  dependencies: TaskSummary[]; // Nouveau champ
 }
 
 interface UseTasksReturn {

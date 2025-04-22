@@ -318,25 +318,55 @@ margin-top:-5px;
   position: absolute;
   top: 100%;
   right: 0;
-  background-color: white;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  background: #ffffff; /* Fond sombre moderne */
+  border: 1px solid #fbfffe30; /* Bordure néon subtile */
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
   z-index: 100;
-  min-width: 120px;
+  min-width: 140px; /* Compact pour Kanban */
+  padding: 0.25rem 0;
 }
 
 .menu-item {
-  display: block;
+  display: flex;
+  align-items: center;
   width: 100%;
-  padding: 8px 12px;
-  background: none;
+  padding: 0.5rem 0.75rem; /* Padding réduit pour compacité */
+  background: transparent;
   border: none;
+  color: #000000; /* Texte gris clair pour contraste */
+  font-size: 0.85rem; /* Texte compact */
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 .menu-item:hover {
-  background-color: #f0f0f0;
+  background: #00ffcc10; /* Fond cyan subtil au survol */
+  color: #000000; /* Texte blanc au survol */
+}
+
+.menu-item:disabled {
+  color: #555555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.menu-item i {
+  margin-right: 1rem; /* Espace clair entre icône et texte */
+  font-size: 1rem;
+  color: #a1a3a3; /* Couleur cyan néon pour les icônes */
+  transition: color 0.2s ease;
+}
+
+.menu-item:hover i {
+  color: #ff007a; /* Icônes magenta au survol pour dynamisme */
+}
+
+.menu-item span {
+  flex: 1; /* Le texte prend l'espace restant */
 }
 
 
@@ -648,11 +678,11 @@ margin-top:-5px;
 }
 
 .image-modal {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  width: 95%;
+  height: 95%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -684,7 +714,7 @@ margin-top:-5px;
   gap: 12px;
 }
 
-.download-image-btn,
+
 .close-modal-btn {
   background: #007bff;
   color: white;
@@ -693,6 +723,18 @@ margin-top:-5px;
   border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.download-image-btn{
+  background: #007bff;
+  color: white;
+  padding: 3px 9px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  margin-top:-10px;
   transition: background 0.2s, transform 0.2s;
 }
 
@@ -932,11 +974,11 @@ margin-top:-5px;
   color: #1f2937; /* Dark text for contrast */
   animation: popupFadeIn 0.2s ease; /* Smooth appearance */
   position: absolute;
-  top: -200%;
-  left: -50%;
+  top: -400%;
+  left: -150%;
   transform: translateX(-50%); /* Center horizontally */
   white-space: nowrap;
-
+width:500px;
 }
 
 /* Popup animation */
@@ -1120,4 +1162,411 @@ margin-top:-5px;
 
 .submit-comment-btn:hover {
   background: #16a34a;
+}
+
+
+.add-dependency-popup {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #333; /* Fond sombre moderne */
+  border: 1px solid #42434330; /* Bordure néon subtile */
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  width: 100%;
+  max-width: 300px; /* Compact pour Kanban */
+  padding: 1rem;
+  animation: slideIn 0.3s ease-out;
+}
+
+.add-dependency-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.add-dependency-header h5 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #FF584A; /* Cyan néon */
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+}
+
+.close-add-dependency-btn {
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.close-add-dependency-btn:hover {
+  color: #ff007a; /* Magenta au survol */
+}
+
+.loading-message,
+.no-dependencies-message {
+  font-size: 0.85rem;
+  color: #e0e0e0;
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+  margin: 0.5rem 0;
+}
+
+.potential-dependencies-list {
+  max-height: 200px; /* Limite la hauteur pour le défilement */
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+}
+
+.potential-dependency-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #333; /* Fond légèrement plus clair */
+  border-radius: 6px;
+  margin-bottom: 0.25rem;
+  transition: background 0.2s ease;
+  color:white;
+}
+
+.potential-dependency-item:hover {
+  background: #00ffcc10; /* Fond cyan subtil au survol */
+}
+
+.dependency-title {
+  font-size: 0.85rem;
+  color: #e0e0e0;
+  font-family: 'Inter', sans-serif;
+  flex: 1;
+}
+
+.add-dependency-btn {
+  background: linear-gradient(90deg, #FF584A, #FF584A); /* Dégradé néon */
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.add-dependency-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 8px #00ffcc80;
+}
+
+.add-dependency-btn:disabled {
+  background: #555555;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.error-message {
+  display: block;
+  font-size: 0.8rem;
+  color: #ff4d4d; /* Rouge pour les erreurs */
+  font-family: 'Inter', sans-serif;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Style pour le défilement */
+.potential-dependencies-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.potential-dependencies-list::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.potential-dependencies-list::-webkit-scrollbar-thumb {
+  background: #00ffcc50;
+  border-radius: 4px;
+}
+
+.potential-dependencies-list::-webkit-scrollbar-thumb:hover {
+  background: #00ffcc80;
+}
+
+.error-message {
+  color: #dc3545;
+  font-size: 12px;
+  margin-top: 5px;
+  display: block;
+}
+
+.blocked {
+  margin-left: 5px;
+  font-weight: bold;
+}
+
+
+.progress-container {
+  position: relative;
+  width: 100%;
+  max-width: 180px; /* Réduit pour les cartes Kanban */
+  margin: 0;
+  padding: 0.25rem 0; /* Moins d'espace vertical */
+}
+
+.progress-text {
+  font-size: 0.75rem; /* Texte plus petit */
+  font-weight: 800;
+  color: #222222;
+  margin-bottom: 0.25rem;
+  font-family: 'Roboto Mono', monospace;
+  letter-spacing: 0.01px;
+  line-height: 1;
+}
+
+.progress-bar-kanban {
+  position: relative;
+  height: 8px; /* Hauteur réduite */
+  background: #eceaea;
+  border-radius: 4px; /* Coins moins arrondis pour compacité */
+  overflow: hidden;
+}
+
+.progress-kanban {
+  height: 100%;
+  background: linear-gradient(90deg, #F7DC6F, #03ce5b);
+  border-radius: 4px;
+  transition: width 0.4s ease-in-out;
+  box-shadow: 0 0 8px #00ffcc60;
+}
+
+.progress-neon {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #00ffcc, #ff007a);
+  border-radius: 4px;
+  opacity: 0.3;
+  filter: blur(6px); /* Flou réduit pour compacité */
+  transition: width 0.4s ease-in-out;
+}
+
+.progress-bar-kanban:hover .progress-kanban {
+  box-shadow: 0 0 12px #00ffcc80, 0 0 16px #ff007a60;
+  transition: box-shadow 0.2s ease;
+}
+
+.progress-bar-kanban:hover .progress-neon {
+  opacity: 0.5;
+}
+
+
+
+
+
+
+/* dependencies-popup.css */
+/* dependencies-popup.css */
+
+/* dependencies-popup.css */
+.dependencies-popup {
+  position: absolute;
+top:70px;
+left:5px;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.popup-content {
+  background: #333;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width:400px;
+  max-width: 1000px;
+  padding: 20px;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideIn 0.3s ease-out;
+}
+
+.dependencies-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dependencies-header h5 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #e9ecf0;
+}
+
+.close-dependencies-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #ced6e7;
+  cursor: pointer;
+}
+
+.close-dependencies-btn:hover {
+  color: #cad6e8;
+}
+
+.no-dependencies {
+  color: #d9dee8;
+  text-align: center;
+  padding: 16px 0;
+  font-size: 1rem;
+}
+
+.dependencies-table {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.dependencies-table table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dependencies-table th,
+.dependencies-table td {
+  text-align: left;
+  vertical-align: middle;
+  padding: 10px 10px;
+  font-size: 0.765rem;
+}
+
+.dependencies-table th {
+  background: #414040;
+  color: #f1eded;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dependencies-table tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease;
+}
+
+.dependencies-table tr:hover {
+  background: #f9fafb;
+}
+
+.dependencies-table td {
+  color: #dddfe2;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-badge[data-status="DONE"] {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge[data-status="IN_PROGRESS"] {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge[data-status="BLOCKED"] {
+  background: #fee2e2;
+  color: #2cb741;
+}
+
+.status-badge:not([data-status="DONE"]):not([data-status="IN_PROGRESS"]):not([data-status="BLOCKED"]) {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.blocked {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+.not-blocked {
+  color: #16a34a;
+  font-weight: 500;
+}
+
+.remove-dependency-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: color 0.2s ease;
+}
+
+.remove-dependency-btn:hover {
+  color: #b91c1c;
+}
+
+.remove-dependency-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  display: block;
+  color: #dc2626;
+  font-size: 0.875rem;
+  margin-top: 16px;
+  text-align: center;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .popup-content {
+    width: 95%;
+    margin: 0 10px;
+  }
+
+  .dependencies-table th,
+  .dependencies-table td {
+    font-size: 0.75rem;
+    padding: 8px;
+  }
 }

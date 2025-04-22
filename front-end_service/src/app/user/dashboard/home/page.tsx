@@ -115,7 +115,7 @@ const Home = () => {
                 ))}
               </div>
             ) : (
-              <p>Aucun projet disponible.</p>
+              <p>No project available.</p>
             )}
           </div>
         </div>

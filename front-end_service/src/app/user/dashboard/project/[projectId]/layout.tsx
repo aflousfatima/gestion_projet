@@ -1689,7 +1689,7 @@ export default function ProjectLayout({
                                                 ) : (
                                                   <tr>
                                                     <td colSpan={2}>
-                                                      Aucune dépendance
+                                                    No project dependancy.
                                                     </td>
                                                     <td>
                                                       <select
@@ -2255,7 +2255,7 @@ export default function ProjectLayout({
                       <p className="sprint-goal">
                         Objectif :{" "}
                         <strong>
-                          {displayedSprint.goal || "Aucun objectif défini"}
+                          {displayedSprint.goal || "No goal defined"}
                         </strong>
                       </p>
 
@@ -2400,7 +2400,7 @@ export default function ProjectLayout({
                     ))}
                   </div>
                 ) : (
-                  <p>Aucun historique disponible.</p>
+                  <p>No history available.</p>
                 )}
                 <button
                   className="action-btn secondary"

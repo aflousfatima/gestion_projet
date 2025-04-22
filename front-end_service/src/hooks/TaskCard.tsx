@@ -30,6 +30,10 @@ interface CommentForm {
   content: string;
 }
 
+interface TimeForm {
+  duration: number;
+  type: string;
+}
 interface User {
   id: string;
   firstName: string;
@@ -48,6 +52,14 @@ interface FileAttachment {
   uploadedAt: string;
 }
 
+interface TaskSummary {
+  id: number;
+  title: string;
+  status: string;
+  projectId: number;
+  userStoryId: number;
+}
+
 interface Task {
   id?: number;
   title: string;
@@ -55,7 +67,9 @@ interface Task {
   creationDate: string;
   startDate: string | null;
   dueDate: string | null;
-  estimationTime: number | null;
+  estimationTime: number;
+  totalTimeSpent: number; // Ajout du champ pour le temps total passé (en minutes)
+  startTime: string; // Ajout de startTime
   status:
     | "TO_DO"
     | "IN_PROGRESS"
@@ -71,6 +85,9 @@ interface Task {
   tags: string[];
   assignedUsers: User[];
   attachments: FileAttachment[];
+  progress: number;
+  dependencyIds: number[];
+  dependencies: TaskSummary[]; // Nouveau champ
 }
 
 interface TaskCardProps {
@@ -101,9 +118,113 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
   const router = useRouter();
-  const { handleSubmit, watch, setValue, reset } = useForm<CommentForm>({
+
+  // States for dependency management
+  const [showAddDependencyPopup, setShowAddDependencyPopup] = useState(false);
+  const [potentialDependencies, setPotentialDependencies] = useState<Task[]>(
+    []
+  );
+  const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
+  const [dependencyError, setDependencyError] = useState<string | null>(null);
+  const [showDependenciesPopup, setShowDependenciesPopup] = useState(false);
+  const [isRemovingDependency, setIsRemovingDependency] = useState<
+    number | null
+  >(null);
+
+  // Fetch potential dependencies when opening the add dependency popup
+  useEffect(() => {
+    if (!showAddDependencyPopup || !task.id || !accessToken) return;
+
+    const fetchPotentialDependencies = async () => {
+      setIsLoadingDependencies(true);
+      setDependencyError(null);
+      try {
+        const response = await axiosInstance.get(
+          `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/potential-dependencies`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        setPotentialDependencies(response.data);
+      } catch (err: any) {
+        const errorMessage =
+          err.response?.data?.message ||
+          "Failed to load potential dependencies";
+        setDependencyError(errorMessage);
+        console.error("Error fetching potential dependencies:", err);
+        toast.error(errorMessage);
+      } finally {
+        setIsLoadingDependencies(false);
+      }
+    };
+
+    fetchPotentialDependencies();
+  }, [showAddDependencyPopup, task.id, accessToken, axiosInstance]);
+
+  // Handle adding a dependency
+  const handleAddDependency = async (dependencyId: number) => {
+    if (!task.id || !accessToken) return;
+
+    setDependencyError(null);
+    try {
+      const response = await axiosInstance.post(
+        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/dependencies/${dependencyId}/add-dependancy`,
+        null,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      onTaskUpdate?.(response.data);
+      setShowAddDependencyPopup(false);
+      toast.success("Dependency added successfully!");
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to add dependency";
+      setDependencyError(errorMessage);
+      console.error("Error adding dependency:", err);
+      toast.error(errorMessage);
+    }
+  };
+
+  // Handle removing a dependency
+  const handleRemoveDependency = async (dependencyId: number) => {
+    if (!task.id || !accessToken) return;
+
+    setIsRemovingDependency(dependencyId);
+    setDependencyError(null);
+    try {
+      const response = await axiosInstance.delete(
+        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/dependencies/${dependencyId}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      onTaskUpdate?.(response.data);
+      toast.success("Dependency removed successfully!");
+    } catch (err: any) {
+      const errorMessage =
+        err.response?.data?.message || "Failed to remove dependency";
+      setDependencyError(errorMessage);
+      console.error("Error removing dependency:", err);
+      toast.error(errorMessage);
+    } finally {
+      setIsRemovingDependency(null);
+    }
+  };
+
+  // Formulaire pour les commentaires
+  const {
+    handleSubmit: handleSubmitComment,
+    watch,
+    setValue,
+    reset,
+  } = useForm<CommentForm>({
     defaultValues: { content: "" },
   });
+
+  // Formulaire pour ajouter du temps
+  const {
+    handleSubmit: handleSubmitTime,
+    register,
+    formState: { errors },
+  } = useForm<TimeForm>({
+    defaultValues: { duration: 0.1, type: "travail" },
+  });
+
   const [showComments, setShowComments] = useState(false);
   const toggleComments = () => setShowComments(!showComments);
   const { comments, setComments } = useWebSocket(task.id, accessToken);
@@ -118,11 +239,108 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const priorityLabels: { [key: string]: string } = {
-    LOW: "Faible",
-    MEDIUM: "Moyenne",
-    HIGH: "Élevée",
-    CRITICAL: "Critique",
-    "": "Aucune",
+    LOW: "Low",
+    MEDIUM: "Medium",
+    HIGH: "High",
+    CRITICAL: "Critical",
+    "": "None",
+  };
+
+  const [displayedTimeSpent, setDisplayedTimeSpent] = useState<number | null>(
+    task.totalTimeSpent
+  );
+  const [displayedProgress, setDisplayedProgress] = useState<number>(
+    task.progress
+  );
+
+  // Mettre à jour le temps affiché en temps réel si la tâche est en IN_PROGRESS
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (task.status === "IN_PROGRESS" && task.startTime) {
+      interval = setInterval(() => {
+        const start = new Date(task.startTime);
+        const now = new Date();
+        const elapsedMinutes = Math.round(
+          (now.getTime() - start.getTime()) / 1000 / 60
+        );
+        const totalMinutes = (task.totalTimeSpent || 0) + elapsedMinutes;
+        setDisplayedTimeSpent(totalMinutes);
+
+        // Calculer la progression
+        if (task.estimationTime && task.estimationTime > 0) {
+          const progress = Math.min(
+            (totalMinutes / task.estimationTime) * 100,
+            90
+          );
+          setDisplayedProgress(progress);
+        }
+      }, 60000); // Mettre à jour chaque minute
+    } else {
+      setDisplayedTimeSpent(task.totalTimeSpent);
+      setDisplayedProgress(task.progress);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [
+    task.status,
+    task.startTime,
+    task.totalTimeSpent,
+    task.estimationTime,
+    task.progress,
+  ]);
+
+  const [showAddTimeForm, setShowAddTimeForm] = useState(false);
+  const [isAddingTime, setIsAddingTime] = useState(false);
+
+  const onSubmitAddTime = async (data: { duration: number; type: string }) => {
+    if (!task.id || !accessToken) return;
+
+    setIsAddingTime(true);
+    setUploadError(null);
+
+    try {
+      // Convertir la durée de heures en minutes
+      const durationInMinutes = Math.round(data.duration * 60);
+      await axiosInstance.post(
+        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/time-entry`,
+        null,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: { duration: durationInMinutes, type: data.type },
+        }
+      );
+
+      // Récupérer la tâche mise à jour pour refléter les nouveaux totalTimeSpent et progress
+      const response = await axiosInstance.get(
+        `${TASK_SERVICE_URL}/api/project/tasks/${task.projectId}/${task.userStoryId}/${task.id}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      console.log("Tâche mise à jour :", response.data); // Log pour débogage
+      onTaskUpdate?.(response.data);
+      setShowAddTimeForm(false);
+      toast.success("Temps ajouté avec succès !");
+    } catch (err: any) {
+      let errorMessage = "Échec de l'ajout du temps";
+      if (err.response?.status === 400) {
+        errorMessage = "La durée doit être positive";
+      } else if (err.response?.status === 404) {
+        errorMessage = "Tâche non trouvée";
+      } else if (err.response?.data) {
+        errorMessage =
+          typeof err.response.data === "string"
+            ? err.response.data
+            : err.response.data.error ||
+              err.response.data.message ||
+              errorMessage;
+      }
+      setUploadError(errorMessage);
+      console.error("Erreur lors de l'ajout du temps :", err);
+      toast.error(errorMessage);
+    } finally {
+      setIsAddingTime(false);
+    }
   };
 
   useEffect(() => {
@@ -219,6 +437,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       startDate: task.startDate,
       dueDate: task.dueDate,
       estimationTime: task.estimationTime,
+      totalTimeSpent: task.totalTimeSpent, // Inclure pour préserver la valeur
       status: newStatus,
       priority: task.priority,
       userStoryId: task.userStoryId,
@@ -244,9 +463,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     try {
-      const response = await axiosInstance.put(
+      await axiosInstance.put(
         `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/updateTask`,
         taskDTO,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      // Récupérer la tâche mise à jour pour obtenir les nouveaux totalTimeSpent et progress
+      const response = await axiosInstance.get(
+        `${TASK_SERVICE_URL}/api/project/tasks/${task.projectId}/${task.userStoryId}/${task.id}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       onTaskUpdate?.(response.data);
@@ -521,7 +746,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
           ) : (
             <span className="responsible-circle empty">?</span>
           )}
-         
         </div>
         <div className="task-due-date">
           {task.dueDate
@@ -529,7 +753,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 day: "numeric",
                 month: "short",
               })
-            : "Aucune"}
+            : "None"}
         </div>
         <div className="task-priority-list">
           <span
@@ -550,7 +774,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   {tag}
                 </span>
               ))
-            : "Aucun"}
+            : "None"}
         </div>
         <div className="task-files">
           {task.attachments && task.attachments.length > 0 ? (
@@ -578,7 +802,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                       </div>
                     ) : attachment.fileType === "application/pdf" ? (
                       <div className="attachment-preview-pdf-list">
-                         <Document
+                        <Document
                           file={attachment.fileUrl}
                           onLoadSuccess={onDocumentLoadSuccess}
                           onLoadError={(error) => {
@@ -692,7 +916,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               </div>
             )}
             <form
-              onSubmit={handleSubmit(onSubmitComment)}
+              onSubmit={handleSubmitComment(onSubmitComment)}
               className="comment-form"
             >
               <ReactQuill
@@ -761,18 +985,24 @@ const TaskCard: React.FC<TaskCardProps> = ({
             ...
           </button>
           {showMenu && (
-            <div className="task-menu-dropdown" ref={menuRef}>
-              <button className="menu-item" onClick={handleEdit}>
-                <i className="fa fa-edit calendar-style"></i> Modifier
-              </button>
-              <button
-                className="menu-item"
-                onClick={handleDeleteTask}
-                disabled={isDeletingTask}
-              >
-                <i className="fa fa-trash"></i> Supprimer
-              </button>
-            </div>
+         <div className="task-menu-dropdown" ref={menuRef}>
+         <button className="menu-item" onClick={handleEdit}>
+           <i className="fa fa-edit"></i>
+           <span>Edit</span>
+         </button>
+         <button
+           className="menu-item"
+           onClick={handleDeleteTask}
+           disabled={isDeletingTask}
+         >
+           <i className="fa fa-trash"></i>
+           <span>Delete</span>
+         </button>
+         <button className="menu-item" onClick={() => setShowAddDependencyPopup(true)}>
+           <i className="fa fa-link"></i>
+           <span>Add Dependency</span>
+         </button>
+       </div>
           )}
         </div>
       </div>
@@ -780,6 +1010,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {task.description && (
         <p className="task-description">{task.description}</p>
       )}
+
+      <div className="progress-container">
+        <p className="progress-text">Progression : {task.progress ?? 0}%</p>
+        <div className="progress-bar-kanban">
+          <div
+            className="progress-kanban"
+            style={{ width: `${task.progress}%` }}
+          ></div>
+          <div
+            className="progress-glow"
+            style={{ width: `${task.progress}%` }}
+          ></div>
+          <div className="sparkle"></div>
+        </div>
+      </div>
 
       <div className="priority-tags-row">
         {task.priority && (
@@ -1030,7 +1275,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   </div>
                 )}
                 <form
-                  onSubmit={handleSubmit(onSubmitComment)}
+                  onSubmit={handleSubmitComment(onSubmitComment)}
                   className="comment-form"
                 >
                   <ReactQuill
@@ -1046,6 +1291,88 @@ const TaskCard: React.FC<TaskCardProps> = ({
                 </form>
               </div>
             )}
+          </div>
+
+          <div className="dependencies-container">
+            <button
+              className="dependencies-btn"
+              onClick={() => setShowDependenciesPopup(true)}
+              title="View dependencies"
+            >
+              <i className="fa fa-link calendar-style"></i>
+            </button>
+            {showDependenciesPopup && (
+  <div className="dependencies-popup" ref={popupRef}>
+    <div className="popup-content">
+      <div className="dependencies-header">
+        <h5>Task Dependencies</h5>
+        <button
+          className="close-dependencies-btn"
+          onClick={() => setShowDependenciesPopup(false)}
+        >
+          ✕
+        </button>
+      </div>
+      {task.dependencies.length === 0 ? (
+        <p className="no-dependencies">
+          No dependencies found for this task.
+        </p>
+      ) : (
+        <div className="dependencies-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Task Title</th>
+                <th>Status</th>
+                <th>Blocking</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {task.dependencies.map((dep) => (
+                <tr key={dep.id}>
+                  <td>{dep.title}</td>
+                  <td>
+                    <span className="status-badge">
+                      {dep.status}
+                    </span>
+                  </td>
+                  <td>
+                    {dep.status !== "DONE" ? (
+                      <span className="blocked">
+                        Blocked
+                      </span>
+                    ) : (
+                      <span className="not-blocked">
+                        Not Blocked
+                      </span>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="remove-dependency-btn"
+                      onClick={() => handleRemoveDependency(dep.id)}
+                      disabled={isRemovingDependency === dep.id}
+                      title="Remove dependency"
+                    >
+                      <i className="fa fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {dependencyError && (
+        <span className="error-message">
+          {dependencyError}
+        </span>
+      )}
+    </div>
+  </div>
+)}
+
           </div>
 
           {(task.creationDate || task.dueDate) && (
@@ -1072,19 +1399,85 @@ const TaskCard: React.FC<TaskCardProps> = ({
               )}
             </div>
           )}
-          {task.estimationTime !== null && (
+
+          {(task.estimationTime !== null || displayedTimeSpent !== null) && (
             <div className="estimation-time-wrapper">
               <button
                 className="estimation-time-btn"
                 onClick={toggleEstimationPopup}
-                title="View estimation time"
+                title="View time details"
               >
                 <i className="fa fa-clock calendar-style"></i>
               </button>
               {isEstimationPopupOpen && (
                 <div className="estimation-popup-wrapper">
                   <div className="estimation-popup">
-                    <span>{task.estimationTime} hours</span>
+                    {displayedTimeSpent !== null && (
+                      <p className="time-item spent">
+                        <span>Temps passé :</span>{" "}
+                        {(task.totalTimeSpent / 60).toFixed(1)} heures
+                      </p>
+                    )}
+                    {displayedTimeSpent !== null && (
+                      <p className="time-item estimated">
+                        <span>Temps estimé :</span>{" "}
+                        {(task.estimationTime / 60).toFixed(1)} heures
+                      </p>
+                    )}
+                    <button
+                      className="add-time-btn"
+                      onClick={() => setShowAddTimeForm((prev) => !prev)}
+                    >
+                      Ajouter du temps
+                    </button>
+                    {showAddTimeForm && (
+                      <form
+                        onSubmit={handleSubmitTime(onSubmitAddTime)}
+                        className="add-time-form"
+                      >
+                        <label>
+                          Durée (heures) :
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="0.1"
+                            {...register("duration", {
+                              required: "La durée est requise",
+                              min: {
+                                value: 0.1,
+                                message:
+                                  "La durée doit être d'au moins 0.1 heure",
+                              },
+                            })}
+                          />
+                          {errors.duration && (
+                            <span className="error-message">
+                              {errors.duration.message}
+                            </span>
+                          )}
+                        </label>
+                        <label>
+                          Type :
+                          <select
+                            {...register("type", {
+                              required: "Le type est requis",
+                            })}
+                          >
+                            <option value="travail">Travail</option>
+                            <option value="réunion">Réunion</option>
+                            <option value="autre">Autre</option>
+                          </select>
+                          {errors.type && (
+                            <span className="error-message">
+                              {errors.type.message}
+                            </span>
+                          )}
+                        </label>
+                        <button type="submit" disabled={isAddingTime}>
+                          {isAddingTime ? "Ajout..." : "Ajouter"}
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </div>
               )}
@@ -1092,6 +1485,44 @@ const TaskCard: React.FC<TaskCardProps> = ({
           )}
         </div>
       </div>
+
+      {showAddDependencyPopup && (
+  <div className="add-dependency-popup" ref={popupRef}>
+    <div className="add-dependency-header">
+      <h5>Add Dependency</h5>
+      <button
+        className="close-add-dependency-btn"
+        onClick={() => setShowAddDependencyPopup(false)}
+      >
+        ✕
+      </button>
+    </div>
+    {isLoadingDependencies ? (
+      <p className="loading-message">Loading potential dependencies...</p>
+    ) : potentialDependencies.length === 0 ? (
+      <p className="no-dependencies-message">No tasks available to add as dependencies.</p>
+    ) : (
+      <div className="potential-dependencies-list">
+        {potentialDependencies.map((dep) => (
+          <div key={dep.id} className="potential-dependency-item">
+            <span className="dependency-title">{dep.title} ({dep.status})</span>
+            <button
+              className="add-dependency-btn"
+              onClick={() => handleAddDependency(dep.id!)}
+              disabled={!dep.id}
+            >
+              Add
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+    {dependencyError && (
+      <span className="error-message">{dependencyError}</span>
+    )}
+  </div>
+)}
+
       {enlargedImage && (
         <div className="image-modal" onClick={() => setEnlargedImage(null)}>
           <div

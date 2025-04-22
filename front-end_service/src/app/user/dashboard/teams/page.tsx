@@ -56,9 +56,9 @@ export default function Teams() {
 
     if (projects.length > 0) {
       setSelectedProjectId(projects[0].id.toString());
-      console.log("✅ Projet sélectionné par défaut (ID) :", projects[0].id);
+      console.log("✅ Default Selected Project (ID) :", projects[0].id);
     } else {
-      console.log("⚠️ Aucun projet disponible, selectedProjectId reste vide.");
+      console.log("⚠️ No project available, selectedProjectId is empty.");
     }
   }, [projectsLoading, projectsError, projects]);
 
@@ -245,7 +245,7 @@ export default function Teams() {
               </div>
             ))
           ) : (
-            <p>Aucun membre d équipe trouvé.</p>
+            <p>No Team Memeber Found.</p>
           )}
         </div>
 
@@ -285,12 +285,12 @@ export default function Teams() {
                         </option>
                       ))
                     ) : (
-                      <option value="">Aucun projet disponible</option>
+                      <option value="">No project available.</option>
                     )}
                   </select>
                 </div>
                 <div className="teams-formGroup">
-                  <label htmlFor="role">Rôle</label>
+                  <label htmlFor="role">Role</label>
                   <select
                     id="role"
                     value={role}
