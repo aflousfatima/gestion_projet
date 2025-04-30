@@ -66,7 +66,6 @@ public class InitialProjectManagementController {
             return ResponseEntity.status(500).body("Erreur lors de la création des entités.");
         }
     }
-
     @Operation(summary = "Obtenir les projets par manager",
             description = "Récupère tous les projets associés à un manager spécifique en fonction de son ID d'authentification.")
     @ApiResponses(value = {
