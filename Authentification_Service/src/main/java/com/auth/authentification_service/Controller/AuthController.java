@@ -48,10 +48,10 @@ public class AuthController {
         try {
             return keycloakService.createUser(userDTO);
         }catch (RuntimeException e) {
-            System.out.println("❌ Erreur lors de la création de l'utilisateur : " + e.getMessage());
+            System.out.println("Erreur lors de la création de l'utilisateur : " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (Exception e) {
-            System.out.println("❌ Erreur inattendue lors de la création de l'utilisateur : " + e.getMessage());
+            System.out.println("Erreur inattendue lors de la création de l'utilisateur : " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur serveur : " + e.getMessage());
         }
@@ -295,8 +295,6 @@ public class AuthController {
                     .body("Erreur lors du décodage du token : " + e.getMessage());
         }
     }
-
-
     @PostMapping("/tasks_reponsibles/by-ids")
     public List<UserDto> getUsersByIds(
             @RequestHeader("Authorization") String authorizationHeader,
