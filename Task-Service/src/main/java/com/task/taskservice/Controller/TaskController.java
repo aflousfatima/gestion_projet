@@ -172,7 +172,7 @@ public class TaskController {
         return new ResponseEntity<>(timeEntryDTOs, HttpStatus.OK);
     }
 
-    @PostMapping("/tasks/{taskId}/dependencies/{dependencyId}")
+    @PostMapping("/{taskId}/dependencies/{dependencyId}/add-dependancy")
     public ResponseEntity<TaskDTO> addDependency(
             @PathVariable Long taskId,
             @PathVariable Long dependencyId,
@@ -181,7 +181,7 @@ public class TaskController {
         return new ResponseEntity<>(updatedTask, HttpStatus.OK);
     }
 
-    @DeleteMapping("/tasks/{taskId}/dependencies/{dependencyId}")
+    @DeleteMapping("/{taskId}/dependencies/{dependencyId}")
     public ResponseEntity<TaskDTO> removeDependency(
             @PathVariable Long taskId,
             @PathVariable Long dependencyId,
