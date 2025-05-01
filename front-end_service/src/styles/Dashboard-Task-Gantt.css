@@ -120,12 +120,84 @@
 .gantt_link_point {
   fill: #ef4444;
 }
+.user-avatar-stack {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+/* Avatar Styles */
+.avatars-stack {
+  display: inline-flex !important;
+  align-items: center;
+  cursor: pointer;
+  margin-left: -50px;
+  z-index: 10;
+}
+
+.avatar-wrapper {
+  position: relative;
+  margin-left: -10px;
+  display: inline-flex;
+}
+
+.user-avatar-stack {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.user-avatar-stack:hover {
+  transform: scale(1.1);
+}
+
+.user-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d1d5db;
+  color: #1a202c;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.user-avatar-placeholder:hover {
+  transform: scale(1.1);
+}
+
+.avatar-more {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #1a202c;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -10px;
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease;
+}
+
+.avatar-more:hover {
+  transform: scale(1.1);
+}
 
 /* Avatar Styles */
-.gantt_task_line .task-text .avatars-stack,
-.gantt_task_line.task-dependent .task-text .avatars-stack,
-.gantt_task_content .task-text .avatars-stack,
-.gantt_task_line.task-dependent .gantt_task_content .task-text .avatars-stack {
+.gantt_task_line ,
+.gantt_task_line.task-dependent ,
+.gantt_task_content .task-text ,
+.gantt_task_line.task-dependent .gantt_task_content {
   display: flex !important;
   visibility: visible !important;
   opacity: 1 !important;
@@ -135,9 +207,10 @@
   z-index: 10 !important;
 }
 
-.gantt_task_line .task-text .avatar-wrapper,
-.gantt_task_line.task-dependent .task-text .avatar-wrapper,
-.gantt_task_content .task-text .avatar-wrapper,
+
+.gantt_task_line .avatar-wrapper,
+.gantt_task_line.task-dependent .avatar-wrapper,
+.gantt_task_content  .avatar-wrapper,
 .gantt_task_line.task-dependent .gantt_task_content .task-text .avatar-wrapper {
   position: relative;
   margin-left: -8px;
@@ -188,6 +261,21 @@
   visibility: visible !important;
   opacity: 1 !important;
   z-index: 12 !important;
+}
+
+.user-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #d1d5db;
+  color: #1a202c;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  transition: transform 0.2s ease;
 }
 
 .gantt_task_line .task-text .user-avatar-placeholder:hover,
@@ -275,6 +363,16 @@
   padding: 8px;
 }
 
+.task-text {
+  display: inline-flex !important;
+  align-items: center;
+  font-size: 12px;
+  color: #1a202c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Prevent text from causing overflow */
+}
 .gantt_row {
   transition: background 0.2s ease;
 }
@@ -326,16 +424,18 @@
 }
 
 /* Users Popup (Placeholder) */
+/* Users Popup */
 .users-popup {
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   background: #ffffff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  padding: 16px;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   z-index: 1000;
+  border: 1px solid #e5e7eb;
 }
 
 /* Status Messages */
