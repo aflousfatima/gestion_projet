@@ -10,8 +10,8 @@ public class TimeEntry {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "task_id")
-    private Task task;
+    @JoinColumn(name = "workitem_id") // Changé de task_id à workitem_id
+    private WorkItem workItem; // Changé de Task à WorkItem
 
     private Long duration; // En minutes
     private String addedBy; // Utilisateur
@@ -21,8 +21,8 @@ public class TimeEntry {
     // Getters et setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public Task getTask() { return task; }
-    public void setTask(Task task) { this.task = task; }
+    public WorkItem getWorkItem() { return workItem; }
+    public void setWorkItem(WorkItem workItem) { this.workItem = workItem; }
     public Long getDuration() { return duration; }
     public void setDuration(Long duration) { this.duration = duration; }
     public String getAddedBy() { return addedBy; }
