@@ -571,7 +571,7 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
 .project-submitButton,
 .project-cancelButton,
 .project-listButton {
-  padding: 12px 30px;
+  padding: 10px 20px;
   border: none;
   border-radius: 12px;
   font-family: 'Poppins', sans-serif;
@@ -580,6 +580,22 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+
+.teams-inviteButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px;
+  background: linear-gradient(135deg, #ebaf66, #fa8d34); /* Dégradé orange pour un look moderne */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 
 .project-submitButton {
@@ -736,18 +752,17 @@ align-items: center; /* Centrer verticalement l'icône et le texte */
   margin-left: -14px;
 }
 
-.search-input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  color: #181819;
+.search-input-project {
+  padding: 6px 7px 7px 22px; /* Padding gauche pour l’icône */
+  height: 20px; /* Hauteur fixée comme demandé */
+  font-size: 14px;
+  width: 120px; /* Réduit de max-width: 300px à 120px comme tu veux */
+  transition: all 0.3s ease;
   outline: none;
 }
 
-.search-input::placeholder {
-  color: #12121356;
+.search-input-project::placeholder {
+  color: #333;
 }
 
 /* Actions Bar (Créer, Exporter, Filtrer) */
@@ -876,6 +891,7 @@ color: #ffffff;
   display: flex;
   justify-content: flex-end;
   margin-top: 20px;
+  gap:15px;
 }
 .status-badge.status-start { background: #c2c8ce; color: #ffffff; }
 .status-badge.status-in_progress { background: #14b8a6; color: #fff; }

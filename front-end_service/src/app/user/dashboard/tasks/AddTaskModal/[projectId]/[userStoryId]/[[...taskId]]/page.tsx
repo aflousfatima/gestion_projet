@@ -1,5 +1,3 @@
-// app/user/dashboard/tasks/AddTaskModal/[projectId]/[userStoryId]/[[...taskId]]/page.tsx
-
 "use client";
 import { useParams, useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
@@ -20,8 +18,8 @@ interface TeamMember {
   avatar: string;
 }
 
-interface Task {
-  id: string;
+interface WorkItem {
+  id?: string;
   title: string;
   description: string | null;
   startDate: string | null;
@@ -29,10 +27,10 @@ interface Task {
   estimationTime: number | null;
   status: string;
   priority: string | null;
-  assignedUser: string[]; // Changed from assignedUsers: { id: string }[]
+  assignedUser: string[];
   tags: string[];
   type: "TASK" | "BUG";
-  severity: string | null;
+  severity?: string | null; // Optional for tasks, required for bugs
 }
 
 export default function AddTaskModalPage() {
@@ -42,10 +40,7 @@ export default function AddTaskModalPage() {
   const projectId = params.projectId as string;
   const userStoryId = params.userStoryId as string;
   const taskId = params.taskId ? params.taskId[0] : null;
-  console.log("Params:", params);
-  console.log("Extracted projectId:", projectId);
-  console.log("Extracted userStoryId:", userStoryId);
-  console.log("Extracted taskId:", taskId);
+  console.log("Params:", { projectId, userStoryId, taskId });
   console.log("Is Editing:", !!taskId);
 
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -54,16 +49,17 @@ export default function AddTaskModalPage() {
   const router = useRouter();
 
   const [workItemType, setWorkItemType] = useState<"TASK" | "BUG">("TASK");
-  const [workItem, setWorkItem] = useState({
+  const [workItem, setWorkItem] = useState<WorkItem>({
     title: "",
     description: "",
     startDate: "",
     dueDate: "",
-    estimationTime: "",
+    estimationTime: null,
     status: "TO_DO",
     priority: "",
-    assignedUser: [] as string[],
-    tags: [] as string[],
+    assignedUser: [],
+    tags: [],
+    type: "TASK",
     severity: "",
   });
 
@@ -93,10 +89,7 @@ export default function AddTaskModalPage() {
         console.log("Team members received:", teamResponse.data);
         setTeamMembers(teamResponse.data);
       } catch (err: any) {
-        console.error(
-          "❌ Error fetching team members:",
-          err.response?.data || err.message
-        );
+        console.error("Error fetching team members:", err.response?.data || err.message);
         setError("Unable to load team members.");
       } finally {
         setLoading(false);
@@ -106,35 +99,11 @@ export default function AddTaskModalPage() {
     fetchTeamMembers();
   }, [accessToken, authLoading, axiosInstance, projectId]);
 
-  // Add state for toggling team list visibility
-  const [isTeamListOpen, setIsTeamListOpen] = useState(false);
-
-  // Toggle team list
-  const toggleTeamList = () => {
-    setIsTeamListOpen((prev) => !prev);
-  };
-
-  // Close team list (optional, for clicking outside)
-  const closeTeamList = () => {
-    setIsTeamListOpen(false);
-  };
+  // Fetch work item data if editing
   useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      const target = e.target as Node;
-      const teamSelection = document.querySelector(".team-selection");
-      if (teamSelection && !teamSelection.contains(target)) {
-        closeTeamList();
-      }
-    };
-    document.addEventListener("click", handleOutsideClick);
-    return () => document.removeEventListener("click", handleOutsideClick);
-  }, []);
-
-  // Fetch task data if editing
-  useEffect(() => {
-    const fetchTask = async () => {
+    const fetchWorkItem = async () => {
       if (!taskId || !accessToken || !projectId || !userStoryId) {
-        console.log("Skipping fetchTask: missing dependencies", {
+        console.log("Skipping fetchWorkItem: missing dependencies", {
           taskId,
           accessToken,
           projectId,
@@ -147,72 +116,68 @@ export default function AddTaskModalPage() {
         setLoading(true);
         setError(null);
 
-        const response = await axiosInstance.get(
-          `${TASK_SERVICE_URL}/api/project/tasks/${projectId}/${userStoryId}/${taskId}`,
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        console.log("Raw response:", response);
-        const taskData = {
-          ...response.data,
-          assignedUsers: response.data.assignedUser
-            ? response.data.assignedUser.map((id: string) => ({ id }))
-            : [],
-        };
-        console.log(
-          "Transformed task data:",
-          JSON.stringify(taskData, null, 2)
-        );
+        // Determine endpoint based on workItemType (assume TASK for initial fetch, adjust after)
+        const endpoint = workItemType === "TASK"
+          ? `${TASK_SERVICE_URL}/api/project/tasks/${projectId}/${userStoryId}/${taskId}`
+          : `${TASK_SERVICE_URL}/api/project/bugs/${projectId}/${userStoryId}/${taskId}`;
 
-        const task: Task = taskData;
-        if (!task) {
-          throw new Error("No task data received from API");
-        }
-        setWorkItemType(task.type || "TASK");
-        setWorkItem({
-          title: task.title || "",
-          description: task.description || "",
-          startDate: task.startDate ? task.startDate.split("T")[0] : "",
-          dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
-          estimationTime: task.estimationTime?.toString() || "",
-          status: task.status || "TO_DO",
-          priority: task.priority || "",
-          assignedUser: task.assignedUser || [], // Changed from task.assignedUsers?.map((user) => user.id)
-          tags: task.tags || [],
-          severity: task.severity || "",
+        const response = await axiosInstance.get(endpoint, {
+          headers: { Authorization: `Bearer ${accessToken}` },
         });
-        console.log("WorkItem updated with:", {
-          title: task.title,
-          description: task.description,
-          startDate: task.startDate,
-          dueDate: task.dueDate,
-          estimationTime: task.estimationTime,
-          status: task.status,
-          priority: task.priority,
-          assignedUser: task.assignedUser?.map((user) => user.id),
-          tags: task.tags,
-          severity: task.severity,
-        });
+        console.log("Raw response:", response.data);
+
+        const workItemData: WorkItem = {
+          id: response.data.id,
+          title: response.data.title || "",
+          description: response.data.description || "",
+          startDate: response.data.startDate ? response.data.startDate.split("T")[0] : "",
+          dueDate: response.data.dueDate ? response.data.dueDate.split("T")[0] : "",
+          estimationTime: response.data.estimationTime || null,
+          status: response.data.status || "TO_DO",
+          priority: response.data.priority || "",
+          assignedUser: response.data.assignedUser || [],
+          tags: response.data.tags || [],
+          type: response.data.type || "TASK",
+          severity: response.data.severity || "",
+        };
+
+        setWorkItemType(workItemData.type);
+        setWorkItem(workItemData);
+        console.log("WorkItem updated with:", workItemData);
       } catch (err: any) {
-        console.error("Error fetching task:", {
+        console.error("Error fetching work item:", {
           message: err.message,
           status: err.response?.status,
           data: err.response?.data,
         });
-        setError("Unable to load task data. Please try again.");
+        setError("Unable to load work item data. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTask();
-  }, [taskId, accessToken, axiosInstance, projectId, userStoryId]);
+    fetchWorkItem();
+  }, [taskId, accessToken, axiosInstance, projectId, userStoryId, workItemType]);
+
+  // Toggle team list
+  const [isTeamListOpen, setIsTeamListOpen] = useState(false);
+  const toggleTeamList = () => setIsTeamListOpen((prev) => !prev);
+  const closeTeamList = () => setIsTeamListOpen(false);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const teamSelection = document.querySelector(".team-selection");
+      if (teamSelection && !teamSelection.contains(target)) {
+        closeTeamList();
+      }
+    };
+    document.addEventListener("click", handleOutsideClick);
+    return () => document.removeEventListener("click", handleOutsideClick);
+  }, []);
 
   const handleInputChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setWorkItem((prev) => ({ ...prev, [name]: value }));
@@ -220,27 +185,24 @@ export default function AddTaskModalPage() {
 
   const [tagInput, setTagInput] = useState("");
   const handleTagAdd = (e?: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e) e.preventDefault(); // Empêche le comportement par défaut (soumission du formulaire)
+    if (e) e.preventDefault();
     if (tagInput.trim()) {
       setWorkItem((prev) => ({
         ...prev,
-        tags: [
-          ...prev.tags.filter((t) => t !== tagInput.trim()),
-          tagInput.trim(),
-        ], // Évite les doublons
+        tags: [...prev.tags.filter((t) => t !== tagInput.trim()), tagInput.trim()],
       }));
       setTagInput("");
-      console.log("Tag ajouté :", tagInput.trim()); // Log pour débogage
+      console.log("Tag ajouté :", tagInput.trim());
     }
   };
 
   const handleTagSuggestionClick = (tag: string) => {
     setWorkItem((prev) => ({
       ...prev,
-      tags: [...prev.tags.filter((t) => t !== tag), tag], // Évite les doublons
+      tags: [...prev.tags.filter((t) => t !== tag), tag],
     }));
     setTagInput("");
-    console.log("Tag suggestion ajouté :", tag); // Log pour débogage
+    console.log("Tag suggestion ajouté :", tag);
   };
 
   const removeTag = (index: number) => {
@@ -265,62 +227,68 @@ export default function AddTaskModalPage() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Validation: Ensure severity is set for bugs
+    if (workItemType === "BUG" && !workItem.severity) {
+      alert("Severity is required for bugs.");
+      return;
+    }
+
     try {
       const payload = {
         title: workItem.title,
-        description: workItem.description,
+        description: workItem.description || null,
         startDate: workItem.startDate || null,
         dueDate: workItem.dueDate || null,
-        estimationTime: parseInt(workItem.estimationTime) || null,
+        estimationTime: workItem.estimationTime ? parseInt(workItem.estimationTime.toString()) : null,
         status: workItem.status,
         priority: workItem.priority || null,
         assignedUser: workItem.assignedUser,
         tags: workItem.tags,
         type: workItemType,
-        ...(workItemType === "BUG" && {
-          severity: workItem.severity || null,
-        }),
+        ...(workItemType === "BUG" && { severity: workItem.severity || null }),
       };
       console.log("Submitting payload:", payload);
 
+      const baseUrl = workItemType === "TASK"
+        ? `${TASK_SERVICE_URL}/api/project/tasks`
+        : `${TASK_SERVICE_URL}/api/project/bugs`;
+
       if (isEditing) {
         const response = await axiosInstance.put(
-          `${TASK_SERVICE_URL}/api/project/tasks/${taskId}/updateTask`,
+          `${baseUrl}/${taskId}/update${workItemType === "TASK" ? "Task" : "Bug"}`,
           payload,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
         );
         if (response.status === 200) {
-          console.log("Task updated successfully");
+          console.log(`${workItemType} updated successfully`);
           router.back();
         } else {
-          throw new Error("Failed to update task");
+          throw new Error(`Failed to update ${workItemType.toLowerCase()}`);
         }
       } else {
         const response = await axiosInstance.post(
-          `${TASK_SERVICE_URL}/api/project/tasks/${projectId}/${userStoryId}/createTask`,
+          `${baseUrl}/${projectId}/${userStoryId}/create${workItemType === "TASK" ? "Task" : "Bug"}`,
           payload,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
         );
         if (response.status === 201) {
-          console.log("Task created successfully");
+          console.log(`${workItemType} created successfully`);
           router.back();
         } else {
-          throw new Error("Failed to create task");
+          throw new Error(`Failed to create ${workItemType.toLowerCase()}`);
         }
       }
     } catch (error: any) {
-      console.error(
-        "Error submitting task:",
-        error.response?.data || error.message
-      );
+      console.error(`Error submitting ${workItemType.toLowerCase()}:`, error.response?.data || error.message);
       alert(
         isEditing
-          ? "Une erreur s'est produite lors de la mise à jour."
-          : "Une erreur s'est produite lors de la création."
+          ? `Une erreur s'est produite lors de la mise à jour du ${workItemType.toLowerCase()}.`
+          : `Une erreur s'est produite lors de la création du ${workItemType.toLowerCase()}.`
       );
     }
   };
@@ -358,9 +326,7 @@ export default function AddTaskModalPage() {
           <div className="type-toggle">
             <button
               type="button"
-              className={`toggle-btn ${
-                workItemType === "TASK" ? "active" : ""
-              }`}
+              className={`toggle-btn ${workItemType === "TASK" ? "active" : ""}`}
               onClick={() => setWorkItemType("TASK")}
             >
               Task
@@ -391,7 +357,7 @@ export default function AddTaskModalPage() {
             <div className="form-group">
               <textarea
                 name="description"
-                value={workItem.description}
+                value={workItem.description || ""}
                 onChange={handleInputChange}
                 placeholder="Add a description..."
                 className="description-input"
@@ -403,7 +369,7 @@ export default function AddTaskModalPage() {
                 <input
                   type="date"
                   name="startDate"
-                  value={workItem.startDate}
+                  value={workItem.startDate || ""}
                   onChange={handleInputChange}
                 />
               </div>
@@ -412,7 +378,7 @@ export default function AddTaskModalPage() {
                 <input
                   type="date"
                   name="dueDate"
-                  value={workItem.dueDate}
+                  value={workItem.dueDate || ""}
                   onChange={handleInputChange}
                 />
               </div>
@@ -421,7 +387,7 @@ export default function AddTaskModalPage() {
                 <input
                   type="number"
                   name="estimationTime"
-                  value={workItem.estimationTime}
+                  value={workItem.estimationTime || ""}
                   onChange={handleInputChange}
                   placeholder="Hours"
                   min="0"
@@ -429,80 +395,21 @@ export default function AddTaskModalPage() {
               </div>
             </div>
 
-            {/* Combined Tags, Priority, Team, and Severity (for Bugs) */}
             <div className="options-row">
-              {/* Priority */}
               <div className="options-group priority-group">
                 <h3>Priority</h3>
-
                 <div className="priority-options">
                   {[
-                    {
-                      value: "LOW",
-                      label: "Low",
-                      color: "#4ade80",
-                      icon: (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M12 5v14m0 0l-7-7m7 7l7-7" />
-                        </svg>
-                      ),
-                    },
-                    {
-                      value: "MEDIUM",
-                      label: "Medium",
-                      color: "#fb923c",
-                      icon: (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M5 12h14m0 0l-7-7m7 7l-7 7" />
-                        </svg>
-                      ),
-                    },
-                    {
-                      value: "HIGH",
-                      label: "High",
-                      color: "#ef4444",
-                      icon: (
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M12 19V5m0 0l7 7m-7-7l-7 7" />
-                        </svg>
-                      ),
-                    },
+                    { value: "LOW", label: "Low", color: "#4ade80", icon: <svg>...</svg> },
+                    { value: "MEDIUM", label: "Medium", color: "#fb923c", icon: <svg>...</svg> },
+                    { value: "HIGH", label: "High", color: "#ef4444", icon: <svg>...</svg> },
                   ].map((opt) => (
                     <button
                       key={opt.value}
                       type="button"
-                      className={`priority-btn ${
-                        workItem.priority === opt.value ? "active" : ""
-                      }`}
-                      onClick={() =>
-                        handlePrioritySelect(
-                          opt.value as "LOW" | "MEDIUM" | "HIGH"
-                        )
-                      }
-                      style={
-                        { "--priority-color": opt.color } as React.CSSProperties
-                      }
+                      className={`priority-btn ${workItem.priority === opt.value ? "active" : ""}`}
+                      onClick={() => handlePrioritySelect(opt.value as "LOW" | "MEDIUM" | "HIGH")}
+                      style={{ "--priority-color": opt.color } as React.CSSProperties}
                     >
                       <span className="priority-icon">{opt.icon}</span>
                       <span className="priority-label">{opt.label}</span>
@@ -511,85 +418,21 @@ export default function AddTaskModalPage() {
                 </div>
               </div>
 
-              {/* Severity (for Bugs) */}
               {workItemType === "BUG" && (
                 <div className="options-group severity-group">
                   <h3>Severity</h3>
                   <div className="severity-options">
                     {[
-                      {
-                        value: "MINOR",
-                        label: "Minor",
-                        color: "#4ade80",
-                        icon: (
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <circle cx="12" cy="12" r="10" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        value: "MAJOR",
-                        label: "Major",
-                        color: "#fb923c",
-                        icon: (
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M12 2L2 19h20L12 2z" />
-                            <path d="M12 8v4" />
-                            <circle cx="12" cy="16" r="1" />
-                          </svg>
-                        ),
-                      },
-                      {
-                        value: "CRITICAL",
-                        label: "Critical",
-                        color: "#ef4444",
-                        icon: (
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M12 2l9 15H3l9-15z" />
-                            <path d="M12 9v4" />
-                            <circle cx="12" cy="17" r="1" />
-                          </svg>
-                        ),
-                      },
+                      { value: "MINOR", label: "Minor", color: "#4ade80", icon: <svg>...</svg> },
+                      { value: "MAJOR", label: "Major", color: "#fb923c", icon: <svg>...</svg> },
+                      { value: "CRITICAL", label: "Critical", color: "#ef4444", icon: <svg>...</svg> },
                     ].map((opt) => (
                       <button
                         key={opt.value}
                         type="button"
-                        className={`severity-btn ${
-                          workItem.severity === opt.value ? "active" : ""
-                        }`}
-                        onClick={() =>
-                          setWorkItem((prev) => ({
-                            ...prev,
-                            severity: opt.value,
-                          }))
-                        }
-                        style={
-                          {
-                            "--severity-color": opt.color,
-                          } as React.CSSProperties
-                        }
+                        className={`severity-btn ${workItem.severity === opt.value ? "active" : ""}`}
+                        onClick={() => setWorkItem((prev) => ({ ...prev, severity: opt.value }))}
+                        style={{ "--severity-color": opt.color } as React.CSSProperties}
                       >
                         <span className="severity-icon">{opt.icon}</span>
                         <span className="severity-label">{opt.label}</span>
@@ -599,7 +442,6 @@ export default function AddTaskModalPage() {
                 </div>
               )}
 
-              {/* Tags */}
               <div className="options-group tags-group">
                 <h3>Tags</h3>
                 <div className="tags-input">
@@ -617,9 +459,7 @@ export default function AddTaskModalPage() {
                   {tagInput && (
                     <div className="tag-suggestions">
                       {tagSuggestions
-                        .filter((tag) =>
-                          tag.toLowerCase().includes(tagInput.toLowerCase())
-                        )
+                        .filter((tag) => tag.toLowerCase().includes(tagInput.toLowerCase()))
                         .map((tag) => (
                           <button
                             key={tag}
@@ -644,14 +484,14 @@ export default function AddTaskModalPage() {
                   </div>
                 </div>
               </div>
-              {/* Team */}
+
               <div className="options-group team-group">
                 <h3>Responsible</h3>
                 <div className="team-selection">
                   <div
                     className="select-members"
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent closing when clicking inside
+                      e.stopPropagation();
                       toggleTeamList();
                     }}
                     role="button"
@@ -708,9 +548,7 @@ export default function AddTaskModalPage() {
                             />
                             <div
                               className={`team-member-inner ${
-                                workItem.assignedUser.includes(user.id)
-                                  ? "selected"
-                                  : ""
+                                workItem.assignedUser.includes(user.id) ? "selected" : ""
                               }`}
                             >
                               <img

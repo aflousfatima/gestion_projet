@@ -215,7 +215,7 @@ export default function Teams() {
             className="teams-inviteButton"
             onClick={() => setIsModalOpen(true)}
           >
-            <i className="fa fa-envelope"></i> Inviter des collègues
+            <i className="fa fa-envelope"></i> Invite collegues
           </button>
         </div>
 

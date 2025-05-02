@@ -1,20 +1,49 @@
 "use client";
 import React, { useState } from "react";
-import { useTasks } from "../../../../../../hooks/useTask";
-import TaskCard from "../../../../../../hooks/TaskCard";
+import { useWorkItems } from "../../../../../../hooks/useWorkItems";
+import WorkItemCard from "../../../../../../hooks/WorkItemCard";
 import "../../../../../../styles/Dashboard-Task-Kanban.css";
 import { useAuth } from "../../../../../../context/AuthContext";
 import useAxios from "../../../../../../hooks/useAxios";
 import { TASK_SERVICE_URL } from "../../../../../../config/useApi";
 
-interface Task {
+interface User {
+  id: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+}
+
+interface FileAttachment {
   id?: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  fileUrl: string;
+  publicId: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+interface TaskSummary {
+  id: number;
+  title: string;
+  status: string;
+  projectId: number;
+  userStoryId: number;
+}
+
+interface WorkItem {
+  id?: number;
+  type: "TASK" | "BUG";
   title: string;
   description: string | null;
   creationDate: string;
   startDate: string | null;
   dueDate: string | null;
   estimationTime: number | null;
+  totalTimeSpent: number;
+  startTime: string;
   status:
     | "TO_DO"
     | "IN_PROGRESS"
@@ -24,29 +53,24 @@ interface Task {
     | "CANCELLED"
     | "";
   priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "";
+  severity?: "MINOR" | "MAJOR" | "CRITICAL" | "BLOCKER" | "";
   userStoryId: number | null;
   createdBy: string | null;
   projectId: number;
   tags: string[];
-  assignedUsers: { id: string; firstName: string; lastName: string; avatar?: string }[];
-  attachments: {
-    id?: number;
-    fileName: string;
-    fileType: string;
-    fileSize: number;
-    fileUrl: string;
-    publicId: string;
-    uploadedBy: string;
-    uploadedAt: string;
-  }[];
+  assignedUsers: User[];
+  attachments: FileAttachment[];
+  progress: number;
+  dependencyIds: number[];
+  dependencies: TaskSummary[];
 }
 
 export default function Kanban() {
-  const { tasks, loading, error, handleTaskUpdate } = useTasks();
+  const { workItems, loading, error, handleWorkItemUpdate } = useWorkItems();
   const { accessToken } = useAuth();
   const axiosInstance = useAxios();
   const [showDates, setShowDates] = useState(false);
-  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const [draggingWorkItemId, setDraggingWorkItemId] = useState<number | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
@@ -76,7 +100,7 @@ export default function Kanban() {
 
   const handleDrop = async (
     e: React.DragEvent<HTMLDivElement>,
-    newStatus: Task["status"]
+    newStatus: WorkItem["status"]
   ) => {
     e.preventDefault();
     e.stopPropagation();
@@ -85,48 +109,55 @@ export default function Kanban() {
 
     if (isUpdatingStatus) return;
 
-    const taskId = e.dataTransfer.getData("taskId");
-    const task = tasks.find((t) => t.id?.toString() === taskId);
+    const workItemId = e.dataTransfer.getData("workItemId");
+    const workItemType = e.dataTransfer.getData("workItemType") as "TASK" | "BUG";
+    const workItem = workItems.find((t) => t.id?.toString() === workItemId);
 
-    if (!task || !task.id || task.status === newStatus) return;
+    if (!workItem || !workItem.id || workItem.status === newStatus) return;
 
     setIsUpdatingStatus(true);
-    setDraggingTaskId(null);
+    setDraggingWorkItemId(null);
 
-    const originalTasks = [...tasks];
-    handleTaskUpdate({ id: task.id, status: newStatus });
+    const originalWorkItems = [...workItems];
+    handleWorkItemUpdate({ id: workItem.id, status: newStatus });
 
-    const taskDTO = {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      creationDate: task.creationDate,
-      startDate: task.startDate,
-      dueDate: task.dueDate,
-      estimationTime: task.estimationTime,
+    const workItemDTO = {
+      id: workItem.id,
+      title: workItem.title,
+      description: workItem.description,
+      creationDate: workItem.creationDate,
+      startDate: workItem.startDate,
+      dueDate: workItem.dueDate,
+      estimationTime: workItem.estimationTime,
+      totalTimeSpent: workItem.totalTimeSpent,
       status: newStatus,
-      priority: task.priority,
-      userStoryId: task.userStoryId,
-      createdBy: task.createdBy,
-      projectId: task.projectId,
-      tags: task.tags,
-      assignedUsers: task.assignedUsers,
-      attachments: task.attachments,
+      priority: workItem.priority,
+      severity: workItem.severity,
+      userStoryId: workItem.userStoryId,
+      createdBy: workItem.createdBy,
+      projectId: workItem.projectId,
+      tags: workItem.tags,
+      assignedUsers: workItem.assignedUsers,
+      attachments: workItem.attachments,
     };
 
     try {
+      const endpoint =
+        workItemType === "TASK"
+          ? `/tasks/${workItem.id}/updateTask`
+          : `/bugs/${workItem.id}/updateBug`;
       const response = await axiosInstance.put(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/updateTask`,
-        taskDTO,
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
+        workItemDTO,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         }
       );
-      handleTaskUpdate(response.data);
+      handleWorkItemUpdate({ ...response.data, type: workItemType });
     } catch (err: any) {
-      let errorMessage = "Failed to update task status";
+      let errorMessage = "Failed to update work item status";
       if (err.response?.data) {
         errorMessage =
           typeof err.response.data === "string"
@@ -135,8 +166,8 @@ export default function Kanban() {
               err.response.data.message ||
               errorMessage;
       }
-      handleTaskUpdate({ id: task.id, status: task.status });
-      console.error("Error updating task status:", err.response?.data || err);
+      handleWorkItemUpdate({ id: workItem.id, status: workItem.status });
+      console.error("Error updating work item status:", err.response?.data || err);
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -150,8 +181,8 @@ export default function Kanban() {
         </p>
       )}
       {error && <p style={{ color: "red" }}>Error: {error}</p>}
-      {!loading && !error && tasks.length === 0 && <p>No tasks found.</p>}
-      {!loading && !error && tasks.length > 0 && (
+      {!loading && !error && workItems.length === 0 && <p>No work items found.</p>}
+      {!loading && !error && workItems.length > 0 && (
         <div className="kanban-board">
           {columns.map((column) => (
             <div
@@ -161,7 +192,7 @@ export default function Kanban() {
               }`}
               onDragOver={(e) => handleDragOver(e, column.status)}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, column.status as Task["status"])}
+              onDrop={(e) => handleDrop(e, column.status as WorkItem["status"])}
             >
               <div className={`column-header ${column.status.toLowerCase()}`}>
                 <h5>{column.title}</h5>
@@ -170,16 +201,16 @@ export default function Kanban() {
                   <button className="ellipsis-btn">...</button>
                 </div>
               </div>
-              <div className="task-list">
-                {tasks
-                  .filter((task) => task.status === column.status)
-                  .map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
+              <div className="work-item-list">
+                {workItems
+                  .filter((item) => item.status === column.status)
+                  .map((item) => (
+                    <WorkItemCard
+                      key={item.id}
+                      workItem={item}
                       showDates={showDates}
                       toggleDates={() => setShowDates(!showDates)}
-                      onTaskUpdate={handleTaskUpdate}
+                      onWorkItemUpdate={handleWorkItemUpdate}
                     />
                   ))}
               </div>

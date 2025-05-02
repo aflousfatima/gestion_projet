@@ -1,8 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import useAxios from "../hooks/useAxios";
-import { useWebSocket } from "../hooks/useWebSocket";
+import useAxios from "./useAxios";
+import { useWebSocket } from "./useWebSocket";
 import { AUTH_SERVICE_URL, TASK_SERVICE_URL } from "../config/useApi";
 import sanitizeHtml from "sanitize-html";
 import { Document, Page, pdfjs } from "react-pdf";
@@ -34,6 +34,7 @@ interface TimeForm {
   duration: number;
   type: string;
 }
+
 interface User {
   id: string;
   firstName: string;
@@ -60,16 +61,17 @@ interface TaskSummary {
   userStoryId: number;
 }
 
-interface Task {
+interface WorkItem {
   id?: number;
+  type: "TASK" | "BUG";
   title: string;
   description: string | null;
   creationDate: string;
   startDate: string | null;
   dueDate: string | null;
-  estimationTime: number;
-  totalTimeSpent: number; // Ajout du champ pour le temps total passé (en minutes)
-  startTime: string; // Ajout de startTime
+  estimationTime: number | null;
+  totalTimeSpent: number;
+  startTime: string;
   status:
     | "TO_DO"
     | "IN_PROGRESS"
@@ -79,6 +81,7 @@ interface Task {
     | "CANCELLED"
     | "";
   priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "";
+  severity?: "MINOR" | "MAJOR" | "CRITICAL" | "BLOCKER" | "";
   userStoryId: number | null;
   createdBy: string | null;
   projectId: number;
@@ -87,20 +90,22 @@ interface Task {
   attachments: FileAttachment[];
   progress: number;
   dependencyIds: number[];
-  dependencies: TaskSummary[]; // Nouveau champ
+  dependencies: TaskSummary[];
 }
 
-interface TaskCardProps {
-  task: Task;
+interface WorkItemCardProps {
+  workItem: WorkItem;
   showDates: boolean;
   toggleDates: () => void;
-  onTaskUpdate?: (updatedTask: Partial<Task> & { deleted?: boolean }) => void;
-  displayMode?: "card" | "row"; // Nouveau prop pour choisir le mode d'affichage
+  onWorkItemUpdate?: (
+    updatedWorkItem: Partial<WorkItem> & { deleted?: boolean }
+  ) => void;
+  displayMode?: "card" | "row";
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({
-  task,
-  onTaskUpdate,
+const WorkItemCard: React.FC<WorkItemCardProps> = ({
+  workItem,
+  onWorkItemUpdate,
   displayMode = "card",
 }) => {
   const { accessToken } = useAuth();
@@ -116,14 +121,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const menuRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
-  const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [isDeletingWorkItem, setIsDeletingWorkItem] = useState(false);
   const router = useRouter();
 
   // States for dependency management
   const [showAddDependencyPopup, setShowAddDependencyPopup] = useState(false);
-  const [potentialDependencies, setPotentialDependencies] = useState<Task[]>(
-    []
-  );
+  const [potentialDependencies, setPotentialDependencies] = useState<
+    WorkItem[]
+  >([]);
   const [isLoadingDependencies, setIsLoadingDependencies] = useState(false);
   const [dependencyError, setDependencyError] = useState<string | null>(null);
   const [showDependenciesPopup, setShowDependenciesPopup] = useState(false);
@@ -131,16 +136,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
     number | null
   >(null);
 
-  // Fetch potential dependencies when opening the add dependency popup
+  // Fetch potential dependencies
   useEffect(() => {
-    if (!showAddDependencyPopup || !task.id || !accessToken) return;
+    if (!showAddDependencyPopup || !workItem.id || !accessToken) return;
 
     const fetchPotentialDependencies = async () => {
       setIsLoadingDependencies(true);
       setDependencyError(null);
       try {
+        const endpoint =
+          workItem.type === "TASK"
+            ? `/tasks/${workItem.id}/potential-dependencies`
+            : `/bugs/${workItem.id}/potential-dependencies`;
         const response = await axiosInstance.get(
-          `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/potential-dependencies`,
+          `${TASK_SERVICE_URL}/api/project${endpoint}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setPotentialDependencies(response.data);
@@ -157,20 +166,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     fetchPotentialDependencies();
-  }, [showAddDependencyPopup, task.id, accessToken, axiosInstance]);
+  }, [
+    showAddDependencyPopup,
+    workItem.id,
+    workItem.type,
+    accessToken,
+    axiosInstance,
+  ]);
 
   // Handle adding a dependency
   const handleAddDependency = async (dependencyId: number) => {
-    if (!task.id || !accessToken) return;
+    if (!workItem.id || !accessToken) return;
 
     setDependencyError(null);
     try {
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.id}/dependencies/${dependencyId}/add-dependancy`
+          : `/bugs/${workItem.id}/dependencies/${dependencyId}/add-dependancy`;
       const response = await axiosInstance.post(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/dependencies/${dependencyId}/add-dependancy`,
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
         null,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      onTaskUpdate?.(response.data);
+      onWorkItemUpdate?.(response.data);
       setShowAddDependencyPopup(false);
       toast.success("Dependency added successfully!");
     } catch (err: any) {
@@ -184,16 +203,20 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   // Handle removing a dependency
   const handleRemoveDependency = async (dependencyId: number) => {
-    if (!task.id || !accessToken) return;
+    if (!workItem.id || !accessToken) return;
 
     setIsRemovingDependency(dependencyId);
     setDependencyError(null);
     try {
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.id}/dependencies/${dependencyId}`
+          : `/bugs/${workItem.id}/dependencies/${dependencyId}`;
       const response = await axiosInstance.delete(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/dependencies/${dependencyId}`,
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      onTaskUpdate?.(response.data);
+      onWorkItemUpdate?.(response.data);
       toast.success("Dependency removed successfully!");
     } catch (err: any) {
       const errorMessage =
@@ -227,7 +250,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   const [showComments, setShowComments] = useState(false);
   const toggleComments = () => setShowComments(!showComments);
-  const { comments, setComments } = useWebSocket(task.id, accessToken);
+  const { comments, setComments } = useWebSocket(workItem.id, accessToken);
   const [users, setUsers] = useState<Map<string, User>>(new Map());
 
   const priorityColors: { [key: string]: string } = {
@@ -235,6 +258,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
     MEDIUM: "#ff9800",
     HIGH: "#f44336",
     CRITICAL: "#d81b60",
+    "": "#b0bec5",
+  };
+
+  const severityColors: { [key: string]: string } = {
+    MINOR: "#2196f3",
+    MAJOR: "#ff9800",
+    CRITICAL: "#f44336",
+    BLOCKER: "#d81b60",
     "": "#b0bec5",
   };
 
@@ -246,65 +277,76 @@ const TaskCard: React.FC<TaskCardProps> = ({
     "": "None",
   };
 
+  const severityLabels: { [key: string]: string } = {
+    MINOR: "Minor",
+    MAJOR: "Major",
+    CRITICAL: "Critical",
+    BLOCKER: "Blocker",
+    "": "None",
+  };
+
   const [displayedTimeSpent, setDisplayedTimeSpent] = useState<number | null>(
-    task.totalTimeSpent
+    workItem.totalTimeSpent
   );
   const [displayedProgress, setDisplayedProgress] = useState<number>(
-    task.progress
+    workItem.progress
   );
 
-  // Mettre à jour le temps affiché en temps réel si la tâche est en IN_PROGRESS
+  // Mettre à jour le temps affiché en temps réel si l'élément est en IN_PROGRESS
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    if (task.status === "IN_PROGRESS" && task.startTime) {
+    if (workItem.status === "IN_PROGRESS" && workItem.startTime) {
       interval = setInterval(() => {
-        const start = new Date(task.startTime);
+        const start = new Date(workItem.startTime);
         const now = new Date();
         const elapsedMinutes = Math.round(
           (now.getTime() - start.getTime()) / 1000 / 60
         );
-        const totalMinutes = (task.totalTimeSpent || 0) + elapsedMinutes;
+        const totalMinutes = (workItem.totalTimeSpent || 0) + elapsedMinutes;
         setDisplayedTimeSpent(totalMinutes);
 
         // Calculer la progression
-        if (task.estimationTime && task.estimationTime > 0) {
+        if (workItem.estimationTime && workItem.estimationTime > 0) {
           const progress = Math.min(
-            (totalMinutes / task.estimationTime) * 100,
+            (totalMinutes / workItem.estimationTime) * 100,
             90
           );
           setDisplayedProgress(progress);
         }
       }, 60000); // Mettre à jour chaque minute
     } else {
-      setDisplayedTimeSpent(task.totalTimeSpent);
-      setDisplayedProgress(task.progress);
+      setDisplayedTimeSpent(workItem.totalTimeSpent);
+      setDisplayedProgress(workItem.progress);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [
-    task.status,
-    task.startTime,
-    task.totalTimeSpent,
-    task.estimationTime,
-    task.progress,
+    workItem.status,
+    workItem.startTime,
+    workItem.totalTimeSpent,
+    workItem.estimationTime,
+    workItem.progress,
   ]);
 
   const [showAddTimeForm, setShowAddTimeForm] = useState(false);
   const [isAddingTime, setIsAddingTime] = useState(false);
 
   const onSubmitAddTime = async (data: { duration: number; type: string }) => {
-    if (!task.id || !accessToken) return;
+    if (!workItem.id || !accessToken) return;
 
     setIsAddingTime(true);
     setUploadError(null);
 
     try {
-      // Convertir la durée de heures en minutes
       const durationInMinutes = Math.round(data.duration * 60);
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.id}/time-entry`
+          : `/bugs/${workItem.id}/time-entry`;
       await axiosInstance.post(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/time-entry`,
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
         null,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -312,13 +354,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
         }
       );
 
-      // Récupérer la tâche mise à jour pour refléter les nouveaux totalTimeSpent et progress
+      // Récupérer l'élément mis à jour
+      const fetchEndpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.projectId}/${workItem.userStoryId}/${workItem.id}`
+          : `/bugs/${workItem.projectId}/${workItem.userStoryId}/${workItem.id}`;
       const response = await axiosInstance.get(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.projectId}/${task.userStoryId}/${task.id}`,
+        `${TASK_SERVICE_URL}/api/project${fetchEndpoint}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      console.log("Tâche mise à jour :", response.data); // Log pour débogage
-      onTaskUpdate?.(response.data);
+      onWorkItemUpdate?.({ ...response.data, type: workItem.type });
       setShowAddTimeForm(false);
       toast.success("Temps ajouté avec succès !");
     } catch (err: any) {
@@ -326,7 +371,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
       if (err.response?.status === 400) {
         errorMessage = "La durée doit être positive";
       } else if (err.response?.status === 404) {
-        errorMessage = "Tâche non trouvée";
+        errorMessage =
+          workItem.type === "TASK" ? "Tâche non trouvée" : "Bug non trouvé";
       } else if (err.response?.data) {
         errorMessage =
           typeof err.response.data === "string"
@@ -369,12 +415,16 @@ const TaskCard: React.FC<TaskCardProps> = ({
   }, [comments, accessToken, axiosInstance]);
 
   useEffect(() => {
-    if (!task.id || !accessToken) return;
+    if (!workItem.id || !accessToken) return;
 
     const fetchComments = async () => {
       try {
+        const endpoint =
+          workItem.type === "TASK"
+            ? `/task/comments/getComment/${workItem.id}`
+            : `/bug/comments/getComment/${workItem.id}`;
         const response = await axiosInstance.get(
-          `${TASK_SERVICE_URL}/api/project/task/comments/getComment/${task.id}`,
+          `${TASK_SERVICE_URL}/api/project${endpoint}`,
           { headers: { Authorization: `Bearer ${accessToken}` } }
         );
         setComments(response.data);
@@ -385,10 +435,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     fetchComments();
-  }, [task.id, accessToken, axiosInstance, setComments]);
+  }, [workItem.id, workItem.type, accessToken, axiosInstance, setComments]);
 
   const onSubmitComment = async (data: { content: string }) => {
-    if (!task.id || !accessToken) return;
+    if (!workItem.id || !accessToken) return;
 
     const sanitizedContent = sanitizeHtml(data.content, {
       allowedTags: ["p", "b", "i", "u", "ul", "ol", "li", "a", "span"],
@@ -396,16 +446,23 @@ const TaskCard: React.FC<TaskCardProps> = ({
     });
 
     try {
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/task/comments/createComment`
+          : `/bug/comments/createComment`;
       await axiosInstance.post(
-        `${TASK_SERVICE_URL}/api/project/task/comments/createComment`,
-        { content: sanitizedContent, workItem: { id: task.id } },
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
+        { content: sanitizedContent, workItem: { id: workItem.id } },
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       reset();
       toast.success("Comment added!");
-      // Rafraîchir les commentaires après l'ajout
+      const fetchEndpoint =
+        workItem.type === "TASK"
+          ? `/task/comments/getComment/${workItem.id}`
+          : `/bug/comments/getComment/${workItem.id}`;
       const response = await axiosInstance.get(
-        `${TASK_SERVICE_URL}/api/project/task/comments/getComment/${task.id}`,
+        `${TASK_SERVICE_URL}/api/project${fetchEndpoint}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setComments(response.data);
@@ -422,35 +479,36 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleToggleStatus = async () => {
-    if (!task.id || isTogglingStatus) return;
+    if (!workItem.id || isTogglingStatus) return;
 
     setIsTogglingStatus(true);
     setUploadError(null);
 
-    const newStatus = task.status === "DONE" ? "TO_DO" : "DONE";
+    const newStatus = workItem.status === "DONE" ? "TO_DO" : "DONE";
 
-    const taskDTO = {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      creationDate: task.creationDate,
-      startDate: task.startDate,
-      dueDate: task.dueDate,
-      estimationTime: task.estimationTime,
-      totalTimeSpent: task.totalTimeSpent, // Inclure pour préserver la valeur
+    const workItemDTO = {
+      id: workItem.id,
+      title: workItem.title,
+      description: workItem.description,
+      creationDate: workItem.creationDate,
+      startDate: workItem.startDate,
+      dueDate: workItem.dueDate,
+      estimationTime: workItem.estimationTime,
+      totalTimeSpent: workItem.totalTimeSpent,
       status: newStatus,
-      priority: task.priority,
-      userStoryId: task.userStoryId,
-      createdBy: task.createdBy,
-      projectId: task.projectId,
-      tags: task.tags || [],
-      assignedUsers: (task.assignedUsers || []).map((user) => ({
+      priority: workItem.priority,
+      severity: workItem.severity,
+      userStoryId: workItem.userStoryId,
+      createdBy: workItem.createdBy,
+      projectId: workItem.projectId,
+      tags: workItem.tags || [],
+      assignedUsers: (workItem.assignedUsers || []).map((user) => ({
         id: user.id,
         firstName: user.firstName,
         lastName: user.lastName,
         avatar: user.avatar,
       })),
-      attachments: (task.attachments || []).map((attachment) => ({
+      attachments: (workItem.attachments || []).map((attachment) => ({
         id: attachment.id,
         fileName: attachment.fileName,
         fileType: attachment.fileType,
@@ -463,20 +521,27 @@ const TaskCard: React.FC<TaskCardProps> = ({
     };
 
     try {
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.id}/updateTask`
+          : `/bugs/${workItem.id}/updateBug`;
       await axiosInstance.put(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/updateTask`,
-        taskDTO,
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
+        workItemDTO,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      // Récupérer la tâche mise à jour pour obtenir les nouveaux totalTimeSpent et progress
+      const fetchEndpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.projectId}/${workItem.userStoryId}/${workItem.id}`
+          : `/bugs/${workItem.projectId}/${workItem.userStoryId}/${workItem.id}`;
       const response = await axiosInstance.get(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.projectId}/${task.userStoryId}/${task.id}`,
+        `${TASK_SERVICE_URL}/api/project${fetchEndpoint}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
-      onTaskUpdate?.(response.data);
+      onWorkItemUpdate?.({ ...response.data, type: workItem.type });
     } catch (err: any) {
-      let errorMessage = "Failed to toggle task status";
+      let errorMessage = "Failed to toggle work item status";
       if (err.response?.data) {
         errorMessage =
           typeof err.response.data === "string"
@@ -486,7 +551,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
               errorMessage;
       }
       setUploadError(errorMessage);
-      console.error("Error toggling task status:", {
+      console.error("Error toggling work item status:", {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
@@ -497,8 +562,9 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
-    if (task.id) {
-      e.dataTransfer.setData("taskId", task.id.toString());
+    if (workItem.id) {
+      e.dataTransfer.setData("workItemId", workItem.id.toString());
+      e.dataTransfer.setData("workItemType", workItem.type);
       e.currentTarget.style.opacity = "0.5";
     }
   };
@@ -523,22 +589,30 @@ const TaskCard: React.FC<TaskCardProps> = ({
     };
   }, []);
 
-  const handleDeleteTask = async () => {
-    if (!task.id || isDeletingTask) return;
+  const handleDeleteWorkItem = async () => {
+    if (!workItem.id || isDeletingWorkItem) return;
 
-    if (!confirm("Are you sure you want to delete this task?")) return;
+    if (
+      !confirm(
+        `Are you sure you want to delete this ${workItem.type.toLowerCase()}?`
+      )
+    )
+      return;
 
-    setIsDeletingTask(true);
+    setIsDeletingWorkItem(true);
     setUploadError(null);
 
     try {
-      await axiosInstance.delete(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/deleteTask`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      onTaskUpdate?.({ id: task.id, deleted: true } as any);
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.id}/deleteTask`
+          : `/bugs/${workItem.id}/deleteBug`;
+      await axiosInstance.delete(`${TASK_SERVICE_URL}/api/project${endpoint}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      onWorkItemUpdate?.({ id: workItem.id, deleted: true });
     } catch (err: any) {
-      let errorMessage = "Failed to delete task";
+      let errorMessage = `Failed to delete ${workItem.type.toLowerCase()}`;
       if (err.response?.data) {
         errorMessage =
           typeof err.response.data === "string"
@@ -548,13 +622,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
               errorMessage;
       }
       setUploadError(errorMessage);
-      console.error("Error deleting task:", {
+      console.error(`Error deleting ${workItem.type.toLowerCase()}:`, {
         status: err.response?.status,
         data: err.response?.data,
         message: err.message,
       });
     } finally {
-      setIsDeletingTask(false);
+      setIsDeletingWorkItem(false);
     }
   };
 
@@ -570,8 +644,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
       const link = document.createElement("a");
       link.href = url;
       const fileName =
-        task.attachments.find((att) => att.fileUrl === imageUrl)?.fileName ||
-        defaultFileName;
+        workItem.attachments.find((att) => att.fileUrl === imageUrl)
+          ?.fileName || defaultFileName;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
@@ -584,12 +658,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleEdit = () => {
-    if (!task.userStoryId || !task.id) {
-      console.error("Missing userStory or task ID");
+    if (!workItem.userStoryId || !workItem.id) {
+      console.error("Missing userStory or work item ID");
       return;
     }
+    const modalType = workItem.type === "TASK" ? "AddTaskModal" : "AddBugModal";
     router.push(
-      `/user/dashboard/tasks/AddTaskModal/${task.projectId}/${task.userStoryId}/${task.id}`
+      `/user/dashboard/tasks/${modalType}/${workItem.projectId}/${workItem.userStoryId}/${workItem.id}`
     );
   };
 
@@ -601,7 +676,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-    if (!file || !task.id) return;
+    if (!file || !workItem.id) return;
 
     setUploading(true);
     setUploadError(null);
@@ -610,8 +685,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
     formData.append("file", file);
 
     try {
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/${workItem.id}/attachments`
+          : `/bugs/${workItem.id}/attachments`;
       const response = await axiosInstance.post(
-        `${TASK_SERVICE_URL}/api/project/tasks/${task.id}/attachments`,
+        `${TASK_SERVICE_URL}/api/project${endpoint}`,
         formData,
         {
           headers: {
@@ -620,7 +699,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           },
         }
       );
-      onTaskUpdate?.(response.data);
+      onWorkItemUpdate?.({ ...response.data, type: workItem.type });
     } catch (err: any) {
       let errorMessage = "Failed to upload file";
       if (err.response?.data) {
@@ -661,7 +740,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const handleDeleteFile = async (publicId: string) => {
-    if (!task.id || !publicId || deleting) return;
+    if (!workItem.id || !publicId || deleting) return;
 
     if (!confirm("Are you sure you want to delete this file?")) return;
 
@@ -670,20 +749,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
     setDeleting(publicId);
 
     try {
-      await axiosInstance.delete(
-        `${TASK_SERVICE_URL}/api/project/tasks/delete?publicId=${encodeURIComponent(
-          publicId
-        )}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
+      const endpoint =
+        workItem.type === "TASK"
+          ? `/tasks/delete?publicId=${encodeURIComponent(publicId)}`
+          : `/bugs/delete?publicId=${encodeURIComponent(publicId)}`;
+      await axiosInstance.delete(`${TASK_SERVICE_URL}/api/project${endpoint}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
 
-      const updatedTask = {
-        ...task,
-        attachments: task.attachments.filter(
+      const updatedWorkItem = {
+        ...workItem,
+        attachments: workItem.attachments.filter(
           (attachment) => attachment.publicId !== publicId
         ),
       };
-      onTaskUpdate?.(updatedTask);
+      onWorkItemUpdate?.(updatedWorkItem);
     } catch (err: any) {
       let errorMessage = "Failed to delete file";
       if (err.response?.data) {
@@ -710,36 +790,39 @@ const TaskCard: React.FC<TaskCardProps> = ({
     setNumPages(numPages);
   };
 
-  // Rendu pour le mode "row" (utilisé dans la vue Liste)
+  // Rendu pour le mode "row"
   if (displayMode === "row") {
     return (
-      <div className="task-row">
-        <div className="task-checkbox">
+      <div className="work-item-row">
+        <div className="work-item-checkbox">
           <input
             type="checkbox"
-            checked={task.status === "DONE"}
+            checked={workItem.status === "DONE"}
             onChange={handleToggleStatus}
             disabled={isTogglingStatus}
           />
-          <span>{task.title}</span>
+          <span>
+            {workItem.title}{" "}
+            {workItem.type === "BUG" && <span className="bug-badge">Bug</span>}
+          </span>
         </div>
-        <div className="task-responsible">
-          {task.assignedUsers.length > 0 ? (
+        <div className="work-item-responsible">
+          {workItem.assignedUsers.length > 0 ? (
             <div className="responsible-avatars">
-              {task.assignedUsers.slice(0, 3).map((user, index) => (
+              {workItem.assignedUsers.slice(0, 3).map((user, index) => (
                 <span
                   key={user.id}
                   className="responsible-circle"
-                  style={{ zIndex: task.assignedUsers.length - index }}
+                  style={{ zIndex: workItem.assignedUsers.length - index }}
                   title={`${user.firstName} ${user.lastName}`}
                 >
                   {user.firstName[0]}
                   {user.lastName[0]}
                 </span>
               ))}
-              {task.assignedUsers.length > 3 && (
+              {workItem.assignedUsers.length > 3 && (
                 <span className="responsible-circle more">
-                  +{task.assignedUsers.length - 3}
+                  +{workItem.assignedUsers.length - 3}
                 </span>
               )}
             </div>
@@ -747,25 +830,36 @@ const TaskCard: React.FC<TaskCardProps> = ({
             <span className="responsible-circle empty">?</span>
           )}
         </div>
-        <div className="task-due-date">
-          {task.dueDate
-            ? new Date(task.dueDate).toLocaleDateString("fr-FR", {
+        <div className="work-item-due-date">
+          {workItem.dueDate
+            ? new Date(workItem.dueDate).toLocaleDateString("fr-FR", {
                 day: "numeric",
                 month: "short",
               })
             : "None"}
         </div>
-        <div className="task-priority-list">
-          <span
-            className="priority-tag"
-            style={{ backgroundColor: priorityColors[task.priority] }}
-          >
-            {priorityLabels[task.priority]}
-          </span>
+        <div className="work-item-priority-list">
+          {workItem.type === "TASK" ? (
+            <span
+              className="priority-tag"
+              style={{ backgroundColor: priorityColors[workItem.priority] }}
+            >
+              {priorityLabels[workItem.priority]}
+            </span>
+          ) : (
+            <span
+              className="severity-tag"
+              style={{
+                backgroundColor: severityColors[workItem.severity || ""],
+              }}
+            >
+              {severityLabels[workItem.severity || ""]}
+            </span>
+          )}
         </div>
-        <div className="task-tags">
-          {task.tags && task.tags.length > 0
-            ? task.tags.map((tag, index) => (
+        <div className="work-item-tags">
+          {workItem.tags && workItem.tags.length > 0
+            ? workItem.tags.map((tag, index) => (
                 <span
                   key={index}
                   className="tag-pill"
@@ -776,10 +870,10 @@ const TaskCard: React.FC<TaskCardProps> = ({
               ))
             : "None"}
         </div>
-        <div className="task-files">
-          {task.attachments && task.attachments.length > 0 ? (
+        <div className="work-item-files">
+          {workItem.attachments && workItem.attachments.length > 0 ? (
             <div className="file-list">
-              {task.attachments.map((attachment, index) => {
+              {workItem.attachments.map((attachment, index) => {
                 if (
                   !attachment?.fileName ||
                   !attachment?.fileUrl ||
@@ -862,11 +956,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
           ) : (
             "Aucun"
           )}
-          <label htmlFor={`file-upload-${task.id}`} className="file-upload-btn">
+          <label
+            htmlFor={`file-upload-${workItem.id}`}
+            className="file-upload-btn"
+          >
             <i className="fa fa-plus"></i> Add File
           </label>
           <input
-            id={`file-upload-${task.id}`}
+            id={`file-upload-${workItem.id}`}
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
@@ -876,7 +973,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {uploading && <span className="status-message">Uploading...</span>}
           {uploadError && <span className="error-message">{uploadError}</span>}
         </div>
-        <div className="task-comments" onClick={toggleComments}>
+        <div className="work-item-comments" onClick={toggleComments}>
           <span className="comment-counter">
             <i className="fa fa-comment"></i> {comments.length || 0}
           </span>
@@ -966,18 +1063,21 @@ const TaskCard: React.FC<TaskCardProps> = ({
     );
   }
 
-  // Rendu pour le mode "card" (utilisé dans Kanban)
+  // Rendu pour le mode "card"
   return (
     <div
-      className="task-card"
-      key={task.id}
+      className="work-item-card"
+      key={workItem.id}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="task-card-header">
-        <h4>{task.title}</h4>
-        <div className="task-menu">
+      <div className="work-item-card-header">
+        <h4>
+          {workItem.title}{" "}
+          {workItem.type === "BUG" && <span className="bug-badge">Bug</span>}
+        </h4>
+        <div className="work-item-menu">
           <button
             className="menu-btn"
             onClick={() => setShowMenu((prev) => !prev)}
@@ -985,60 +1085,72 @@ const TaskCard: React.FC<TaskCardProps> = ({
             ...
           </button>
           {showMenu && (
-         <div className="task-menu-dropdown" ref={menuRef}>
-         <button className="menu-item" onClick={handleEdit}>
-           <i className="fa fa-edit"></i>
-           <span>Edit</span>
-         </button>
-         <button
-           className="menu-item"
-           onClick={handleDeleteTask}
-           disabled={isDeletingTask}
-         >
-           <i className="fa fa-trash"></i>
-           <span>Delete</span>
-         </button>
-         <button className="menu-item" onClick={() => setShowAddDependencyPopup(true)}>
-           <i className="fa fa-link"></i>
-           <span>Add Dependency</span>
-         </button>
-       </div>
+            <div className="work-item-menu-dropdown" ref={menuRef}>
+              <button className="menu-item" onClick={handleEdit}>
+                <i className="fa fa-edit"></i>
+                <span>Edit</span>
+              </button>
+              <button
+                className="menu-item"
+                onClick={handleDeleteWorkItem}
+                disabled={isDeletingWorkItem}
+              >
+                <i className="fa fa-trash"></i>
+                <span>Delete</span>
+              </button>
+              <button
+                className="menu-item"
+                onClick={() => setShowAddDependencyPopup(true)}
+              >
+                <i className="fa fa-link"></i>
+                <span>Add Dependency</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
 
-      {task.description && (
-        <p className="task-description">{task.description}</p>
+      {workItem.description && (
+        <p className="work-item-description">{workItem.description}</p>
       )}
 
       <div className="progress-container">
-        <p className="progress-text">Progression : {task.progress ?? 0}%</p>
+        <p className="progress-text">Progression : {workItem.progress ?? 0}%</p>
         <div className="progress-bar-kanban">
           <div
             className="progress-kanban"
-            style={{ width: `${task.progress}%` }}
+            style={{ width: `${workItem.progress}%` }}
           ></div>
           <div
             className="progress-glow"
-            style={{ width: `${task.progress}%` }}
+            style={{ width: `${workItem.progress}%` }}
           ></div>
           <div className="sparkle"></div>
         </div>
       </div>
 
       <div className="priority-tags-row">
-        {task.priority && (
-          <span
-            className="priority-tag"
-            style={{ backgroundColor: priorityColors[task.priority] }}
-          >
-            {task.priority}
-          </span>
-        )}
-        {task.tags?.length > 0 && (
+        {workItem.type === "TASK"
+          ? workItem.priority && (
+              <span
+                className="priority-tag"
+                style={{ backgroundColor: priorityColors[workItem.priority] }}
+              >
+                {workItem.priority}
+              </span>
+            )
+          : workItem.severity && (
+              <span
+                className="severity-tag"
+                style={{ backgroundColor: severityColors[workItem.severity] }}
+              >
+                {workItem.severity}
+              </span>
+            )}
+        {workItem.tags?.length > 0 && (
           <div className="tags-container">
-            {task.tags.map((tag, index) => (
-              <span key={index} className="task-tag">
+            {workItem.tags.map((tag, index) => (
+              <span key={index} className="work-item-tag">
                 {tag}
               </span>
             ))}
@@ -1049,8 +1161,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
       <div className="attachment-section">
         <div className="attachment-container">
           <div className="attachments-list">
-            {task.attachments.length > 0 &&
-              task.attachments.map((attachment, index) => {
+            {workItem.attachments.length > 0 &&
+              workItem.attachments.map((attachment, index) => {
                 if (
                   !attachment?.fileName ||
                   !attachment?.fileUrl ||
@@ -1131,12 +1243,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
               })}
           </div>
           <div className="attachment-controls">
-            <label htmlFor={`file-upload-${task.id}`} className="btn-attach">
+            <label
+              htmlFor={`file-upload-${workItem.id}`}
+              className="btn-attach"
+            >
               Attach File
               <i className="fa fa-paperclip"></i>
             </label>
             <input
-              id={`file-upload-${task.id}`}
+              id={`file-upload-${workItem.id}`}
               type="file"
               ref={fileInputRef}
               onChange={handleFileUpload}
@@ -1149,15 +1264,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
         {uploadError && <span className="error-message">{uploadError}</span>}
       </div>
 
-      <div className="task-footer">
-        {task.assignedUsers?.length > 0 && (
+      <div className="work-item-footer">
+        {workItem.assignedUsers?.length > 0 && (
           <div className="assigned-users-container">
             <div className="avatars-stack" onClick={toggleUsersPopup}>
-              {task.assignedUsers.slice(0, 3).map((user, index) => (
+              {workItem.assignedUsers.slice(0, 3).map((user, index) => (
                 <div
                   key={user.id}
                   className="avatar-wrapper"
-                  style={{ zIndex: task.assignedUsers.length - index }}
+                  style={{ zIndex: workItem.assignedUsers.length - index }}
                 >
                   {user.avatar ? (
                     <img
@@ -1173,15 +1288,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
                   )}
                 </div>
               ))}
-              {task.assignedUsers.length > 3 && (
+              {workItem.assignedUsers.length > 3 && (
                 <div className="avatar-more">
-                  +{task.assignedUsers.length - 3}
+                  +{workItem.assignedUsers.length - 3}
                 </div>
               )}
             </div>
             {showUsersPopup && (
               <div className="users-card-popup" ref={popupRef}>
-                {task.assignedUsers.map((user) => (
+                {workItem.assignedUsers.map((user) => (
                   <div key={user.id} className="user-card-item">
                     <div className="user-card-avatar">
                       {user.avatar ? (
@@ -1211,12 +1326,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
         <div className="right-container">
           <button
             className={`toggle-status-btn ${
-              task.status === "DONE" ? "done" : "to-do"
+              workItem.status === "DONE" ? "done" : "to-do"
             }`}
             onClick={handleToggleStatus}
             disabled={isTogglingStatus}
-            title={task.status === "DONE" ? "Mark as To Do" : "Mark as Done"}
-            data-status={task.status}
+            title={
+              workItem.status === "DONE" ? "Mark as To Do" : "Mark as Done"
+            }
+            data-status={workItem.status}
           >
             {isTogglingStatus ? (
               <i className="fa fa-spinner fa-spin status-icon"></i>
@@ -1302,80 +1419,75 @@ const TaskCard: React.FC<TaskCardProps> = ({
               <i className="fa fa-link calendar-style"></i>
             </button>
             {showDependenciesPopup && (
-  <div className="dependencies-popup" ref={popupRef}>
-    <div className="popup-content">
-      <div className="dependencies-header">
-        <h5>Task Dependencies</h5>
-        <button
-          className="close-dependencies-btn"
-          onClick={() => setShowDependenciesPopup(false)}
-        >
-          ✕
-        </button>
-      </div>
-      {task.dependencies.length === 0 ? (
-        <p className="no-dependencies">
-          No dependencies found for this task.
-        </p>
-      ) : (
-        <div className="dependencies-table">
-          <table>
-            <thead>
-              <tr>
-                <th>Task Title</th>
-                <th>Status</th>
-                <th>Blocking</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {task.dependencies.map((dep) => (
-                <tr key={dep.id}>
-                  <td>{dep.title}</td>
-                  <td>
-                    <span className="status-badge">
-                      {dep.status}
-                    </span>
-                  </td>
-                  <td>
-                    {dep.status !== "DONE" ? (
-                      <span className="blocked">
-                        Blocked
-                      </span>
-                    ) : (
-                      <span className="not-blocked">
-                        Not Blocked
-                      </span>
-                    )}
-                  </td>
-                  <td>
+              <div className="dependencies-popup" ref={popupRef}>
+                <div className="popup-content">
+                  <div className="dependencies-header">
+                    <h5>Work Item Dependencies</h5>
                     <button
-                      className="remove-dependency-btn"
-                      onClick={() => handleRemoveDependency(dep.id)}
-                      disabled={isRemovingDependency === dep.id}
-                      title="Remove dependency"
+                      className="close-dependencies-btn"
+                      onClick={() => setShowDependenciesPopup(false)}
                     >
-                      <i className="fa fa-trash"></i>
+                      ✕
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {dependencyError && (
-        <span className="error-message">
-          {dependencyError}
-        </span>
-      )}
-    </div>
-  </div>
-)}
-
+                  </div>
+                  {workItem.dependencies.length === 0 ? (
+                    <p className="no-dependencies">
+                      No dependencies found for this work item.
+                    </p>
+                  ) : (
+                    <div className="dependencies-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Blocking</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {workItem.dependencies.map((dep) => (
+                            <tr key={dep.id}>
+                              <td>{dep.title}</td>
+                              <td>
+                                <span className="status-badge">
+                                  {dep.status}
+                                </span>
+                              </td>
+                              <td>
+                                {dep.status !== "DONE" ? (
+                                  <span className="blocked">Blocked</span>
+                                ) : (
+                                  <span className="not-blocked">
+                                    Not Blocked
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <button
+                                  className="remove-dependency-btn"
+                                  onClick={() => handleRemoveDependency(dep.id)}
+                                  disabled={isRemovingDependency === dep.id}
+                                  title="Remove dependency"
+                                >
+                                  <i className="fa fa-trash"></i>
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {dependencyError && (
+                    <span className="error-message">{dependencyError}</span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
-          {(task.creationDate || task.dueDate) && (
+          {(workItem.creationDate || workItem.dueDate) && (
             <div className="date-container">
               <button
                 className="calendar-btn"
@@ -1385,14 +1497,14 @@ const TaskCard: React.FC<TaskCardProps> = ({
               </button>
               {showLocalDates && (
                 <div className="date-popup">
-                  {task.creationDate && (
+                  {workItem.creationDate && (
                     <p className="date-item created">
-                      <span>Created:</span> {task.creationDate}
+                      <span>Created:</span> {workItem.creationDate}
                     </p>
                   )}
-                  {task.dueDate && (
+                  {workItem.dueDate && (
                     <p className="date-item due">
-                      <span>Due:</span> {task.dueDate}
+                      <span>Due:</span> {workItem.dueDate}
                     </p>
                   )}
                 </div>
@@ -1400,7 +1512,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
 
-          {(task.estimationTime !== null || displayedTimeSpent !== null) && (
+          {(workItem.estimationTime !== null ||
+            displayedTimeSpent !== null) && (
             <div className="estimation-time-wrapper">
               <button
                 className="estimation-time-btn"
@@ -1415,13 +1528,13 @@ const TaskCard: React.FC<TaskCardProps> = ({
                     {displayedTimeSpent !== null && (
                       <p className="time-item spent">
                         <span>Temps passé :</span>{" "}
-                        {(task.totalTimeSpent / 60).toFixed(1)} heures
+                        {(workItem.totalTimeSpent / 60).toFixed(1)} heures
                       </p>
                     )}
-                    {displayedTimeSpent !== null && (
+                    {workItem.estimationTime !== null && (
                       <p className="time-item estimated">
                         <span>Temps estimé :</span>{" "}
-                        {(task.estimationTime / 60).toFixed(1)} heures
+                        {(workItem.estimationTime / 60).toFixed(1)} heures
                       </p>
                     )}
                     <button
@@ -1487,41 +1600,45 @@ const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {showAddDependencyPopup && (
-  <div className="add-dependency-popup" ref={popupRef}>
-    <div className="add-dependency-header">
-      <h5>Add Dependency</h5>
-      <button
-        className="close-add-dependency-btn"
-        onClick={() => setShowAddDependencyPopup(false)}
-      >
-        ✕
-      </button>
-    </div>
-    {isLoadingDependencies ? (
-      <p className="loading-message">Loading potential dependencies...</p>
-    ) : potentialDependencies.length === 0 ? (
-      <p className="no-dependencies-message">No tasks available to add as dependencies.</p>
-    ) : (
-      <div className="potential-dependencies-list">
-        {potentialDependencies.map((dep) => (
-          <div key={dep.id} className="potential-dependency-item">
-            <span className="dependency-title">{dep.title} ({dep.status})</span>
+        <div className="add-dependency-popup" ref={popupRef}>
+          <div className="add-dependency-header">
+            <h5>Add Dependency</h5>
             <button
-              className="add-dependency-btn"
-              onClick={() => handleAddDependency(dep.id!)}
-              disabled={!dep.id}
+              className="close-add-dependency-btn"
+              onClick={() => setShowAddDependencyPopup(false)}
             >
-              Add
+              ✕
             </button>
           </div>
-        ))}
-      </div>
-    )}
-    {dependencyError && (
-      <span className="error-message">{dependencyError}</span>
-    )}
-  </div>
-)}
+          {isLoadingDependencies ? (
+            <p className="loading-message">Loading potential dependencies...</p>
+          ) : potentialDependencies.length === 0 ? (
+            <p className="no-dependencies-message">
+              No work items available to add as dependencies.
+            </p>
+          ) : (
+            <div className="potential-dependencies-list">
+              {potentialDependencies.map((dep) => (
+                <div key={dep.id} className="potential-dependency-item">
+                  <span className="dependency-title">
+                    {dep.title} ({dep.status}) {dep.type === "BUG" && "(Bug)"}
+                  </span>
+                  <button
+                    className="add-dependency-btn"
+                    onClick={() => handleAddDependency(dep.id!)}
+                    disabled={!dep.id}
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {dependencyError && (
+            <span className="error-message">{dependencyError}</span>
+          )}
+        </div>
+      )}
 
       {enlargedImage && (
         <div className="image-modal" onClick={() => setEnlargedImage(null)}>
@@ -1557,4 +1674,4 @@ const TaskCard: React.FC<TaskCardProps> = ({
   );
 };
 
-export default TaskCard;
+export default WorkItemCard;

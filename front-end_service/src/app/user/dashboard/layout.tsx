@@ -854,7 +854,7 @@ export default function DashboardLayout({
                                       onChange={(e) =>
                                         setSearchQuery(e.target.value)
                                       }
-                                      className="search-input"
+                                      className="search-input-project"
                                     />
                                   </div>
                                   <button
@@ -1069,6 +1069,13 @@ export default function DashboardLayout({
                                   >
                                     Fermer
                                   </button>
+                                  <div className="teams-actions">
+                                  <button
+                                  className="teams-inviteButton"           
+                                  >
+                                 <i className="fa fa-envelope"></i> Invite
+                                  </button>
+                                 </div>
                                 </div>
                               </>
                             ) : (
