@@ -171,7 +171,7 @@ public class TaskService {
 
                         // Enregistrer dans l'historique
                         TimeEntry timeEntry = new TimeEntry();
-                        timeEntry.setTask(task);
+                        timeEntry.setWorkItem(task);
                         timeEntry.setDuration(minutes);
                         timeEntry.setAddedBy(updatedBy);
                         timeEntry.setAddedAt(LocalDateTime.now());
@@ -628,7 +628,7 @@ public class TaskService {
         }
         task.setTotalTimeSpent(task.getTotalTimeSpent() != null ? task.getTotalTimeSpent() + duration : duration);
         TimeEntry timeEntry = new TimeEntry();
-        timeEntry.setTask(task);
+        timeEntry.setWorkItem(task);
         timeEntry.setDuration(duration);
         timeEntry.setAddedBy(addedBy);
         timeEntry.setAddedAt(LocalDateTime.now());

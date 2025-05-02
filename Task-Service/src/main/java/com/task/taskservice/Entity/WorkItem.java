@@ -67,15 +67,13 @@ protected String createdBy;
     @OneToMany(cascade = CascadeType.ALL)
     protected List<FileAttachment> attachments;
 
-
-
     @Column(name = "start_time")
     private LocalDateTime startTime;
 
     @Column(name = "total_time_spent")
     private Long totalTimeSpent = 0L; // En minutes
 
-    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "workItem", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TimeEntry> timeEntries = new ArrayList<>();
 
     // Getters et setters
@@ -158,7 +156,6 @@ protected String createdBy;
         this.estimationTime = estimationTime;
     }
 
-
     public WorkItemStatus getStatus() {
         return status;
     }
@@ -183,7 +180,6 @@ protected String createdBy;
         this.progress = progress;
     }
 
-
     public Long getUserStory() {
         return userStory;
     }
@@ -191,7 +187,6 @@ protected String createdBy;
     public void setUserStory(Long userStory) {
         this.userStory = userStory;
     }
-
 
     public Long getProjectId() {
         return  projectId;
