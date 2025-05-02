@@ -558,55 +558,59 @@ export default function ProjectLayout({
     fetchSprints();
   }, [accessToken, authLoading, axiosInstance, projectId]);
 
-  // Définir fetchData avec useCallback
-  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    if (isDataLoaded) return; // Évite les appels multiples inutiles
-    try {
-      const sprintsResponse = await axiosInstance.get(
-        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      const fetchedSprints = sprintsResponse.data.map((sprint: Sprint) => ({
-        id: sprint.id,
-        name: sprint.name,
-        startDate: sprint.startDate,
-        endDate: sprint.endDate,
-        capacity: sprint.capacity,
-        goal: sprint.goal || "",
-        status: sprint.status,
-        userStories: sprint.userStories || [],
-      }));
-      setSprints(fetchedSprints);
+// Définir fetchData avec useCallback
+const fetchData = useCallback(async () => {
+  if (authLoading || !accessToken || !projectId) return;
+  try {
+    setLoading(true);
+    setError(null);
+    console.log("📡 Début de fetchData pour sprints et backlog");
 
-      const active = fetchedSprints.find((s: Sprint) => s.status === "ACTIVE");
-      if (active) {
-        setActiveSprint(active);
-      }
+    // Fetch sprints
+    const sprintsResponse = await axiosInstance.get(
+      `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const fetchedSprints = sprintsResponse.data.map((sprint: Sprint) => ({
+      id: sprint.id,
+      name: sprint.name,
+      startDate: sprint.startDate,
+      endDate: sprint.endDate,
+      capacity: sprint.capacity,
+      goal: sprint.goal || "",
+      status: sprint.status,
+      userStories: sprint.userStories || [],
+    }));
+    console.log("📋 Sprints récupérés :", fetchedSprints);
 
-      const backlogResponse = await axiosInstance.get(
-        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
-      );
-      setBacklog(backlogResponse.data);
-      setIsDataLoaded(true); // Marque les données comme chargées
-    } catch (error) {
-      console.error("Erreur lors du rechargement des données :", error);
-    }
-  }, [axiosInstance, projectId, accessToken, isDataLoaded]);
+    // Set sprints and active sprint
+    setSprints(fetchedSprints);
+    const active = fetchedSprints.find((s: Sprint) => s.status === "ACTIVE");
+    setActiveSprint(active || null);
+    console.log("🚀 Active sprint défini :", active || "Aucun sprint actif");
 
-  useEffect(() => {
-    if (!authLoading && accessToken && projectId) {
-      fetchData();
-    }
-  }, [fetchData, authLoading, accessToken, projectId]);
+    // Fetch backlog
+    const backlogResponse = await axiosInstance.get(
+      `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    setBacklog(backlogResponse.data);
+    console.log("📚 Backlog récupéré :", backlogResponse.data);
 
-  useEffect(() => {
-    if (!authLoading && accessToken && projectId) {
-      fetchData();
-    }
-  }, [fetchData, authLoading, accessToken, projectId]);
+  } catch (error) {
+    console.error("❌ Erreur lors du chargement des données :", error);
+    setError("Erreur lors du chargement des données.");
+  } finally {
+    setLoading(false);
+    console.log("🏁 Fin de fetchData");
+  }
+}, [axiosInstance, projectId, accessToken, authLoading]);
+
+useEffect(() => {
+  fetchData();
+}, [fetchData]);
+
   // Gestionnaire pour ajouter un sprint
   const handleAddSprint = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -674,17 +678,6 @@ export default function ProjectLayout({
 
   const displayedSprint =
     activeSprint || sprints.find((s) => s.status === "ACTIVE");
-
-  useEffect(() => {
-    const syncActiveSprint = async () => {
-      await fetchData(); // Charge les données initiales
-      const active = sprints.find((s) => s.status === "ACTIVE");
-      if (active && !activeSprint) {
-        setActiveSprint(active); // Définit activeSprint si un sprint est actif
-      }
-    };
-    syncActiveSprint();
-  }, [sprints, activeSprint, fetchData, projectId, accessToken]); // Ajoutez projectId et accessToken comme dépendances
 
   const [editingTagsUserStory, setEditingTagsUserStory] =
     useState<UserStory | null>(null);
@@ -1996,226 +1989,243 @@ export default function ProjectLayout({
                         </div>
 
                         <table className="sprint-table">
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Dates</th>
-                              <th>Goal</th>
-                              <th>Capacity</th>
-                              <th>Status</th>
-                              <th>Stories</th>
-                              <th>Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {currentSprints.map((sprint) => (
-                              <React.Fragment key={sprint.id}>
-                                <tr
-                                  key={sprint.id}
-                                  onClick={() => {
-                                    setSelectedItem({
-                                      id: sprint.id,
-                                      type: "sprint",
-                                      title: sprint.name,
-                                    });
-                                    fetchHistory(sprint.id, "sprint");
-                                  }}
-                                  style={{ cursor: "pointer" }}
-                                >
-                                  <td>{sprint.name}</td>
-                                  <td>
-                                    {new Date(
-                                      sprint.startDate
-                                    ).toLocaleDateString("en-US", {
-                                      month: "short",
-                                      day: "2-digit",
-                                    })}{" "}
-                                    -{" "}
-                                    {new Date(
-                                      sprint.endDate
-                                    ).toLocaleDateString("en-US", {
-                                      month: "short",
-                                      day: "2-digit",
-                                    })}
-                                  </td>
-                                  <td>{sprint.goal || "No goal set"}</td>
-                                  <td>{sprint.capacity} pts</td>
-                                  <td>{sprint.status}</td>
-                                  <td>
-                                    <button
-                                      className="story-count-btn"
-                                      onClick={() =>
-                                        setExpandedSprintStories(
-                                          expandedSprintStories === sprint.id
-                                            ? null
-                                            : sprint.id
-                                        )
-                                      }
-                                    >
-                                      {sprint.userStories.length}{" "}
-                                      <i
-                                        className={`fa ${
-                                          expandedSprintStories === sprint.id
-                                            ? "fa-chevron-up"
-                                            : "fa-chevron-down"
-                                        }`}
-                                      ></i>
-                                    </button>
-                                  </td>
-                                  <td className="action-cell">
-                                    <button
-                                      onClick={() => handleEditSprint(sprint)}
-                                      className="icon-btn edit"
-                                    >
-                                      <i className="fa fa-edit"></i>
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteSprint(sprint.id)
-                                      }
-                                      className="icon-btn delete"
-                                    >
-                                      <i className="fa fa-trash"></i>
-                                    </button>
-                                    <div className="tooltip-container">
-                                      <button
-                                        onClick={async () => {
-                                          try {
-                                            const response =
-                                              await axiosInstance.post(
-                                                `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprint.id}/activate`,
-                                                {},
-                                                {
-                                                  headers: {
-                                                    Authorization: `Bearer ${accessToken}`,
-                                                  },
-                                                }
-                                              );
-                                            setActiveSprint(response.data); // Utilise le setter de useState
-                                            await fetchData(); // Recharge les données
-                                          } catch (error) {
-                                            console.error(
-                                              "Erreur lors de l'activation du sprint :",
-                                              error
-                                            );
-                                            alert(
-                                              "Erreur lors de l'activation du sprint."
-                                            );
-                                          }
-                                        }}
-                                        className={`icon-btn activate ${
-                                          activeSprint?.id === sprint.id
-                                            ? "active"
-                                            : ""
-                                        }`}
-                                      >
-                                        <i className="fa fa-play"></i>
-                                      </button>
-                                      <span className="tooltip-text">
-                                        Activer ce sprint
-                                      </span>
-                                    </div>
-                                    <button
-                                      onClick={() =>
-                                        handleCancelSprint(sprint.id)
-                                      }
-                                      className="icon-btn cancel"
-                                      disabled={
-                                        sprint.status === "COMPLETED" ||
-                                        sprint.status === "CANCELED" ||
-                                        sprint.status === "ARCHIVED"
-                                      }
-                                    >
-                                      <i className="fa fa-stop"></i>
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleArchiveSprint(sprint.id)
-                                      }
-                                      className="icon-btn archive"
-                                      disabled={
-                                        sprint.status !== "COMPLETED" &&
-                                        sprint.status !== "CANCELED"
-                                      }
-                                    >
-                                      <i className="fa fa-archive"></i>
-                                    </button>
-                                  </td>
-                                </tr>
-                                {expandedSprintStories === sprint.id && (
-                                  <tr>
-                                    <td colSpan={6}>
-                                      <div className="sprint-stories-list">
-                                        {sprint.userStories.length > 0 ? (
-                                          <table className="inner-story-table">
-                                            <thead>
-                                              <tr>
-                                                <th>Name</th>
-                                                <th>Effort (pts)</th>
-                                                <th>Status</th>
-                                                <th>Action</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {sprint.userStories.map(
-                                                (story) => (
-                                                  <tr key={story.id}>
-                                                    <td>{story.title}</td>
-                                                    <td>
-                                                      {story.effortPoints}
-                                                    </td>
-                                                    <td>
-                                                      {story.status ||
-                                                        "IN_SPRINT"}
-                                                    </td>
-                                                    <td>
-                                                      <button
-                                                        onClick={async () => {
-                                                          try {
-                                                            await axiosInstance.put(
-                                                              `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/remove-sprint`,
-                                                              {},
-                                                              {
-                                                                headers: {
-                                                                  Authorization: `Bearer ${accessToken}`,
-                                                                },
-                                                              }
-                                                            );
-                                                            await fetchData(); // Recharger après suppression
-                                                          } catch (error) {
-                                                            console.error(
-                                                              "Erreur lors du retrait du Sprint :",
-                                                              error
-                                                            );
-                                                            alert(
-                                                              "Erreur lors du retrait de la User Story."
-                                                            );
-                                                          }
-                                                        }}
-                                                        className="icon-btn delete"
-                                                      >
-                                                        <i className="fa fa-times"></i>
-                                                      </button>
-                                                    </td>
-                                                  </tr>
-                                                )
-                                              )}
-                                            </tbody>
-                                          </table>
-                                        ) : (
-                                          <p>
-                                            No user stories assigned to this
-                                            sprint.
-                                          </p>
-                                        )}
-                                      </div>
-                                    </td>
-                                  </tr>
-                                )}
-                              </React.Fragment>
-                            ))}
-                          </tbody>
-                        </table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Dates</th>
+      <th>Goal</th>
+      <th>Capacity</th>
+      <th>Status</th>
+      <th>Stories</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {currentSprints.map((sprint) => (
+      <React.Fragment key={sprint.id}>
+        <tr>
+          {/* Colonnes cliquables pour afficher l'historique */}
+          <td
+            onClick={() => {
+              setSelectedItem({
+                id: sprint.id,
+                type: "sprint",
+                title: sprint.name,
+              });
+              fetchHistory(sprint.id, "sprint");
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            {sprint.name}
+          </td>
+          <td
+            onClick={() => {
+              setSelectedItem({
+                id: sprint.id,
+                type: "sprint",
+                title: sprint.name,
+              });
+              fetchHistory(sprint.id, "sprint");
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            {new Date(sprint.startDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "2-digit",
+            })}{" "}
+            -{" "}
+            {new Date(sprint.endDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "2-digit",
+            })}
+          </td>
+          <td
+            onClick={() => {
+              setSelectedItem({
+                id: sprint.id,
+                type: "sprint",
+                title: sprint.name,
+              });
+              fetchHistory(sprint.id, "sprint");
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            {sprint.goal || "No goal set"}
+          </td>
+          <td
+            onClick={() => {
+              setSelectedItem({
+                id: sprint.id,
+                type: "sprint",
+                title: sprint.name,
+              });
+              fetchHistory(sprint.id, "sprint");
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            {sprint.capacity} pts
+          </td>
+          <td
+            onClick={() => {
+              setSelectedItem({
+                id: sprint.id,
+                type: "sprint",
+                title: sprint.name,
+              });
+              fetchHistory(sprint.id, "sprint");
+            }}
+            style={{ cursor: "pointer" }}
+          >
+            {sprint.status}
+          </td>
+          {/* Colonne Stories : non cliquable pour l'historique */}
+          <td onClick={(e) => e.stopPropagation()}>
+            <button
+              className="story-count-btn"
+              onClick={() =>
+                setExpandedSprintStories(
+                  expandedSprintStories === sprint.id ? null : sprint.id
+                )
+              }
+            >
+              {sprint.userStories.length}{" "}
+              <i
+                className={`fa ${
+                  expandedSprintStories === sprint.id
+                    ? "fa-chevron-up"
+                    : "fa-chevron-down"
+                }`}
+              ></i>
+            </button>
+          </td>
+          {/* Colonne Actions : non cliquable pour l'historique */}
+          <td className="action-cell" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => handleEditSprint(sprint)}
+              className="icon-btn edit"
+            >
+              <i className="fa fa-edit"></i>
+            </button>
+            <button
+              onClick={() => handleDeleteSprint(sprint.id)}
+              className="icon-btn delete"
+            >
+              <i className="fa fa-trash"></i>
+            </button>
+            <div className="tooltip-container">
+              <button
+                onClick={async () => {
+                  try {
+                    const response = await axiosInstance.post(
+                      `${PROJECT_SERVICE_URL}/api/projects/${projectId}/sprints/${sprint.id}/activate`,
+                      {},
+                      {
+                        headers: {
+                          Authorization: `Bearer ${accessToken}`,
+                        },
+                      }
+                    );
+                    setActiveSprint(response.data);
+                    await fetchData();
+                  } catch (error) {
+                    console.error("Erreur lors de l'activation du sprint :", error);
+                    alert("Erreur lors de l'activation du sprint.");
+                  }
+                }}
+                className={`icon-btn activate ${
+                  activeSprint?.id === sprint.id ? "active" : ""
+                }`}
+              >
+                <i className="fa fa-play"></i>
+              </button>
+              <span className="tooltip-text">Activate this sprint</span>
+            </div>
+            <button
+              onClick={() => handleCancelSprint(sprint.id)}
+              className="icon-btn cancel"
+              disabled={
+                sprint.status === "COMPLETED" ||
+                sprint.status === "CANCELED" ||
+                sprint.status === "ARCHIVED"
+              }
+            >
+              <i className="fa fa-stop"></i>
+            </button>
+            <button
+              onClick={() => handleArchiveSprint(sprint.id)}
+              className="icon-btn archive"
+              disabled={
+                sprint.status !== "COMPLETED" && sprint.status !== "CANCELED"
+              }
+            >
+              <i className="fa fa-archive"></i>
+            </button>
+          </td>
+        </tr>
+        {expandedSprintStories === sprint.id && (
+          <tr>
+            <td colSpan={7}>
+              <div className="sprint-stories-list">
+                {sprint.userStories.length > 0 ? (
+                  <table className="inner-story-table">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Effort (pts)</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sprint.userStories.map((story) => (
+                        <tr key={story.id}>
+                          <td>{story.title}</td>
+                          <td>{story.effortPoints}</td>
+                          <td>{story.status || "IN_SPRINT"}</td>
+                          <td>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await axiosInstance.put(
+                                    `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories/${story.id}/remove-sprint`,
+                                    {},
+                                    {
+                                      headers: {
+                                        Authorization: `Bearer ${accessToken}`,
+                                      },
+                                    }
+                                  );
+                                  await fetchData();
+                                } catch (error) {
+                                  console.error(
+                                    "Erreur lors du retrait du Sprint :",
+                                    error
+                                  );
+                                  alert(
+                                    "Erreur lors du retrait de la User Story."
+                                  );
+                                }
+                              }}
+                              className="icon-btn delete"
+                            >
+                              <i className="fa fa-times"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>No user stories assigned to this sprint.</p>
+                )}
+              </div>
+            </td>
+          </tr>
+        )}
+      </React.Fragment>
+    ))}
+  </tbody>
+</table>
                         {/* Pagination pour les sprints */}
                         {totalSprintItems > itemsPerPage && (
                           <div className="pagination-container">
@@ -2342,7 +2352,7 @@ export default function ProjectLayout({
                 Add Story
               </button>
 
-              <button className="action-btn secondary">Export Data</button>
+              <button className="action-btn secondary-export">Export Data</button>
             </div>
           </div>
 

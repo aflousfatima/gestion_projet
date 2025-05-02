@@ -29,7 +29,7 @@ interface Task {
   estimationTime: number | null;
   status: string;
   priority: string | null;
-  assignedUser: string[]; // Changed from assignedUsers: { id: string }[]  
+  assignedUser: string[]; // Changed from assignedUsers: { id: string }[]
   tags: string[];
   type: "TASK" | "BUG";
   severity: string | null;
@@ -160,8 +160,11 @@ export default function AddTaskModalPage() {
             ? response.data.assignedUser.map((id: string) => ({ id }))
             : [],
         };
-        console.log("Transformed task data:", JSON.stringify(taskData, null, 2));
-  
+        console.log(
+          "Transformed task data:",
+          JSON.stringify(taskData, null, 2)
+        );
+
         const task: Task = taskData;
         if (!task) {
           throw new Error("No task data received from API");
@@ -174,7 +177,7 @@ export default function AddTaskModalPage() {
           dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
           estimationTime: task.estimationTime?.toString() || "",
           status: task.status || "TO_DO",
-          priority: task.priority || "",          
+          priority: task.priority || "",
           assignedUser: task.assignedUser || [], // Changed from task.assignedUsers?.map((user) => user.id)
           tags: task.tags || [],
           severity: task.severity || "",
@@ -205,7 +208,7 @@ export default function AddTaskModalPage() {
 
     fetchTask();
   }, [taskId, accessToken, axiosInstance, projectId, userStoryId]);
-  
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -216,14 +219,28 @@ export default function AddTaskModalPage() {
   };
 
   const [tagInput, setTagInput] = useState("");
-  const handleTagAdd = () => {
+  const handleTagAdd = (e?: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e) e.preventDefault(); // Empêche le comportement par défaut (soumission du formulaire)
     if (tagInput.trim()) {
       setWorkItem((prev) => ({
         ...prev,
-        tags: [...prev.tags, tagInput.trim()],
+        tags: [
+          ...prev.tags.filter((t) => t !== tagInput.trim()),
+          tagInput.trim(),
+        ], // Évite les doublons
       }));
       setTagInput("");
+      console.log("Tag ajouté :", tagInput.trim()); // Log pour débogage
     }
+  };
+
+  const handleTagSuggestionClick = (tag: string) => {
+    setWorkItem((prev) => ({
+      ...prev,
+      tags: [...prev.tags.filter((t) => t !== tag), tag], // Évite les doublons
+    }));
+    setTagInput("");
+    console.log("Tag suggestion ajouté :", tag); // Log pour débogage
   };
 
   const removeTag = (index: number) => {
@@ -417,125 +434,182 @@ export default function AddTaskModalPage() {
               {/* Priority */}
               <div className="options-group priority-group">
                 <h3>Priority</h3>
-        
-  <div className="priority-options">
-    {[
-      {
-        value: "LOW",
-        label: "Low",
-        color: "#4ade80",
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 5v14m0 0l-7-7m7 7l7-7" />
-          </svg>
-        ),
-      },
-      {
-        value: "MEDIUM",
-        label: "Medium",
-        color: "#fb923c",
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M5 12h14m0 0l-7-7m7 7l-7 7" />
-          </svg>
-        ),
-      },
-      {
-        value: "HIGH",
-        label: "High",
-        color: "#ef4444",
-        icon: (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 19V5m0 0l7 7m-7-7l-7 7" />
-          </svg>
-        ),
-      },
-    ].map((opt) => (
-      <button
-        key={opt.value}
-        type="button"
-        className={`priority-btn ${workItem.priority === opt.value ? "active" : ""}`}
-        onClick={() => handlePrioritySelect(opt.value as "LOW" | "MEDIUM" | "HIGH")}
-        style={{ '--priority-color': opt.color } as React.CSSProperties}
-      >
-        <span className="priority-icon">{opt.icon}</span>
-        <span className="priority-label">{opt.label}</span>
-      </button>
-    ))}
-  </div>
-</div>
 
+                <div className="priority-options">
+                  {[
+                    {
+                      value: "LOW",
+                      label: "Low",
+                      color: "#4ade80",
+                      icon: (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M12 5v14m0 0l-7-7m7 7l7-7" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      value: "MEDIUM",
+                      label: "Medium",
+                      color: "#fb923c",
+                      icon: (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M5 12h14m0 0l-7-7m7 7l-7 7" />
+                        </svg>
+                      ),
+                    },
+                    {
+                      value: "HIGH",
+                      label: "High",
+                      color: "#ef4444",
+                      icon: (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M12 19V5m0 0l7 7m-7-7l-7 7" />
+                        </svg>
+                      ),
+                    },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`priority-btn ${
+                        workItem.priority === opt.value ? "active" : ""
+                      }`}
+                      onClick={() =>
+                        handlePrioritySelect(
+                          opt.value as "LOW" | "MEDIUM" | "HIGH"
+                        )
+                      }
+                      style={
+                        { "--priority-color": opt.color } as React.CSSProperties
+                      }
+                    >
+                      <span className="priority-icon">{opt.icon}</span>
+                      <span className="priority-label">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {/* Severity (for Bugs) */}
               {workItemType === "BUG" && (
-  <div className="options-group severity-group">
-    <h3>Severity</h3>
-    <div className="severity-options">
-      {[
-        {
-          value: "MINOR",
-          label: "Minor",
-          color: "#4ade80",
-          icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-            </svg>
-          ),
-        },
-        {
-          value: "MAJOR",
-          label: "Major",
-          color: "#fb923c",
-          icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2L2 19h20L12 2z" />
-              <path d="M12 8v4" />
-              <circle cx="12" cy="16" r="1" />
-            </svg>
-          ),
-        },
-        {
-          value: "CRITICAL",
-          label: "Critical",
-          color: "#ef4444",
-          icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2l9 15H3l9-15z" />
-              <path d="M12 9v4" />
-              <circle cx="12" cy="17" r="1" />
-            </svg>
-          ),
-        },
-      ].map((opt) => (
-        <button
-          key={opt.value}
-          type="button"
-          className={`severity-btn ${workItem.severity === opt.value ? "active" : ""}`}
-          onClick={() => setWorkItem((prev) => ({ ...prev, severity: opt.value }))}
-          style={{
-            '--severity-color': opt.color,
-          } as React.CSSProperties}
-        >
-          <span className="severity-icon">{opt.icon}</span>
-          <span className="severity-label">{opt.label}</span>
-        </button>
-      ))}
-    </div>
-  </div>
-)}
-              
+                <div className="options-group severity-group">
+                  <h3>Severity</h3>
+                  <div className="severity-options">
+                    {[
+                      {
+                        value: "MINOR",
+                        label: "Minor",
+                        color: "#4ade80",
+                        icon: (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        value: "MAJOR",
+                        label: "Major",
+                        color: "#fb923c",
+                        icon: (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M12 2L2 19h20L12 2z" />
+                            <path d="M12 8v4" />
+                            <circle cx="12" cy="16" r="1" />
+                          </svg>
+                        ),
+                      },
+                      {
+                        value: "CRITICAL",
+                        label: "Critical",
+                        color: "#ef4444",
+                        icon: (
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M12 2l9 15H3l9-15z" />
+                            <path d="M12 9v4" />
+                            <circle cx="12" cy="17" r="1" />
+                          </svg>
+                        ),
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={`severity-btn ${
+                          workItem.severity === opt.value ? "active" : ""
+                        }`}
+                        onClick={() =>
+                          setWorkItem((prev) => ({
+                            ...prev,
+                            severity: opt.value,
+                          }))
+                        }
+                        style={
+                          {
+                            "--severity-color": opt.color,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <span className="severity-icon">{opt.icon}</span>
+                        <span className="severity-label">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Tags */}
               <div className="options-group tags-group">
-              <h3>Tags</h3>
-              <div className="tags-input">
+                <h3>Tags</h3>
+                <div className="tags-input">
                   <input
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" || e.key === ",") {
-                        e.preventDefault();
-                        handleTagAdd();
+                        handleTagAdd(e);
                       }
                     }}
                     placeholder="Add a tag..."
@@ -551,13 +625,7 @@ export default function AddTaskModalPage() {
                             key={tag}
                             type="button"
                             className="tag-suggestion"
-                            onClick={() => {
-                              setWorkItem((prev) => ({
-                                ...prev,
-                                tags: [...prev.tags, tag],
-                              }));
-                              setTagInput("");
-                            }}
+                            onClick={() => handleTagSuggestionClick(tag)}
                           >
                             {tag}
                           </button>
@@ -576,7 +644,6 @@ export default function AddTaskModalPage() {
                   </div>
                 </div>
               </div>
-
               {/* Team */}
               <div className="options-group team-group">
                 <h3>Responsible</h3>
@@ -660,7 +727,6 @@ export default function AddTaskModalPage() {
                   )}
                 </div>
               </div>
-
             </div>
           </div>
 

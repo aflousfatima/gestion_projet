@@ -782,6 +782,13 @@ padding: 1px 5px;
   background: #333;
   color: #fff;
 }
+/* Bouton */
+.action-btn.secondary-export {
+  background: #fc522c;
+  color: white;
+
+}
+
 .action-btn.primary-sprint {
   background: #333;
   color: #fff;
@@ -805,12 +812,12 @@ padding: 1px 5px;
 
 }
 
-.action-btn.secondary:hover {
+.action-btn.secondary1:hover {
   background: #d1d5db;
 }
 
 
-.action-btn.secondary {
+.action-btn.secondary1 {
   background: rgb(152, 151, 151);
   color: #ffffff;
 
@@ -1595,24 +1602,8 @@ left:10%;
   padding: 25px;
 }
 
-/* Bouton */
-.action-btn.secondary {
-  background: #fc522c;
-  color: white;
-  border: none;
-  padding: 10px 25px;
-  border-radius: 8px;
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
-  font-size: 1em;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.3s ease;
-  margin-top: 30px;
-  display: block;
-  margin-left: auto;
-}
 
-.action-btn.secondary:hover {
+.action-btn.secondary1:hover {
   background: #333;
   transform: translateY(-2px);
 }
