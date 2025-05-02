@@ -95,36 +95,35 @@ public class TaskService {
 
         // Gestion des tags
         if (taskDTO.getTags() != null && !taskDTO.getTags().isEmpty()) {
-            System.out.println("➡️ Tags reçus pour la tâche : " + taskDTO.getTags());
+            logger.info("➡️ Tags reçus pour la tâche : {}", taskDTO.getTags());
 
-            Set<Tag> tags = taskDTO.getTags().stream().map(tagName -> {
-                System.out.println("🔍 Vérification du tag : " + tagName);
-
-                // Vérifier si le tag existe
-                return tagRepository.findByName(tagName)
+            Set<Tag> tags = new HashSet<>();
+            for (String tagName : taskDTO.getTags()) {
+                logger.info("🔍 Vérification du tag : {}", tagName);
+                Tag tag = tagRepository.findByName(tagName)
                         .orElseGet(() -> {
-                            System.out.println("➕ Tag non trouvé, création du tag : " + tagName);
+                            logger.info("➕ Tag non trouvé, création du tag : {}", tagName);
                             Tag newTag = new Tag();
                             newTag.setName(tagName);
-                            Tag savedTag = tagRepository.save(newTag);
-                            System.out.println("✅ Tag créé et sauvegardé : " + savedTag.getName() + " (ID: " + savedTag.getId() + ")");
-                            return savedTag;
+                            newTag.setWorkItems(new HashSet<>()); // Initialiser la collection
+                            return tagRepository.save(newTag); // Sauvegarder explicitement le tag
                         });
-            }).collect(Collectors.toSet());
-
-            System.out.println("✅ Ensemble des tags associés (avant association à la tâche) : " + tags.stream().map(Tag::getName).collect(Collectors.toSet()));
-
-            // Réinitialiser les tags pour éviter les doublons
-            task.setTags(new HashSet<>());
-            // Associer les tags à la tâche
-            for (Tag tag : tags) {
-                task.addTag(tag);
-                System.out.println("🔗 Tag associé à la tâche : " + tag.getName());
+                tags.add(tag);
+                logger.info("✅ Tag ajouté à la liste : {}", tag.getName());
             }
 
-            System.out.println("✅ Tous les tags ont été associés à la tâche.");
+            // Réinitialiser les tags de la tâche
+            task.setTags(new HashSet<>());
+            // Associer les tags à la tâche et synchroniser la relation bidirectionnelle
+            for (Tag tag : tags) {
+                task.getTags().add(tag); // Ajouter au côté WorkItem
+                tag.getWorkItems().add(task); // Synchroniser le côté Tag
+                logger.info("🔗 Tag associé à la tâche : {}", tag.getName());
+            }
+
+            logger.info("✅ Tous les tags ont été associés à la tâche : {}", tags.stream().map(Tag::getName).collect(Collectors.toSet()));
         } else {
-            System.out.println("⚠️ Aucun tag reçu pour la tâche.");
+            logger.info("⚠️ Aucun tag reçu pour la tâche.");
         }
 
         updateProgress(task);
