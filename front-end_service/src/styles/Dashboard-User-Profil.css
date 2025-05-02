@@ -1,0 +1,235 @@
+.profile-container {
+    max-width: 100%; /* Étend le conteneur à la pleine largeur */
+    margin: 0 auto;
+    padding: 10px; /* Réduit le padding pour minimiser l'espace vide */
+    font-family: 'Arial', sans-serif;
+  }
+  
+  .profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px; /* Réduit légèrement la marge */
+  }
+  
+  .profile-title {
+    font-size: 2rem;
+    color: #333;
+  }
+  
+  .back-btn {
+    color: #007bff;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 0.3s;
+  }
+  
+  .back-btn:hover {
+    color: #0056b3;
+  }
+  
+  .error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+  
+  .success-message {
+    background-color: #d4edda;
+    color: #155724;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+  }
+  
+  .profile-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Deux colonnes pour les cartes secondaires */
+    gap: 15px; /* Réduit l'espace entre les cartes */
+    align-items: start; /* Aligner les cartes en haut */
+  }
+  
+  /* La carte Informations personnelles prend toute la largeur */
+  .full-width {
+    grid-column: 1 / -1; /* Occupe toutes les colonnes */
+  }
+  
+  /* Media query pour les écrans plus petits (tablettes et mobiles) */
+  @media (max-width: 768px) {
+    .profile-content {
+      grid-template-columns: 1fr; /* Une seule colonne sur petits écrans */
+      gap: 10px; /* Réduit encore l'espace sur mobile */
+    }
+    .full-width {
+      grid-column: 1 / -1; /* Reste pleine largeur */
+    }
+    .profile-container {
+      padding: 5px; /* Encore moins de padding sur mobile */
+    }
+  }
+  
+  .profile-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    transition: transform 0.3s;
+  }
+  
+  .profile-card:hover {
+    transform: translateY(-5px);
+  }
+  
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .card-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: #333;
+  }
+  
+  .card-header h2 svg {
+    margin-right: 10px;
+  }
+  
+  .card-body {
+    padding: 20px;
+  }
+  
+  .avatar-section {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #007bff;
+  }
+  
+  .avatar-upload {
+    margin-top: 10px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  .profile-form {
+    display: grid;
+    gap: 15px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  
+  .form-group input,
+  .form-group textarea {
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 5px;
+    font-size: 1rem;
+  }
+  
+  .form-group input:disabled {
+    background: #e9ecef;
+  }
+  
+  .info-list p {
+    margin: 10px 0;
+  }
+  
+  .tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .tasks-table th,
+  .tasks-table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+  }
+  
+  .tasks-table th {
+    background: #f8f9fa;
+  }
+  
+  .view-task-btn {
+    color: #007bff;
+    text-decoration: none;
+  }
+  
+  .view-task-btn:hover {
+    text-decoration: underline;
+  }
+  
+  .see-all-btn {
+    display: block;
+    margin-top: 10px;
+    color: #007bff;
+    text-decoration: none;
+  }
+  
+  .see-all-btn:hover {
+    text-decoration: underline;
+  }
+  
+  .stats-list p {
+    margin: 10px 0;
+  }
+  
+  .edit-btn,
+  .save-btn,
+  .cancel-btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  
+  .edit-btn {
+    background: #007bff;
+    color: #fff;
+  }
+  
+  .edit-btn:hover {
+    background: #0056b3;
+  }
+  
+  .save-btn {
+    background: #28a745;
+    color: #fff;
+    margin-right: 10px;
+  }
+  
+  .save-btn:hover {
+    background: #218838;
+  }
+  
+  .cancel-btn {
+    background: #dc3545;
+    color: #fff;
+  }
+  
+  .cancel-btn:hover {
+    background: #c82333;
+  }

@@ -38,7 +38,7 @@ export default function DashboardLayout({
   const { projects, setProjects, loading, error } = useProjects();
   const axiosInstance = useAxios();
   const currentPath = usePathname();
-  const [user, setUser] = useState({ firstName: "", lastName: "" });
+  const [user, setUser] = useState({ firstName: "", lastName: "" , email:""});
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { accessToken, isLoading } = useAuth();
   const router = useRouter();
@@ -440,7 +440,7 @@ export default function DashboardLayout({
                     <span className="user-fullname">
                       {user.firstName} {user.lastName}
                     </span>
-                    <span className="user-email">aflousfatima@gmail.com</span>
+                    <span className="user-email">{user.email}</span>
                   </div>
                 </div>
                 <div className="dropdown-divider"></div>
@@ -458,8 +458,14 @@ export default function DashboardLayout({
                 </div>
                 <div className="dropdown-item">
                   <i className="fa fa-user-circle"></i>
-                  <span>Profil</span>
+                  <Link
+                    href="/user/dashboard/profile"
+                    className="nav-link btn style-profile"
+                  >
+                    <span>Profil</span>
+                 </Link>
                 </div>
+
                 <div className="dropdown-item">
                   <i className="fa fa-cog"></i>
                   <span>Settings</span>
