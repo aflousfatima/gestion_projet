@@ -401,8 +401,6 @@ public class UserStoryService {
         return convertToDTO(updatedUserStory);
     }
 
-
-
     public List<Long> getUserStoryIdsOfActiveSprint(Long projectId) {
         Sprint sprintActif = sprintRepository.findByProjectIdAndStatus(projectId, SprintStatus.ACTIVE);
         if (sprintActif == null) return new ArrayList<>();
