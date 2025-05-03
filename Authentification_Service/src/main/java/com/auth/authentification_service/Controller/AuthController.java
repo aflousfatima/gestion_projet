@@ -305,4 +305,9 @@ public class AuthController {
         return keycloakService.getUsersByIds(userIds);
     }
 
+    @GetMapping("/project-members/by-user")
+    public List<Long> getProjectIdsByUserId(@RequestParam String userId) {
+        System.out.println("🔍 Récupération des projectId pour userId: " + userId);
+        return keycloakService.getProjectIdsByUserId(userId);
+    }
 }

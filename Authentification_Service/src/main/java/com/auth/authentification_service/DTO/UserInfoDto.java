@@ -3,10 +3,12 @@ package com.auth.authentification_service.DTO;
 public class UserInfoDto {
     private String firstName;
     private String lastName;
+    private String email;
 
-    public UserInfoDto(String firstName, String lastName) {
+    public UserInfoDto(String firstName, String lastName , String email) {
         this.firstName = firstName;
         this.lastName = lastName;
+        this.email = email;
     }
 
     public String getFirstName() {
@@ -15,5 +17,13 @@ public class UserInfoDto {
 
     public String getLastName() {
         return lastName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

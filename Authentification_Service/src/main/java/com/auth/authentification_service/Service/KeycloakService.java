@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class KeycloakService {
@@ -495,6 +496,14 @@ public class KeycloakService {
                     authId + " depuis Keycloak : " + e.getMessage());
             throw new RuntimeException("Erreur lors de la récupération de l'utilisateur depuis Keycloak", e);
         }
+    }
+
+
+    public List<Long> getProjectIdsByUserId(String userId) {
+        List<ProjectMember> projectMembers = projectMemberRepository.findByIdUserId(userId);
+        return projectMembers.stream()
+                .map(pm -> pm.getId().getProjectId())
+                .collect(Collectors.toList());
     }
 
 

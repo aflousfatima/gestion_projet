@@ -130,7 +130,8 @@ public class LoginService {
             DecodedJWT decodedJWT = JWT.decode(accessToken);
             String firstName = decodedJWT.getClaim("given_name").asString();
             String lastName = decodedJWT.getClaim("family_name").asString();
-            return new UserInfoDto(firstName, lastName);
+            String email = decodedJWT.getClaim("email").asString();
+            return new UserInfoDto(firstName,lastName,email);
         } catch (Exception e) {
             throw new RuntimeException("Impossible de décoder le token", e);
         }
