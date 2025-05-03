@@ -1,10 +1,7 @@
-// hooks/useProjects.ts
 import { useState, useEffect } from "react";
 import useAxios from "./useAxios";
 import { useAuth } from "../context/AuthContext";
 import { AUTH_SERVICE_URL, PROJECT_SERVICE_URL } from "../config/useApi";
-
-
 
 export interface Project {
   id?: number;
@@ -15,7 +12,7 @@ export interface Project {
   creationDate?: string;
   startDate: string;
   deadline: string;
-  status: "START" | "IN_PROGRESS" | "IN_PAUSE" | "DONE" | "CANCEL" | "ARCHIVE"|"";
+  status: "START" | "IN_PROGRESS" | "IN_PAUSE" | "DONE" | "CANCEL" | "ARCHIVE" | "";
   phase:
     | "PLANIFICATION"
     | "DESIGN"
@@ -60,11 +57,12 @@ export const useProjects = (): UseProjectsResult => {
         );
         const authId = authIdResponse.data;
 
+        // Appeler le nouvel endpoint pour récupérer les projets de l'utilisateur
         const projectsResponse = await axiosInstance.get(
-          `${PROJECT_SERVICE_URL}/api/projects/by-manager?authId=${authId}`
+          `${PROJECT_SERVICE_URL}/api/projects/by-user?authId=${authId}`
         );
         const { projects } = projectsResponse.data;
-        console.log("Projets renvoyés par l'API :", projects); // Vérifie la structure
+        console.log("Projets renvoyés par l'API :", projects);
         setProjects(projects);
       } catch (err) {
         console.error("Erreur lors de la récupération des projets:", err);
@@ -77,5 +75,5 @@ export const useProjects = (): UseProjectsResult => {
     fetchProjects();
   }, [accessToken, authLoading, axiosInstance]);
 
-  return { projects,setProjects, loading, error };
+  return { projects, setProjects, loading, error };
 };
