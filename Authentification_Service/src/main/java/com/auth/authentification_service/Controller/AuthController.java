@@ -1,9 +1,6 @@
 package com.auth.authentification_service.Controller;
 
-import com.auth.authentification_service.DTO.LoginRequest;
-import com.auth.authentification_service.DTO.TokenDto;
-import com.auth.authentification_service.DTO.UserDto;
-import com.auth.authentification_service.DTO.UserInfoDto;
+import com.auth.authentification_service.DTO.*;
 import com.auth.authentification_service.Service.KeycloakService;
 import com.auth.authentification_service.Service.LoginService;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
@@ -306,8 +303,14 @@ public class AuthController {
     }
 
     @GetMapping("/project-members/by-user")
-    public List<Long> getProjectIdsByUserId(@RequestParam String userId) {
-        System.out.println("🔍 Récupération des projectId pour userId: " + userId);
-        return keycloakService.getProjectIdsByUserId(userId);
+    public ResponseEntity<List<ProjectMemberDTO>> getProjectMembersByUserId(@RequestParam String userId) {
+        System.out.println("🔍 Récupération des membres de projet pour userId: " + userId);
+        List<ProjectMemberDTO> projectMembers = keycloakService.getProjectMembersByUserId(userId);
+        if (projectMembers.isEmpty()) {
+            System.out.println("ℹ️ Aucun membre de projet trouvé pour userId: " + userId);
+            return ResponseEntity.ok(Collections.emptyList());
+        }
+        System.out.println("✅ Membres de projet trouvés: " + projectMembers.size());
+        return ResponseEntity.ok(projectMembers);
     }
 }
