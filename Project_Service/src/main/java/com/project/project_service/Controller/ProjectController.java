@@ -1,9 +1,6 @@
 package com.project.project_service.Controller;
 
-import com.project.project_service.DTO.ManagerDTO;
-import com.project.project_service.DTO.ProjectDTO;
-import com.project.project_service.DTO.ProjectDetailsDTO;
-import com.project.project_service.DTO.ProjectResponseDTO;
+import com.project.project_service.DTO.*;
 import com.project.project_service.Entity.Client;
 import com.project.project_service.Entity.Projet;
 import com.project.project_service.Service.ProjectService;
@@ -211,7 +208,7 @@ public class ProjectController {
     }
 
     @GetMapping("/projects/by-user")
-    public ProjectResponseDTO getProjectsByUser(@RequestParam String authId) {
+    public ProjectResponseWithRoleDTO getProjectsByUser(@RequestParam String authId) {
         return projectService.getProjectsByUser(authId);
     }
 
