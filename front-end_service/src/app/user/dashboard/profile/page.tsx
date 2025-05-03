@@ -3,14 +3,17 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import useAxios from "@/hooks/useAxios";
 import Link from "next/link";
+import { AUTH_SERVICE_URL } from "../../../../config/useApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
-  faTasks,
-  faChartBar,
+  faEnvelope,
   faEdit,
   faSave,
   faTimes,
+  faLock,
+  faBell,
+  faProjectDiagram,
 } from "@fortawesome/free-solid-svg-icons";
 import "../../../../styles/Dashboard-User-Profil.css";
 
@@ -30,11 +33,10 @@ interface User {
   };
 }
 
-interface Task {
-  id: string;
-  title: string;
-  status: string;
-  dueDate: string;
+interface ProjectRole {
+  projectId: number;
+  projectName: string;
+  roleInProject: string;
 }
 
 const ProfilePage: React.FC = () => {
@@ -54,12 +56,13 @@ const ProfilePage: React.FC = () => {
       deadlineReminders: true,
     },
   });
+  const [projectRoles, setProjectRoles] = useState<ProjectRole[]>([]);
   const [isEditing, setIsEditing] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [stats, setStats] = useState({
-    tasksCompleted: 0,
-    tasksInProgress: 0,
-    sprintsContributed: 0,
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -67,61 +70,62 @@ const ProfilePage: React.FC = () => {
   // Récupérer les informations de l'utilisateur
   useEffect(() => {
     const fetchUserInfo = async () => {
-      if (!accessToken) return;
+      if (!accessToken || isLoading) return;
       try {
-        const response = await axiosInstance.get("http://localhost:8083/api/me", {
+        console.log("🔍 Récupération des détails de l'utilisateur...");
+        const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
+        console.log("✅ Réponse de /api/me:", response.data);
         setUser({
           ...response.data,
+          avatar: response.data.avatar || `https://ui-avatars.com/api/?name=${response.data.firstName?.charAt(0) || 'U'}+${response.data.lastName?.charAt(0) || 'U'}`,
           notificationPreferences: response.data.notificationPreferences || {
             emailNotifications: true,
             taskUpdates: true,
             deadlineReminders: true,
           },
         });
-      } catch (err) {
-        setError("Erreur lors de la récupération des informations utilisateur");
-        console.error(err);
+      } catch (err: any) {
+        console.error("Erreur lors de la récupération des infos utilisateur:", err);
+        setError(err.response?.data?.message || "Erreur lors de la récupération des informations utilisateur");
       }
     };
 
-    const fetchUserTasks = async () => {
-      try {
-        const response = await axiosInstance.get(
-          "http://localhost:8082/api/project/tasks/assigned",
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        setTasks(response.data);
-      } catch (err) {
-        console.error("Erreur lors de la récupération des tâches", err);
-      }
-    };
-
-    const fetchUserStats = async () => {
-      try {
-        const response = await axiosInstance.get(
-          "http://localhost:8082/api/project/user-stats",
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        setStats(response.data);
-      } catch (err) {
-        console.error("Erreur lors de la récupération des statistiques", err);
-      }
-    };
-
-    if (!isLoading && accessToken) {
-      fetchUserInfo();
-      fetchUserTasks();
-      fetchUserStats();
-    }
+    fetchUserInfo();
   }, [accessToken, isLoading, axiosInstance]);
 
-  // Gérer les changements dans le formulaire
+  // Récupérer les rôles dans les projets
+  useEffect(() => {
+    const fetchProjectRoles = async () => {
+      if (!accessToken || isLoading || !user.id) return;
+      try {
+        console.log("🔍 Récupération des projets pour authId:", user.id);
+        const response = await axiosInstance.get(
+          "http://localhost:8085/api/projects/by-user",
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            params: { authId: user.id },
+          }
+        );
+        console.log("✅ Réponse de /projects/by-user:", response.data);
+        const projectRoles = response.data.projects.map((project: any) => ({
+          projectId: project.id,
+          projectName: project.name,
+          roleInProject: project.roleInProject,
+        }));
+        console.log("✅ Rôles de projet finaux:", projectRoles);
+        setProjectRoles(projectRoles);
+      } catch (err: any) {
+        console.error("Erreur lors de la récupération des rôles de projet:", err);
+        setError(err.response?.data?.message || "Erreur lors de la récupération des rôles de projet");
+      }
+    };
+
+    fetchProjectRoles();
+  }, [accessToken, isLoading, axiosInstance, user.id]);
+
+  // Gérer les changements dans le formulaire utilisateur
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -129,6 +133,7 @@ const ProfilePage: React.FC = () => {
     setUser((prev) => ({ ...prev, [name]: value }));
   };
 
+  // Gérer les changements dans les préférences de notification
   const handleNotificationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setUser((prev) => ({
@@ -140,7 +145,13 @@ const ProfilePage: React.FC = () => {
     }));
   };
 
-  // Soumettre les modifications
+  // Gérer les changements dans le formulaire de mot de passe
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Soumettre les modifications du profil
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -151,11 +162,40 @@ const ProfilePage: React.FC = () => {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
-      setSuccessMessage("Profil mis à jour avec succès !");
+      setSuccessMessage("Profile updated successfully!");
       setIsEditing(false);
       setError(null);
     } catch (err) {
-      setError("Erreur lors de la mise à jour du profil");
+      setError("Error updating profile");
+      setSuccessMessage(null);
+      console.error(err);
+    }
+  };
+
+  // Soumettre le changement de mot de passe
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError("New passwords do not match");
+      return;
+    }
+    try {
+      await axiosInstance.post(
+        "http://localhost:8083/api/user/change-password",
+        {
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        },
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      setSuccessMessage("Password changed successfully!");
+      setIsChangingPassword(false);
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setError(null);
+    } catch (err) {
+      setError("Error changing password");
       setSuccessMessage(null);
       console.error(err);
     }
@@ -179,12 +219,19 @@ const ProfilePage: React.FC = () => {
           }
         );
         setUser((prev) => ({ ...prev, avatar: response.data.avatarUrl }));
-        setSuccessMessage("Avatar mis à jour avec succès !");
+        setSuccessMessage("Avatar updated successfully!");
       } catch (err) {
-        setError("Erreur lors du téléchargement de l'avatar");
+        setError("Error uploading avatar");
         console.error(err);
       }
     }
+  };
+
+  // Générer les initiales pour le placeholder
+  const getInitials = () => {
+    const firstInitial = user.firstName && user.firstName !== "Inconnu" ? user.firstName.charAt(0) : "U";
+    const lastInitial = user.lastName && user.lastName !== "Inconnu" ? user.lastName.charAt(0) : "U";
+    return `${firstInitial}${lastInitial}`.toUpperCase();
   };
 
   if (isLoading) {
@@ -197,15 +244,6 @@ const ProfilePage: React.FC = () => {
 
   return (
     <div className="profile-container">
-      <div className="profile-header">
-        <h1 className="profile-title">
-          Profil de {user.firstName} {user.lastName}
-        </h1>
-        <Link href="/user/dashboard/home" className="back-btn">
-          <FontAwesomeIcon icon={faTimes} /> Retour
-        </Link>
-      </div>
-
       {error && <div className="error-message">{error}</div>}
       {successMessage && <div className="success-message">{successMessage}</div>}
 
@@ -214,31 +252,34 @@ const ProfilePage: React.FC = () => {
         <div className="profile-card full-width">
           <div className="card-header">
             <h2>
-              <FontAwesomeIcon icon={faUser} /> Informations personnelles
+              <FontAwesomeIcon icon={faUser} /> Personal Informations
             </h2>
             {!isEditing ? (
               <button className="edit-btn" onClick={() => setIsEditing(true)}>
-                <FontAwesomeIcon icon={faEdit} /> Modifier
+                <FontAwesomeIcon icon={faEdit} /> Edit
               </button>
             ) : (
-              <div>
+              <div className="form-actions">
                 <button className="save-btn" onClick={handleSubmit}>
-                  <FontAwesomeIcon icon={faSave} /> Enregistrer
+                  <FontAwesomeIcon icon={faSave} /> Save
                 </button>
                 <button className="cancel-btn" onClick={() => setIsEditing(false)}>
-                  <FontAwesomeIcon icon={faTimes} /> Annuler
+                  <FontAwesomeIcon icon={faTimes} /> Cancel
                 </button>
               </div>
             )}
           </div>
-
           <div className="card-body">
             <div className="avatar-section">
-              <img
-                src={user.avatar || "/default-avatar.png"}
-                alt="Avatar"
-                className="avatar"
-              />
+              {user.avatar && user.avatar !== `https://ui-avatars.com/api/?name=U+U` ? (
+                <img
+                  src={user.avatar}
+                  alt={`${user.firstName} ${user.lastName}`}
+                  className="avatar"
+                />
+              ) : (
+                <div className="user-avatar-placeholder">{getInitials()}</div>
+              )}
               {isEditing && (
                 <input
                   type="file"
@@ -248,82 +289,147 @@ const ProfilePage: React.FC = () => {
                 />
               )}
             </div>
-
             {isEditing ? (
               <form className="profile-form">
-                <div className="form-group">
-                  <label>Prénom</label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={user.firstName}
-                    onChange={handleInputChange}
-                    required
-                  />
+                <div className="form-columns">
+                  <div className="form-column">
+                    <div className="form-group">
+                      <label>First Name</label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={user.firstName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Last Name</label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={user.lastName}
+                        onChange={handleInputChange}
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={user.email}
+                        disabled
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Nom</label>
-                  <input
-                    type="text"
-                    name="lastName"
-                    value={user.lastName}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={user.email}
-                    disabled
-                  />
-                </div>
-                
-                
               </form>
             ) : (
-              <div className="info-list">
-                <p><strong>Prénom :</strong> {user.firstName}</p>
-                <p><strong>Nom :</strong> {user.lastName}</p>
-                <p><strong>Email :</strong> {user.email}</p>
-               
+              <div className="info-columns">
+                <div className="info-column">
+                  <p><strong>First Name:</strong> {user.firstName || "Not defined"}</p>
+                  <p><strong>Last Name:</strong> {user.lastName || "Not defined"}</p>
+                  <p><strong>Email:</strong> {user.email || "Not defined"}</p>
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Section Tâches assignées */}
+        {/* Section Sécurité */}
         <div className="profile-card">
           <div className="card-header">
             <h2>
-              <FontAwesomeIcon icon={faTasks} /> Tâches assignées
+              <FontAwesomeIcon icon={faLock} /> Security
+            </h2>
+            <button
+              className="edit-btn"
+              onClick={() => setIsChangingPassword(true)}
+            >
+              <FontAwesomeIcon icon={faEdit} /> Change Password
+            </button>
+          </div>
+          <div className="card-body">
+            {isChangingPassword ? (
+              <form className="password-form" onSubmit={handlePasswordSubmit}>
+                <div className="form-group">
+                  <label>Current Password</label>
+                  <input
+                    type="password"
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handlePasswordChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>New Password</label>
+                  <input
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handlePasswordChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Confirm New Password</label>
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    value={passwordData.confirmPassword}
+                    onChange={handlePasswordChange}
+                    required
+                  />
+                </div>
+                <div className="form-actions">
+                  <button type="submit" className="save-btn">
+                    <FontAwesomeIcon icon={faSave} /> Save
+                  </button>
+                  <button
+                    type="button"
+                    className="cancel-btn"
+                    onClick={() => setIsChangingPassword(false)}
+                  >
+                    <FontAwesomeIcon icon={faTimes} /> Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <p>Manage your account security by changing your password.</p>
+            )}
+          </div>
+        </div>
+
+        {/* Section Rôles dans les projets */}
+        <div className="profile-card">
+          <div className="card-header">
+            <h2>
+              <FontAwesomeIcon icon={faProjectDiagram} /> Roles in Projects
             </h2>
           </div>
           <div className="card-body">
-            {tasks.length > 0 ? (
-              <table className="tasks-table">
+            {projectRoles.length > 0 ? (
+              <table className="project-roles-table">
                 <thead>
                   <tr>
-                    <th>Titre</th>
-                    <th>Statut</th>
-                    <th>Date d'échéance</th>
+                    <th>Project</th>
+                    <th>Role</th>
                     <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tasks.slice(0, 5).map((task) => (
-                    <tr key={task.id}>
-                      <td>{task.title}</td>
-                      <td>{task.status}</td>
-                      <td>{new Date(task.dueDate).toLocaleDateString()}</td>
+                  {projectRoles.map((role) => (
+                    <tr key={role.projectId}>
+                      <td>{role.projectName}</td>
+                      <td>{role.roleInProject}</td>
                       <td>
                         <Link
-                          href={`/user/dashboard/tasks/${task.id}`}
-                          className="view-task-btn"
+                          href={`/user/dashboard/projects/${role.projectId}`}
+                          className="view-project-btn"
                         >
-                          Voir
+                          View Project
                         </Link>
                       </td>
                     </tr>
@@ -331,29 +437,57 @@ const ProfilePage: React.FC = () => {
                 </tbody>
               </table>
             ) : (
-              <p>Aucune tâche assignée.</p>
-            )}
-            {tasks.length > 5 && (
-              <Link href="/user/dashboard/my-tasks" className="see-all-btn">
-                Voir toutes les tâches
-              </Link>
+              <p>No roles in projects.</p>
             )}
           </div>
         </div>
 
-        {/* Section Statistiques */}
+        {/* Section Préférences de notification */}
         <div className="profile-card">
           <div className="card-header">
             <h2>
-              <FontAwesomeIcon icon={faChartBar} /> Statistiques de contribution
+              <FontAwesomeIcon icon={faBell} /> Notification Preferences
             </h2>
           </div>
           <div className="card-body">
-            <div className="stats-list">
-              <p><strong>Tâches terminées :</strong> {stats.tasksCompleted}</p>
-              <p><strong>Tâches en cours :</strong> {stats.tasksInProgress}</p>
-              <p><strong>Sprints contribués :</strong> {stats.sprintsContributed}</p>
-            </div>
+            <form className="notification-form">
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="emailNotifications"
+                    checked={user.notificationPreferences?.emailNotifications}
+                    onChange={handleNotificationChange}
+                    disabled={!isEditing}
+                  />
+                  Email Notifications
+                </label>
+              </div>
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="taskUpdates"
+                    checked={user.notificationPreferences?.taskUpdates}
+                    onChange={handleNotificationChange}
+                    disabled={!isEditing}
+                  />
+                  Task Updates
+                </label>
+              </div>
+              <div className="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    name="deadlineReminders"
+                    checked={user.notificationPreferences?.deadlineReminders}
+                    onChange={handleNotificationChange}
+                    disabled={!isEditing}
+                  />
+                  Deadline Reminders
+                </label>
+              </div>
+            </form>
           </div>
         </div>
       </div>
