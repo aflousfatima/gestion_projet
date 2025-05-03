@@ -1,8 +1,6 @@
 package com.project.project_service.Service;
 
-import com.project.project_service.DTO.ManagerDTO;
-import com.project.project_service.DTO.ProjectDTO;
-import com.project.project_service.DTO.ProjectDetailsDTO;
+import com.project.project_service.DTO.*;
 import com.project.project_service.Entity.Client;
 import com.project.project_service.Entity.Entreprise;
 import com.project.project_service.Entity.Projet;
@@ -17,8 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ProjectService {
@@ -215,4 +213,61 @@ public class ProjectService {
         );
     }
 
+
+    public ProjectResponseDTO getProjectsByUser(String authId) {
+        System.out.println("🔍 Récupération des projets pour l'utilisateur avec authId: " + authId);
+
+        // Étape 1 : Vérifier si l'utilisateur est un manager
+        Client manager = clientRepository.findByAuthId(authId);
+        Entreprise company = null;
+        List<Projet> managerProjects = new ArrayList<>();
+
+        if (manager != null) {
+            company = manager.getCompany();
+            if (company != null) {
+                managerProjects = projectRepository.findByCompany(company);
+                System.out.println("✅ Projets du manager trouvés: " + managerProjects.size());
+            } else {
+                System.out.println("❌ Aucune entreprise associée au manager: " + authId);
+            }
+        } else {
+            System.out.println("❌ Manager non trouvé pour l'authId: " + authId);
+        }
+
+        // Étape 2 : Récupérer les projets où l'utilisateur est membre via le microservice Authentification
+        List<Long> projectIds = authClient.getProjectIdsByUserId(authId);
+        List<Projet> memberProjects = new ArrayList<>();
+        if (projectIds != null && !projectIds.isEmpty()) {
+            memberProjects = projectRepository.findAllById(projectIds);
+            System.out.println("✅ Projets du membre trouvés: " + memberProjects.size());
+        } else {
+            System.out.println("ℹ️ Aucun projet trouvé pour le membre avec authId: " + authId);
+        }
+
+        // Étape 3 : Combiner les projets (manager + membre) et éviter les doublons
+        Set<Projet> allProjects = new HashSet<>();
+        allProjects.addAll(managerProjects);
+        allProjects.addAll(memberProjects);
+
+        // Étape 4 : Convertir les projets en DTO
+        List<ProjectDTO> projectDTOs = allProjects.stream()
+                .map(project -> new ProjectDTO(
+                        project.getId(),
+                        project.getName(),
+                        project.getDescription(),
+                        null,
+                        project.getCreationDate(),
+                        project.getStartDate(),
+                        project.getDeadline(),
+                        project.getStatus().name(),
+                        project.getPhase().name(),
+                        project.getPriority().name()
+                ))
+                .collect(Collectors.toList());
+
+        // Étape 5 : Construire la réponse
+        String companyName = (company != null) ? company.getName() : "N/A";
+        System.out.println("✅ Projets totaux trouvés: " + projectDTOs.size());
+        return new ProjectResponseDTO(companyName, projectDTOs);
+    }
 }
