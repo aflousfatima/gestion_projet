@@ -1,5 +1,6 @@
 package com.auth.authentification_service.Service;
 
+import com.auth.authentification_service.DTO.ProjectMemberDTO;
 import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.Entity.Invitation;
 import com.auth.authentification_service.Entity.ProjectMember;
@@ -499,10 +500,20 @@ public class KeycloakService {
     }
 
 
-    public List<Long> getProjectIdsByUserId(String userId) {
+   /* public List<Long> getProjectIdsByUserId(String userId) {
         List<ProjectMember> projectMembers = projectMemberRepository.findByIdUserId(userId);
         return projectMembers.stream()
                 .map(pm -> pm.getId().getProjectId())
+                .collect(Collectors.toList());
+    }
+*/
+    public List<ProjectMemberDTO> getProjectMembersByUserId(String userId) {
+        List<ProjectMember> projectMembers = projectMemberRepository.findByIdUserId(userId);
+        return projectMembers.stream()
+                .map(pm -> new ProjectMemberDTO(
+                        pm.getId().getProjectId(),
+                        pm.getRoleInProject()
+                ))
                 .collect(Collectors.toList());
     }
 

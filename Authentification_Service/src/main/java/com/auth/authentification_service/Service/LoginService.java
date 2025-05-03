@@ -128,14 +128,18 @@ public class LoginService {
     public UserInfoDto getUserInfo(String accessToken) {
         try {
             DecodedJWT decodedJWT = JWT.decode(accessToken);
+            String id = decodedJWT.getSubject(); // Ajoute l'ID (sub)
             String firstName = decodedJWT.getClaim("given_name").asString();
             String lastName = decodedJWT.getClaim("family_name").asString();
             String email = decodedJWT.getClaim("email").asString();
-            return new UserInfoDto(firstName,lastName,email);
+            return new UserInfoDto(id,firstName,lastName,email);
         } catch (Exception e) {
             throw new RuntimeException("Impossible de décoder le token", e);
         }
     }
+
+
+
 
     public void assignManagerRoleToUser(String userId) throws Exception {
         System.out.println("🔄 Attribution du rôle MANAGER à l'utilisateur : " + userId);
