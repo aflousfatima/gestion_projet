@@ -1,5 +1,6 @@
 package com.project.project_service.config;
 
+import com.project.project_service.DTO.ProjectMemberDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -8,7 +9,8 @@ import java.util.Map;
 
 @FeignClient(name = "auth-service", url = "http://localhost:8083")  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface AuthClient {
-
+    @GetMapping("/api/project-members/by-user")
+    List<ProjectMemberDTO> getProjectMembersByUserId(@RequestParam("userId") String userId);
     @GetMapping("/api/assign-manager-role")
     String extractUserIdFromToken(@RequestHeader("Authorization") String authorization);
 
@@ -23,8 +25,6 @@ public interface AuthClient {
     @GetMapping("/api/auth/decode-token")
     String decodeToken(@RequestHeader("Authorization") String authorization);
 
-    @GetMapping("/api/project-members/by-user")
-    List<Long> getProjectIdsByUserId(@RequestParam("userId") String userId);
 
 }
 
