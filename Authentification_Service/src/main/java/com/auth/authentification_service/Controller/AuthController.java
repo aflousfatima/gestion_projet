@@ -313,4 +313,22 @@ public class AuthController {
         System.out.println("✅ Membres de projet trouvés: " + projectMembers.size());
         return ResponseEntity.ok(projectMembers);
     }
+
+
+
+    @PutMapping("/update")
+    public ResponseEntity<String> updateUser(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, Object> userData) {
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+        return keycloakService.updateUser(accessToken, userData);
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, String> passwordData) {
+        String accessToken = authorizationHeader.replace("Bearer ", "");
+        return keycloakService.changePassword(accessToken, passwordData);
+    }
 }

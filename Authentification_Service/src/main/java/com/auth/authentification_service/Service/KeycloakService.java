@@ -1,6 +1,8 @@
 package com.auth.authentification_service.Service;
 
+import com.auth.authentification_service.DTO.KeycloakTokenResponse;
 import com.auth.authentification_service.DTO.ProjectMemberDTO;
+import com.auth.authentification_service.DTO.TokenDto;
 import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.Entity.Invitation;
 import com.auth.authentification_service.Entity.ProjectMember;
@@ -500,13 +502,7 @@ public class KeycloakService {
     }
 
 
-   /* public List<Long> getProjectIdsByUserId(String userId) {
-        List<ProjectMember> projectMembers = projectMemberRepository.findByIdUserId(userId);
-        return projectMembers.stream()
-                .map(pm -> pm.getId().getProjectId())
-                .collect(Collectors.toList());
-    }
-*/
+
     public List<ProjectMemberDTO> getProjectMembersByUserId(String userId) {
         List<ProjectMember> projectMembers = projectMemberRepository.findByIdUserId(userId);
         return projectMembers.stream()
@@ -568,4 +564,137 @@ public class KeycloakService {
 
         return users;
     }
+
+    public ResponseEntity<String> updateUser(String accessToken, Map<String, Object> userData) {
+        System.out.println("🔄 Mise à jour de l'utilisateur avec les données : " + userData);
+
+        // Décoder le token pour obtenir l'ID de l'utilisateur
+        DecodedJWT decodedJWT = JWT.decode(accessToken);
+        String userId = decodedJWT.getSubject();
+        String updateUserUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + userId;
+
+        // Préparer le payload pour Keycloak
+        Map<String, Object> userPayload = new HashMap<>();
+        if (userData.containsKey("firstName")) {
+            userPayload.put("firstName", userData.get("firstName"));
+        }
+        if (userData.containsKey("lastName")) {
+            userPayload.put("lastName", userData.get("lastName"));
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(getAdminToken());
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(userPayload, headers);
+
+        // Mettre à jour l'utilisateur dans Keycloak
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    updateUserUrl, HttpMethod.PUT, request, String.class);
+
+            if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                System.out.println("✅ Utilisateur mis à jour dans Kernel : " + userId);
+                return ResponseEntity.ok("Profil mis à jour avec succès");
+            } else {
+                System.out.println("❌ Échec de la mise à jour de l'utilisateur : " + response.getBody());
+                return ResponseEntity.status(response.getStatusCode())
+                        .body("Échec de la mise à jour du profil");
+            }
+        } catch (HttpClientErrorException e) {
+            System.out.println("❌ Erreur Keycloak : " + e.getResponseBodyAsString());
+            throw new RuntimeException("Erreur lors de la mise à jour de l'utilisateur : " + e.getMessage());
+        }
+    }
+
+
+    public ResponseEntity<String> changePassword(String accessToken, Map<String, String> passwordData) {
+        System.out.println("🔄 Changement de mot de passe pour l'utilisateur");
+
+        // Décoder le token pour obtenir l'ID et l'email de l'utilisateur
+        DecodedJWT decodedJWT = JWT.decode(accessToken);
+        String userId = decodedJWT.getSubject();
+        String email = decodedJWT.getClaim("email").asString();
+
+        if (email == null) {
+            System.out.println("❌ Email non trouvé dans le token");
+            return ResponseEntity.badRequest().body("Email non trouvé dans le token");
+        }
+
+        // Valider le mot de passe actuel
+        String currentPassword = passwordData.get("currentPassword");
+        String newPassword = passwordData.get("newPassword");
+
+        try {
+            authenticateUser(email, currentPassword);
+            System.out.println("✅ Mot de passe actuel validé");
+        } catch (Exception e) {
+            System.out.println("❌ Mot de passe actuel invalide : " + e.getMessage());
+            return ResponseEntity.badRequest().body("Mot de passe actuel incorrect");
+        }
+
+        // Préparer le payload pour changer le mot de passe
+        String resetPasswordUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + userId + "/reset-password";
+        Map<String, Object> passwordPayload = new HashMap<>();
+        passwordPayload.put("type", "password");
+        passwordPayload.put("value", newPassword);
+        passwordPayload.put("temporary", false);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(getAdminToken());
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(passwordPayload, headers);
+
+        // Changer le mot de passe dans Keycloak
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    resetPasswordUrl, HttpMethod.PUT, request, String.class);
+
+            if (response.getStatusCode() == HttpStatus.NO_CONTENT) {
+                System.out.println("✅ Mot de passe changé pour l'utilisateur : " + userId);
+                return ResponseEntity.ok("Mot de passe changé avec succès");
+            } else {
+                System.out.println("❌ Échec du changement de mot de passe : " + response.getBody());
+                return ResponseEntity.status(response.getStatusCode())
+                        .body("Échec du changement de mot de passe");
+            }
+        } catch (HttpClientErrorException e) {
+            System.out.println("❌ Erreur Keycloak : " + e.getResponseBodyAsString());
+            throw new RuntimeException("Erreur lors du changement de mot de passe : " + e.getMessage());
+        }
+    }
+
+
+    public TokenDto authenticateUser(String email, String password) throws Exception {
+        System.out.println("Récupération du client secret depuis Vault...");
+        String keycloakClientSecret = vaultService.getClientSecret();
+        System.out.println("Client Secret from Vault: " + keycloakClientSecret);
+        String tokenUrl = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/token";
+        System.out.println("URL de token : " + tokenUrl);
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("client_id", keycloakClientId);
+        params.add("client_secret", keycloakClientSecret);
+        params.add("username", email);
+        params.add("password", password);
+        params.add("grant_type", "password");
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
+
+        System.out.println("Envoi de la requête POST à Keycloak...");
+        ResponseEntity<KeycloakTokenResponse> responseEntity = restTemplate.exchange(
+                tokenUrl, HttpMethod.POST, entity, KeycloakTokenResponse.class);
+
+        if (responseEntity.getStatusCode() == HttpStatus.OK) {
+            System.out.println("Tokens récupérés avec succès !");
+            KeycloakTokenResponse tokenResponse = responseEntity.getBody();
+
+            return new TokenDto(tokenResponse.getAccessToken(), tokenResponse.getRefreshToken());
+        } else {
+            System.out.println("Échec de l'authentification avec Keycloak !");
+            throw new Exception("Échec de l'authentification avec Keycloak");
+        }
+    }
+
 }
