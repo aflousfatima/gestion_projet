@@ -227,4 +227,17 @@ public class TaskController {
         List<WorkItemHistoryDTO> history = taskService.getTaskHistoryWithAuthorNames(taskId, token);
         return ResponseEntity.ok(history);
     }
+
+
+    @GetMapping("/{projectId}/fetch_tasks")
+    public ResponseEntity<List<Task>> getTasksByProjectId(@PathVariable Long projectId) {
+        List<Task> tasks = taskService.getTasksByProjectId(projectId);
+        return ResponseEntity.ok(tasks);
+    }
+
+    @GetMapping("/{projectId}/count")
+    public ResponseEntity<Long> countTasksByProjectId(@PathVariable Long projectId) {
+        long count = taskService.countTasksByProjectId(projectId);
+        return ResponseEntity.ok(count);
+    }
 }
