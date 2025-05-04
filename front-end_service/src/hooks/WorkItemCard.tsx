@@ -61,6 +61,14 @@ interface TaskSummary {
   userStoryId: number;
 }
 
+interface WorkItemHistory {
+  id: number;
+  action: string;
+  description: string;
+  authorName: string; // Nouveau champ
+  timestamp: string;
+}
+
 interface WorkItem {
   id?: number;
   type: "TASK" | "BUG";
@@ -91,6 +99,7 @@ interface WorkItem {
   progress: number;
   dependencyIds: number[];
   dependencies: TaskSummary[];
+  history?: WorkItemHistory[];
 }
 
 interface WorkItemCardProps {
@@ -102,6 +111,56 @@ interface WorkItemCardProps {
   ) => void;
   displayMode?: "card" | "row";
 }
+
+const getActionClass = (action: string) => {
+  switch (action.toUpperCase()) {
+    case 'CREATION':
+      return 'created';
+    case 'MISE_A_JOUR':
+      return 'updated';
+    case 'SUPPRESSION':
+      return 'deleted';
+    case 'AJOUT_DEPENDANCE':
+      return 'add_dependency';
+    case 'SUPPRESSION_DEPENDANCE':
+      return 'remove_dependency';
+    case 'AJOUT_COMMENTAIRE':
+      return 'add_comment';
+    case 'AJOUT_PIECE_JOINTE':
+      return 'add_attachment';
+    case 'SUPPRESSION_PIECE_JOINTE':
+      return 'remove_attachment';
+    case 'AJOUT_TEMPS':
+      return 'add_time';
+    default:
+      return action.toLowerCase().replace(/\s+/g, '_');
+  }
+};
+
+const getActionLabel = (action: string) => {
+  switch (action.toUpperCase()) {
+    case 'CREATION':
+      return 'Créé';
+    case 'MISE_A_JOUR':
+      return 'Mis à jour';
+    case 'SUPPRESSION':
+      return 'Supprimé';
+    case 'AJOUT_DEPENDANCE':
+      return 'Dépendance ajoutée';
+    case 'SUPPRESSION_DEPENDANCE':
+      return 'Dépendance supprimée';
+    case 'AJOUT_COMMENTAIRE':
+      return 'Commentaire ajouté';
+    case 'AJOUT_PIECE_JOINTE':
+      return 'Pièce jointe ajoutée';
+    case 'SUPPRESSION_PIECE_JOINTE':
+      return 'Pièce jointe supprimée';
+    case 'AJOUT_TEMPS':
+      return 'Temps ajouté';
+    default:
+      return action;
+  }
+};
 
 const WorkItemCard: React.FC<WorkItemCardProps> = ({
   workItem,
@@ -123,6 +182,11 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
   const [enlargedImage, setEnlargedImage] = useState<string | null>(null);
   const [isDeletingWorkItem, setIsDeletingWorkItem] = useState(false);
   const router = useRouter();
+
+  const [showHistoryPopup, setShowHistoryPopup] = useState(false);
+  const [history, setHistory] = useState<WorkItemHistory[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   // States for dependency management
   const [showAddDependencyPopup, setShowAddDependencyPopup] = useState(false);
@@ -292,6 +356,37 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
     workItem.progress
   );
 
+  // Récupérer l'historique
+  useEffect(() => {
+    if (!showHistoryPopup || !workItem.id || !accessToken) return;
+  
+    const fetchHistory = async () => {
+      setIsLoadingHistory(true);
+      setHistoryError(null);
+      try {
+        const endpoint =
+          workItem.type === "TASK"
+            ? `/tasks/${workItem.id}/history-with-author-names`
+            : `/bugs/${workItem.id}/history-with-author-names`; // À adapter si vous avez un service similaire pour les bugs
+        const response = await axiosInstance.get(
+          `${TASK_SERVICE_URL}/api/project${endpoint}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        setHistory(response.data);
+      } catch (err: any) {
+        const errorMessage =
+          err.response?.data?.message || "Échec du chargement de l'historique";
+        setHistoryError(errorMessage);
+        console.error("Erreur lors de la récupération de l'historique:", err);
+        toast.error(errorMessage);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+  
+    fetchHistory();
+  }, [showHistoryPopup, workItem.id, workItem.type, accessToken]);
+
   // Mettre à jour le temps affiché en temps réel si l'élément est en IN_PROGRESS
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -388,6 +483,74 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
       setIsAddingTime(false);
     }
   };
+
+
+  // Rendu de la fenêtre contextuelle pour l'historique
+  const renderHistoryPopup = () => (
+    <div className="modal-overlay-history">
+      <div className="modal-content-history" ref={popupRef} role="dialog" aria-labelledby="history-title">
+        <h5 id="history-title">History of {workItem.type === "TASK" ? "Task" : "le bug"}</h5>
+        <button
+          className="close-history-btn"
+          onClick={() => setShowHistoryPopup(false)}
+          aria-label="Fermer la fenêtre de l'historique"
+        >
+          ✕
+        </button>
+        {isLoadingHistory ? (
+          <p className="loading-message">Chargement de l historique...</p>
+        ) : history.length === 0 ? (
+          <p className="no-history-message">Aucun historique disponible.</p>
+        ) : (
+          <div className="history-timeline">
+            {history.map((entry) => (
+              <div
+                key={entry.id}
+                className={`history-event ${getActionClass(entry.action)}`}
+              >
+                <div className="event-date">
+                  {new Date(entry.timestamp).toLocaleString("fr-FR", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+                <div className="event-details-container">
+                  <div className="event-details">
+                    <div className="top-row">
+                      <div className="action">
+                        <i className="fa fa-tag"></i>
+                        <span className={getActionClass(entry.action)}>
+                          {getActionLabel(entry.action)}
+                        </span>
+                      </div>
+                      <div className="author">
+                        <i className="fa fa-user"></i>
+                        <span>{entry.authorName}</span>
+                      </div>
+                    </div>
+                    <div className="description-row">
+                      <div className="description">
+                        <i className="fa fa-info-circle"></i>
+                        <span>{entry.description}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {historyError && (
+          <div className="error-container">
+            <span className="error-message">{historyError}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -1105,8 +1268,16 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
                 <i className="fa fa-link"></i>
                 <span>Add Dependency</span>
               </button>
+              <button
+        className="menu-item"
+        onClick={() => setShowHistoryPopup(true)}
+      >
+        <i className="fa fa-history"></i>
+        <span>Historique</span>
+      </button>
             </div>
           )}
+          {showHistoryPopup && renderHistoryPopup()}
         </div>
       </div>
 

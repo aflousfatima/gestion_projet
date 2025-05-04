@@ -1586,3 +1586,328 @@ left:5px;
   color: white;
   font-size: 0.85rem;
 }
+
+/* Superposition modale */
+.modal-overlay-history {
+  margin-top: -400px;
+  margin-left:-600px;
+  right: 0;
+  bottom: 0;
+  position: absolute;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in;
+  width:1100px;
+}
+
+
+/* Conteneur principal */
+.modal-content-history {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+
+  max-width: 900px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  animation: slideUp 0.4s ease-out;
+  position: relative;
+  margin-left:30px;
+}
+
+
+/* Titre */
+.modal-content-history h5 {
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 1.3em;
+  margin-bottom: 30px;
+  padding-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* Bouton de fermeture */
+.close-history-btn {
+  background: none;
+  border: none;
+  font-size: 1.2em;
+  cursor: pointer;
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  color: #333;
+  transition: color 0.2s ease;
+}
+
+.close-history-btn:hover {
+  color: #fc522c;
+}
+
+/* Timeline */
+.history-timeline {
+  position: relative;
+  padding: 0 20px;
+}
+
+/* Ligne verticale */
+.history-timeline::before {
+  content: '';
+  position: absolute;
+  left: 24%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #333, #333);
+  z-index: 1;
+}
+
+/* Événement */
+.history-event {
+  position: relative;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  animation: eventFadeIn 0.5s ease-out;
+}
+
+/* Date (à gauche) */
+.history-event .event-date {
+  width: 20%;
+  text-align: right;
+  padding-right: 15px;
+  color: #333;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 500;
+  font-size: 0.9em;
+  letter-spacing: 0.5px;
+}
+
+/* Conteneur des détails (à droite) */
+.history-event .event-details-container {
+  width: 50%;
+  padding: 10px 10px;
+  background: #a3a0a024;
+  border-radius: 8px;
+  border-left: 3px solid #333;
+  position: relative;
+  transition: background 0.3s ease;
+  left: 10%;
+}
+
+.history-event:hover .event-details-container {
+  background: #edf2f7;
+}
+
+/* Connecteur entre la ligne et la carte */
+.history-event .event-details-container::before {
+  content: '';
+  position: absolute;
+  left: -53px;
+  top: 50%;
+  width: 53px;
+  height: 2px;
+  background: #333;
+  z-index: 0;
+}
+
+/* Marqueur de l’événement */
+.history-event::after {
+  content: '';
+  position: absolute;
+  left: 23%;
+  transform: translateX(-50%);
+  top: 47%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #333;
+  z-index: 2;
+}
+
+/* Icônes selon l’action */
+.history-event.created::after {
+  content: '\f055'; /* FontAwesome "plus-circle" */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 8px;
+}
+
+.history-event.updated::after {
+  content: '\f303'; /* FontAwesome "pen" */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 8px;
+}
+
+.history-event.deleted::after {
+  content: '\f2ed'; /* FontAwesome "trash" */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 8px;
+}
+
+.history-event.add_dependency::after,
+.history-event.remove_dependency::after,
+.history-event.add_comment::after,
+.history-event.add_attachment::after,
+.history-event.remove_attachment::after,
+.history-event.add_time::after {
+  content: '\f0c1'; /* FontAwesome "link" pour dépendances, adaptable pour autres */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  background: #fc522c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 8px;
+}
+
+/* Détails */
+.history-event .event-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Ligne pour Action et Description */
+.event-details .top-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e3f0e2;
+}
+
+/* Style des champs avec icônes */
+.history-event .event-details i {
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+/* Couleurs variées pour les icônes */
+.history-event .event-details .action i {
+  color: #fcb02c;
+}
+
+.history-event .event-details .description i {
+  color: #ef5011;
+}
+
+/* Style des champs */
+.history-event .event-details .action,
+.history-event .event-details .description {
+  display: flex;
+  align-items: center;
+}
+
+/* Polices variées */
+.history-event .event-details strong {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  margin-right: 5px;
+  color: #333;
+}
+
+.history-event .event-details .description span {
+  font-family: 'Inter', sans-serif;
+  color: #333;
+}
+
+/* Badge pour l’action */
+.history-event .event-details .action span {
+  font-family: 'Inter', sans-serif;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.history-event .event-details .action span.created {
+  background: #e6fffa;
+  color: #2c7a7b;
+}
+
+.history-event .event-details .action span.updated {
+  background: #fffaf0;
+  color: #975a16;
+}
+
+.history-event .event-details .action span.deleted {
+  background: #fff5f5;
+  color: #9b2c2c;
+}
+
+.history-event .event-details .action span.add_dependency,
+.history-event .event-details .action span.remove_dependency,
+.history-event .event-details .action span.add_comment,
+.history-event .event-details .action span.add_attachment,
+.history-event .event-details .action span.remove_attachment,
+.history-event .event-details .action span.add_time {
+  background: #f0f4ff;
+  color: #1a4e9b;
+}
+
+/* Message "Aucun historique" ou "Chargement" */
+.modal-content-history .no-history-message,
+.modal-content-history .loading-message {
+  color: #718096;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.1em;
+  text-align: center;
+  padding: 25px;
+}
+
+/* Erreur */
+.modal-content-history .error-container {
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.modal-content-history .error-message {
+  color: #c62828;
+  font-family: 'Inter', sans-serif;
+  font-size: 1em;
+}
+
+/* Scrollbar */
+.modal-content-history::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-content-history::-webkit-scrollbar-track {
+  background: #f7fafc;
+}
+
+.modal-content-history::-webkit-scrollbar-thumb {
+  background: #fc522c;
+  border-radius: 10px;
+}
+
+.modal-content-history::-webkit-scrollbar-thumb:hover {
+  background: #4a5568;
+}
