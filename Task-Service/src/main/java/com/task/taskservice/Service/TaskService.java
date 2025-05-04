@@ -126,6 +126,9 @@ public class TaskService {
             logger.info("⚠️ Aucun tag reçu pour la tâche.");
         }
 
+        // Enregistrer l'historique pour la création
+        logHistory(task, "CREATION", "Task created: " + task.getTitle(), createdBy);
+
         updateProgress(task);
         // Save the task
         Task savedTask = taskRepository.save(task);
@@ -151,6 +154,8 @@ public class TaskService {
             validateDependencies(task);
         }
 
+// Suivre les changements pour l'historique
+        StringBuilder changes = new StringBuilder();
 
         // Gérer le chronomètre pour le timeSpent
         if (taskDTO.getStatus() != null) {
@@ -160,6 +165,7 @@ public class TaskService {
             // Si on passe à IN_PROGRESS, démarrer le chronomètre
             if (newStatus == WorkItemStatus.IN_PROGRESS && currentStatus != WorkItemStatus.IN_PROGRESS) {
                 task.setStartTime(LocalDateTime.now());
+                changes.append("Status Changed from ").append(currentStatus).append(" à IN_PROGRESS; ");
             }
             // Si on quitte IN_PROGRESS
             else if (currentStatus == WorkItemStatus.IN_PROGRESS && newStatus != WorkItemStatus.IN_PROGRESS) {
@@ -177,9 +183,11 @@ public class TaskService {
                         timeEntry.setAddedAt(LocalDateTime.now());
                         timeEntry.setType("travail");
                         task.getTimeEntries().add(timeEntry);
+                        changes.append("Added Time: ").append(minutes).append(" minutes; ");
                     }
                     task.setStartTime(null); // Réinitialiser
                 }
+                changes.append("Status changed from IN_PROGRESS to ").append(newStatus).append("; ");
             }
 
             // Mettre à jour le statut
@@ -193,10 +201,31 @@ public class TaskService {
 
 
         // Update fields
-        if (taskDTO.getTitle() != null) task.setTitle(taskDTO.getTitle());
-        if (taskDTO.getDescription() != null) task.setDescription(taskDTO.getDescription());
-        if (taskDTO.getDueDate() != null) task.setDueDate(taskDTO.getDueDate());
-        if (taskDTO.getPriority() != null) task.setPriority(taskDTO.getPriority());
+        if (taskDTO.getTitle() != null && !taskDTO.getTitle().equals(task.getTitle())) {
+            changes.append("Titre changé de '").append(task.getTitle()).append("' à '").append(taskDTO.getTitle()).append("'; ");
+            task.setTitle(taskDTO.getTitle());
+        }
+        if (taskDTO.getDescription() != null && !taskDTO.getDescription().equals(task.getDescription())) {
+            changes.append("Description modifiée; ");
+            task.setDescription(taskDTO.getDescription());
+        }
+        if (taskDTO.getDueDate() != null && !taskDTO.getDueDate().equals(task.getDueDate())) {
+            changes.append("Date d'échéance changée à ").append(taskDTO.getDueDate()).append("; ");
+            task.setDueDate(taskDTO.getDueDate());
+        }
+        if (taskDTO.getPriority() != null && taskDTO.getPriority() != task.getPriority()) {
+            changes.append("Priorité changée de ").append(task.getPriority()).append(" à ").append(taskDTO.getPriority()).append("; ");
+            task.setPriority(taskDTO.getPriority());
+        }
+        if (taskDTO.getEstimationTime() != null && !taskDTO.getEstimationTime().equals(task.getEstimationTime())) {
+            changes.append("Estimation changée à ").append(taskDTO.getEstimationTime()).append(" minutes; ");
+            task.setEstimationTime(taskDTO.getEstimationTime());
+        }
+        if (taskDTO.getStartDate() != null && !taskDTO.getStartDate().equals(task.getStartDate())) {
+            changes.append("Date de début changée à ").append(taskDTO.getStartDate()).append("; ");
+            task.setStartDate(taskDTO.getStartDate());
+        }
+
         if (taskDTO.getStatus() != null) {
             task.setStatus(taskDTO.getStatus());
             // Gérer completedDate
@@ -206,8 +235,6 @@ public class TaskService {
                 task.setCompletedDate(null); // Réinitialiser si le statut change
             }
         }
-        if (taskDTO.getEstimationTime() != null) task.setEstimationTime(taskDTO.getEstimationTime());
-        if (taskDTO.getStartDate() != null) task.setStartDate(taskDTO.getStartDate());
         task.setUpdatedBy(updatedBy);
         task.setLastModifiedDate(LocalDate.now());
 
@@ -224,20 +251,25 @@ public class TaskService {
 
         // Update assigned user IDs only if explicitly provided and non-empty
         if (taskDTO.getAssignedUserIds() != null && !taskDTO.getAssignedUserIds().isEmpty()) {
-            Set<String> userIdsSet = new HashSet<>(taskDTO.getAssignedUserIds());
-            task.setAssignedUserIds(userIdsSet);
-        } else {
-            // Preserve existing assignedUserIds
-            task.setAssignedUserIds(task.getAssignedUserIds() != null ? task.getAssignedUserIds() : new HashSet<>());
+            Set<String> newUserIds = new HashSet<>(taskDTO.getAssignedUserIds());
+            if (!newUserIds.equals(task.getAssignedUserIds())) {
+                changes.append("Utilisateurs assignés modifiés; ");
+                task.setAssignedUserIds(newUserIds);
+            }
         }
 
         // Update tags
-        if (taskDTO.getTags() != null) {
+        if (taskDTO.getTags() != null && !taskDTO.getTags().equals(task.getTags().stream().map(Tag::getName).collect(Collectors.toSet()))) {
+            changes.append("Tags modifiés; ");
             Set<Tag> tags = taskDTO.getTags().stream().map(tagName ->
-                    tagRepository.findByName(tagName)
-                            .orElseGet(() -> tagRepository.save(new Tag()))
-            ).collect(Collectors.toSet());
+                            tagRepository.findByName(tagName)
+                                    .orElseGet(() -> tagRepository.save(new Tag())))
+                    .collect(Collectors.toSet());
             task.setTags(tags);
+        }
+
+        if (changes.length() > 0) {
+            logHistory(task, "MISE_A_JOUR", changes.toString(), updatedBy);
         }
         updateProgress(task);
         // Save the updated task
@@ -301,6 +333,9 @@ public class TaskService {
     public void deleteTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
                 .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+
+        // Enregistrer l'historique pour la suppression
+        logHistory(task, "SUPPRESSION", "Tâche supprimée: " + task.getTitle(), task.getUpdatedBy() != null ? task.getUpdatedBy() : "Système");
         List<Task> dependentTasks = taskRepository.findByDependenciesId(taskId);
         for (Task dependent : dependentTasks) {
             dependent.getDependencies().remove(task);
@@ -461,6 +496,8 @@ public class TaskService {
         task.getAttachments().add(attachment);
         logger.info("Added attachment, attachments count: {}", task.getAttachments().size());
 
+        logHistory(task, "AJOUT_PIECE_JOINTE", "Pièce jointe ajoutée: " + file.getOriginalFilename(), uploadedBy);
+
         taskRepository.saveAndFlush(task);
         logger.info("Saved task: {}", task);
 
@@ -488,7 +525,6 @@ public class TaskService {
         // Remove the attachment from the Task
         task.getAttachments().remove(attachment);
         logger.info("Removed attachment {} from task {}", attachment.getId(), task.getId());
-
         // Delete from Cloudinary
         try {
             cloudinaryService.deleteFile(publicId);
@@ -504,6 +540,7 @@ public class TaskService {
 
         // Delete the FileAttachment (optional, as cascade should handle it)
         fileAttachmentRepository.delete(attachment);
+
         logger.info("Deleted file attachment from database with publicId: {}", publicId);
     }
 
@@ -634,6 +671,7 @@ public class TaskService {
         timeEntry.setAddedAt(LocalDateTime.now());
         timeEntry.setType(type);
         task.getTimeEntries().add(timeEntry);
+        logHistory(task, "AJOUT_TEMPS", "Temps ajouté: " + duration + " minutes (" + type + ")", addedBy);
         updateProgress(task);
         taskRepository.save(task);
     }
@@ -710,6 +748,8 @@ public class TaskService {
 
         // Add dependency
         task.getDependencies().add(dependency);
+        logHistory(task, "AJOUT_DEPENDANCE", "Dépendance ajoutée: Tâche ID " + dependencyId, updatedBy);
+
         logger.debug("Added dependency ID {} to task ID {}", dependencyId, taskId);
 
         // Check for dependency cycles
@@ -760,6 +800,7 @@ public class TaskService {
 
         // Supprimer la dépendance
         task.getDependencies().remove(dependency);
+        logHistory(task, "SUPPRESSION_DEPENDANCE", "Dépendance supprimée: Tâche ID " + dependencyId, updatedBy);
         logger.debug("Removed dependency ID {} from task ID {}", dependencyId, taskId);
 
         // Mettre à jour progress
@@ -838,5 +879,149 @@ public class TaskService {
             responseDTO.setAssignedUsers(Collections.emptyList());
         }
         return responseDTO;
+    }
+
+
+    @Transactional(readOnly = true)
+    public List<TaskDTO> getTasksByUserAndActiveSprints(String token) {
+        logger.info("Fetching tasks for user in active sprints");
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            logger.error("Invalid token: unable to extract user");
+            throw new IllegalArgumentException("Invalid token: unable to extract user");
+        }
+        logger.info("User ID extracted: {}", userId);
+
+        // Récupérer les projets de l'utilisateur
+        ProjectResponseWithRoleDTO projectResponse = projectClient.getProjectsByUser(userId);
+        List<ProjectDTO> userProjects = projectResponse.getProjects().stream()
+                .map(project -> new ProjectDTO(
+                        project.getId(),
+                        project.getName(),
+                        project.getDescription(),
+                        project.getCreationDate() != null ? project.getCreationDate().toLocalDate() : null,
+                        project.getStartDate() != null ? project.getStartDate().toLocalDate() : null,
+                        project.getDeadline() != null ? project.getDeadline().toLocalDate() : null,
+                        project.getStatus(),
+                        project.getPhase(),
+                        project.getPriority()
+                ))
+                .collect(Collectors.toList());
+        if (userProjects.isEmpty()) {
+            logger.info("No projects found for user ID: {}", userId);
+            return Collections.emptyList();
+        }
+        logger.info("Found {} projects for user ID: {}", userProjects.size(), userId);
+
+        // Récupérer les user stories des sprints actifs pour chaque projet
+        List<Long> allActiveStoryIds = userProjects.stream()
+                .map(project -> projectClient.getUserStoriesOfActiveSprint(project.getId()))
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+        if (allActiveStoryIds.isEmpty()) {
+            logger.info("No active story IDs found for user ID: {}", userId);
+            return Collections.emptyList();
+        }
+        logger.info("Found {} active story IDs for user ID: {}", allActiveStoryIds.size(), userId);
+
+        // Récupérer les tâches assignées à l'utilisateur
+        List<Task> tasks = taskRepository.findByUserStoryIn(allActiveStoryIds)
+                .stream()
+                .filter(task -> task.getAssignedUserIds().contains(userId))
+                .collect(Collectors.toList());
+        if (tasks.isEmpty()) {
+            logger.info("No tasks found for user ID: {} in active sprints", userId);
+            return Collections.emptyList();
+        }
+        logger.info("Found {} tasks for user ID: {}", tasks.size(), userId);
+
+        // Récupérer les détails des utilisateurs assignés
+        Set<String> allUserIds = tasks.stream()
+                .flatMap(task -> task.getAssignedUserIds().stream())
+                .collect(Collectors.toSet());
+        List<UserDTO> users = Collections.emptyList();
+        if (!allUserIds.isEmpty()) {
+            try {
+                users = authClient.getUsersByIds(token, new ArrayList<>(allUserIds));
+                logger.info("Successfully fetched {} user details", users.size());
+            } catch (Exception e) {
+                logger.error("Error fetching user details: {}", e.getMessage());
+            }
+        }
+        Map<String, UserDTO> userMap = users.stream()
+                .collect(Collectors.toMap(UserDTO::getId, user -> user));
+
+        // Convertir en TaskDTO
+        List<TaskDTO> taskDTOs = tasks.stream()
+                .map(task -> {
+                    TaskDTO dto = taskMapper.toDTO(task);
+                    dto.setAssignedUsers(task.getAssignedUserIds().stream()
+                            .map(userMap::get)
+                            .filter(Objects::nonNull)
+                            .collect(Collectors.toList()));
+                    return dto;
+                })
+                .collect(Collectors.toList());
+        logger.info("Successfully converted {} tasks to DTOs for user ID: {}", taskDTOs.size(), userId);
+        return taskDTOs;
+    }
+
+
+    private void logHistory(WorkItem workItem, String action, String description, String userId) {
+        WorkItemHistory history = new WorkItemHistory();
+        history.setWorkItem(workItem);
+        history.setAction(action);
+        history.setDescription(description);
+        history.setAuthorId(userId); // Stocker l'ID de l'utilisateur
+        history.setTimestamp(LocalDateTime.now());
+        workItem.getHistory().add(history);
+    }
+
+    @Transactional(readOnly = true)
+    public List<WorkItemHistoryDTO> getTaskHistory(Long taskId, String token) {
+        String userId = authClient.decodeToken(token);
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Tâche non trouvée avec l'ID: " + taskId));
+        return task.getHistory().stream()
+                .map(history -> new WorkItemHistoryDTO(
+                        history.getId(),
+                        history.getAction(),
+                        history.getDescription(),
+                        history.getAuthorId(), // Retourner l'ID pour compatibilité, mais sera remplacé par getTaskHistoryWithAuthorNames
+                        history.getTimestamp()
+                ))
+                .collect(Collectors.toList());
+    }
+    @Transactional(readOnly = true)
+    public List<WorkItemHistoryDTO> getTaskHistoryWithAuthorNames(Long taskId, String token) {
+        String userId = authClient.decodeToken(token);
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Tâche non trouvée avec l'ID: " + taskId));
+
+        String bearerToken = token.startsWith("Bearer ") ? token : "Bearer " + token;
+
+        // Cache pour éviter des appels multiples au service d'authentification
+        Map<String, Map<String, Object>> userCache = new HashMap<>();
+
+        return task.getHistory().stream()
+                .map(history -> {
+                    String authorId = history.getAuthorId();
+                    Map<String, Object> userDetails = userCache.computeIfAbsent(authorId,
+                            id -> authClient.getUserDetailsByAuthId(id, bearerToken)
+                    );
+
+                    String firstName = (String) userDetails.getOrDefault("firstName", "Inconnu");
+                    String lastName = (String) userDetails.getOrDefault("lastName", "Inconnu");
+                    String fullName = firstName + " " + lastName;
+
+                    return new WorkItemHistoryDTO(
+                            history.getId(),
+                            history.getAction(),
+                            history.getDescription(),
+                            fullName, // Utiliser le nom complet
+                            history.getTimestamp()
+                    );
+                })
+                .collect(Collectors.toList());
     }
 }

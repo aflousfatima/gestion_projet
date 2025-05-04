@@ -18,6 +18,7 @@ public class WorkItemHistory {
 
     private String action;  // Type d'action effectuée (ex: "modification du statut", "ajout de commentaire", etc.)
 
+    private String authorId; // Nouveau champ pour stocker l'ID de l'utilisateur
     private LocalDateTime date;  // Date et heure de l'action
 
     private String description;  // Détails de l'action (par exemple, "Changement de statut de TO_DO à IN_PROGRESS")
@@ -43,5 +44,13 @@ public class WorkItemHistory {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public String getAuthorId() {
+        return authorId;
+    }
+
+    public void setAuthorId(String authorId) {
+        this.authorId = authorId;
+    }
 }
 

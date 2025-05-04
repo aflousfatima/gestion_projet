@@ -13,7 +13,11 @@ import java.util.Map;
 public interface AuthClient {
 
 
-
+    @GetMapping("/api/auth/users/{authId}")
+    Map<String, Object> getUserDetailsByAuthId(
+            @PathVariable("authId") String authId,
+            @RequestHeader("Authorization") String authorization
+    );
 
     @PostMapping("/api/tasks_reponsibles/by-ids")
     List<UserDTO> getUsersByIds(
