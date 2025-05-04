@@ -1024,4 +1024,14 @@ public class TaskService {
                 })
                 .collect(Collectors.toList());
     }
+
+
+    public List<Task> getTasksByProjectId(Long projectId) {
+        return taskRepository.findByProjectId(projectId);
+    }
+
+    public long countTasksByProjectId(Long projectId) {
+        return taskRepository.findByProjectId(projectId).size();
+    }
+
 }
