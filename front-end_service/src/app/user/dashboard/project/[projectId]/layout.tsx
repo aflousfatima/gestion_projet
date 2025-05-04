@@ -7,6 +7,7 @@ import { AxiosError } from "axios"; // Ajoutez cet import en haut du fichier
 import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
+  TASK_SERVICE_URL,
 } from "../../../../../config/useApi";
 import { useParams, usePathname } from "next/navigation";
 import { useCallback } from "react"; // Ajoutez cet import si ce n'est pas déjà fait
@@ -58,6 +59,15 @@ interface Sprint {
   userStories: UserStory[];
   status: "PLANNED" | "ACTIVE" | "COMPLETED" | "ARCHIVED" | "CANCELED"; // Nouveau champ
 }
+interface Task {
+  id: number;
+  title: string;
+  description: string;
+  status: "TODO" | "IN_PROGRESS" | "DONE" | "BLOCKED";
+  priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  userStoryId?: number;
+  projectId: string;
+}
 
 interface History {
   id: number;
@@ -88,6 +98,8 @@ export default function ProjectLayout({
   const [expandedDependsOn, setExpandedDependsOn] = useState<number | null>(
     null
   );
+  const [taskCount, setTaskCount] = useState<number>(0);
+
   const [searchQuery, setSearchQuery] = useState(""); // Nouvel état pour la recherche
   // Calculer les éléments à afficher avec recherche et pagination
   const filteredBacklog = backlog
@@ -598,6 +610,15 @@ const fetchData = useCallback(async () => {
     setBacklog(backlogResponse.data);
     console.log("📚 Backlog récupéré :", backlogResponse.data);
 
+        // Fetch tasks
+      // Fetch task count
+    const tasksResponse = await axiosInstance.get(
+      `${TASK_SERVICE_URL}/api/project/tasks/${projectId}/count`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    setTaskCount(tasksResponse.data);
+    console.log("✅ Nombre de tâches récupéré :", tasksResponse.data);
+
   } catch (error) {
     console.error("❌ Erreur lors du chargement des données :", error);
     setError("Erreur lors du chargement des données.");
@@ -935,9 +956,9 @@ useEffect(() => {
               </span>
             </div>
             <div className="dashboard-card-task">
-              <i className="fa fa-clock"></i>
-              <span>Tâches:</span>
-            </div>
+    <i className="fa fa-clock"></i>
+    <span>Tasks: {taskCount}</span>
+  </div>
           </div>
 
           <div className="sidebar-content">
