@@ -1,12 +1,9 @@
 package com.task.taskservice.Controller;
 
-import com.task.taskservice.DTO.DashboardStatsDTO;
-import com.task.taskservice.DTO.TaskCalendarDTO;
-import com.task.taskservice.DTO.TimeEntryDTO;
+import com.task.taskservice.DTO.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.task.taskservice.DTO.TaskDTO;
 import com.task.taskservice.Entity.Task;
 import com.task.taskservice.Mapper.TaskMapper;
 import com.task.taskservice.Service.TaskService;
@@ -100,6 +97,23 @@ public class TaskController {
 
         List<TaskDTO> tasks = taskService.getTasksOfActiveSprint(projectId, token);
         return new ResponseEntity<>(tasks, HttpStatus.OK);
+    }
+
+    @GetMapping("/user/active-sprints")
+    public ResponseEntity<List<TaskDTO>> getTasksByUserAndActiveSprints(
+            @RequestHeader("Authorization") String token) {
+        logger.info("Received request to get tasks for user in active sprints");
+        try {
+            List<TaskDTO> tasks = taskService.getTasksByUserAndActiveSprints(token);
+            logger.info("Returning {} tasks for user", tasks.size());
+            return ResponseEntity.ok(tasks);
+        } catch (IllegalArgumentException e) {
+            logger.error("Error fetching tasks: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (Exception e) {
+            logger.error("Unexpected error fetching tasks: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
 
@@ -196,5 +210,21 @@ public class TaskController {
             @RequestHeader("Authorization") String token) {
         List<TaskDTO> potentialDependencies = taskService.getPotentialDependencies(taskId, token);
         return new ResponseEntity<>(potentialDependencies, HttpStatus.OK);
+    }
+
+    @GetMapping("/{taskId}/history")
+    public ResponseEntity<List<WorkItemHistoryDTO>> getTaskHistory(
+            @PathVariable Long taskId,
+            @RequestHeader("Authorization") String token) {
+        List<WorkItemHistoryDTO> history = taskService.getTaskHistory(taskId, token);
+        return ResponseEntity.ok(history);
+    }
+
+    @GetMapping("/{taskId}/history-with-author-names")
+    public ResponseEntity<List<WorkItemHistoryDTO>> getTaskHistoryWithAuthorNames(
+            @PathVariable Long taskId,
+            @RequestHeader("Authorization") String token) {
+        List<WorkItemHistoryDTO> history = taskService.getTaskHistoryWithAuthorNames(taskId, token);
+        return ResponseEntity.ok(history);
     }
 }

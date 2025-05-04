@@ -211,9 +211,6 @@ protected String createdBy;
         this.attachments = attachments;
     }
 
-
-
-
     public String getCreatedBy() {
         return createdBy;
     }
@@ -221,8 +218,6 @@ protected String createdBy;
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
     }
-
-
 
     public Set<WorkItemHistory> getHistory() {
         return history;

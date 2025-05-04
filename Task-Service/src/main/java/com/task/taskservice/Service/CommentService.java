@@ -4,6 +4,8 @@ import com.task.taskservice.Configuration.AuthClient;
 import com.task.taskservice.DTO.CommentDTO;
 import com.task.taskservice.Entity.Comment;
 import com.task.taskservice.Entity.Task;
+import com.task.taskservice.Entity.WorkItem;
+import com.task.taskservice.Entity.WorkItemHistory;
 import com.task.taskservice.Mapper.TaskMapper;
 import com.task.taskservice.Repository.CommentRepository;
 import com.task.taskservice.Repository.TaskRepository;
@@ -14,6 +16,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,7 +54,8 @@ public class CommentService {
             logger.debug("Saving comment: content={}, author={}", comment.getContent(), author);
             Comment savedComment = commentRepository.save(comment);
             logger.info("Comment saved with id: {}", savedComment.getId());
-
+            CommentDTO commenntDTO = new CommentDTO();
+            logHistory(task, "AJOUT_COMMENTAIRE", "Commentaire ajouté: " + commenntDTO.getContent().substring(0, Math.min(50, commenntDTO.getContent().length())), author);
             // Explicitly flush to ensure the INSERT is executed
             commentRepository.flush();
             logger.info("Comment flushed to database");
@@ -73,5 +77,15 @@ public class CommentService {
         return comments.stream()
                 .map(taskMapper::mapToDTO)
                 .collect(Collectors.toList());
+    }
+
+    private void logHistory(WorkItem workItem, String action, String description, String userId) {
+        WorkItemHistory history = new WorkItemHistory();
+        history.setWorkItem(workItem);
+        history.setAction(action);
+        history.setDescription(description);
+        history.setTimestamp(LocalDateTime.now());
+        history.setDescription(description + " By " + userId); // Inclure l'utilisateur dans la description
+        workItem.getHistory().add(history);
     }
 }
