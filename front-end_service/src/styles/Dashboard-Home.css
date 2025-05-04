@@ -241,3 +241,124 @@ font-size:15px;
               font-size: 16px; /* Ajuste la taille */
             }
           
+
+            .tasks-list {
+              position: relative;
+              display: flex;
+              flex-direction: column;
+              gap: 12px;
+              padding: 12px 0;
+              max-width: 400px;
+              margin: 0 auto;
+              font-family: 'Inter', sans-serif;
+            }
+            
+            .tasks-list::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              bottom: 0;
+              left: 20px;
+              width: 1px;
+              background: #d1d5db;
+              z-index: 1;
+            }
+            
+            .task-item {
+              display: flex;
+              align-items: flex-start;
+              position: relative;
+              z-index: 2;
+            }
+            
+            .task-node {
+              width: 10px;
+              height: 10px;
+              background: #f58d85;
+              border-radius: 50%;
+              margin-top: 4px;
+              transition: background 0.2s ease;
+              z-index: 3;
+            }
+            
+            .task-item:hover .task-node {
+              background: #1e3a8a;
+            }
+            
+            .task-content {
+              margin-left: 16px;
+              display: flex;
+              flex-direction: column;
+              gap: 2px;
+              max-width: 350px;
+            }
+            
+            .task-title {
+              font-size: 0.85rem;
+              font-weight: 500;
+              color: #1e293b;
+              margin: 0;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            
+            .project-info {
+              font-size: 0.75rem;
+              font-weight: 400;
+              color: #333;
+              background: #f9e190;
+              padding: 1px 6px;
+              border-radius: 10px;
+              display: inline-block;
+              transition: background 0.2s ease, color 0.2s ease;
+              width:100px;
+            }
+            
+            .task-item:hover .project-info {
+              background: #dbeafe;
+              color: #1e3a8a;
+            }
+            
+            .task-icon {
+              position: absolute;
+              left: 16px;
+              top: 4px;
+              font-size: 0.7rem;
+              color: #ffffff;
+              background: #ff6a5f;
+              width: 14px;
+              height: 14px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 4;
+              transition: background 0.2s ease;
+            }
+            
+            .task-item:hover .task-icon {
+              background: #1e3a8a;
+            }
+            
+            .tasks-list p {
+              text-align: center;
+              font-size: 0.8rem;
+              color: #6b7280;
+              font-weight: 400;
+              font-style: italic;
+              padding: 10px;
+              animation: fadeIn 0.4s ease-out;
+            }
+            
+            /* Animation */
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+                transform: translateY(8px);
+              }
+              to {
+                opacity: 1;
+                transform: translateY(0);
+              }
+            }

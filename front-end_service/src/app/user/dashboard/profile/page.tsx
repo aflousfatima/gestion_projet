@@ -156,7 +156,7 @@ const ProfilePage: React.FC = () => {
     e.preventDefault();
     try {
       await axiosInstance.put(
-        "http://localhost:8083/api/user/update",
+        "http://localhost:8083/api/update",
         user,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -181,7 +181,7 @@ const ProfilePage: React.FC = () => {
     }
     try {
       await axiosInstance.post(
-        "http://localhost:8083/api/user/change-password",
+        "http://localhost:8083/api/change-password",
         {
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
