@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import useAxios from "../../../../hooks/useAxios";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "../../../../styles/Integrations.css";
 
 const Integrations: React.FC = () => {
@@ -16,7 +15,11 @@ const Integrations: React.FC = () => {
   // Vérifier l'état de la connexion GitHub
   useEffect(() => {
     const checkGithubConnection = async () => {
-      if (!accessToken || isLoading) return;
+      console.log("🔍 Access Token:", accessToken);
+      if (!accessToken || isLoading) {
+        console.log("🔍 Pas de token ou chargement en cours, annulation...");
+        return;
+      }
       try {
         console.log("🔍 Vérification de la connexion GitHub...");
         const response = await axiosInstance.get(
@@ -31,8 +34,9 @@ const Integrations: React.FC = () => {
         console.error("Erreur lors de la vérification de la connexion GitHub:", err);
         setGithubConnected(false);
         setError(
+          err.response?.data?.error ||
           err.response?.data?.message ||
-            "Erreur lors de la vérification de la connexion GitHub"
+          "Erreur lors de la vérification de la connexion GitHub"
         );
       }
     };
@@ -52,25 +56,17 @@ const Integrations: React.FC = () => {
   }, []);
 
   // Gérer la connexion à GitHub
-  const handleConnectGithub = async () => {
+  const handleConnectGithub = () => {
     setGithubLoading(true);
     setError(null);
     setSuccessMessage(null);
     try {
-      console.log("🔄 Déclenchement de la connexion GitHub...");
-      await axiosInstance.get(
-        "http://localhost:8087/api/github-integration/oauth/login",
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      // La redirection est gérée par le backend
+      console.log("🔄 Redirection vers l'authentification GitHub...");
+      // Rediriger le navigateur vers l'endpoint /oauth/login
+      window.location.href = "http://localhost:8087/api/github-integration/oauth/login";
     } catch (err: any) {
-      console.error("Erreur lors de la connexion à GitHub:", err);
-      setError(
-        err.response?.data?.message || "Erreur lors de la connexion à GitHub"
-      );
-    } finally {
+      console.error("Erreur lors de la redirection GitHub:", err);
+      setError("Erreur lors de la redirection vers GitHub");
       setGithubLoading(false);
     }
   };
@@ -91,27 +87,26 @@ const Integrations: React.FC = () => {
 
         <div className="integration-card">
           <div className="card-header">
-            <i className="fab fa-github github-icon"></i>
+          <i className="fab fa-github github-icon"></i>
             <h2>GitHub Integration</h2>
           </div>
           <div className="card-body">
             {githubConnected ? (
               <p className="connected-message">
-                Votre compte GitHub est connecté. Suivez vos commits et pull requests en temps réel.
+                Your GitHub account is connected. Track your commits and pull requests in real time.
               </p>
             ) : (
               <>
                 <p className="description">
-                  Connectez votre compte GitHub pour synchroniser vos projets, suivre les commits et gérer les pull requests directement depuis notre plateforme.
+                  Connect your GitHub account to sync your projects, track commits, and manage pull requests directly from our platform.
                 </p>
                 <button
                   className="connect-button"
                   onClick={handleConnectGithub}
                   disabled={githubLoading}
                 >
-   
                   <i className="fab fa-github button-icon"></i>
-                  {githubLoading ? "Connexion..." : "Connecter GitHub"}
+                  {githubLoading ? "Connexion..." : "Connect GitHub"}
                 </button>
               </>
             )}
