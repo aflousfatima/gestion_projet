@@ -32,7 +32,7 @@ public class HistoryService {
         this.sprintHistoryRepo = sprintHistoryRepo;
     }
 
-    // ➕ Ajouter une action pour User Story
+    // Ajouter une action pour User Story
     public void addUserStoryHistory(Long userStoryId, String action, String author, String description) {
         UserStoryHistory history = new UserStoryHistory();
         history.setUserStoryId(userStoryId);
