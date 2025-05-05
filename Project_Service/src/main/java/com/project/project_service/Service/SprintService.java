@@ -312,4 +312,38 @@ public class SprintService {
             }
         }
     }
+
+
+    public SprintDTO checkAndUpdateSprintStatus(Long projectId, Long sprintId, String token) {
+        String userIdStr = authClient.decodeToken(token);
+        if (userIdStr == null) {
+            throw new IllegalArgumentException("Token invalide ou utilisateur non identifié");
+        }
+
+        Sprint sprint = sprintRepository.findById(sprintId)
+                .orElseThrow(() -> new RuntimeException("Sprint non trouvé avec l'ID: " + sprintId));
+
+        if (!sprint.getProject().getId().equals(projectId)) {
+            throw new RuntimeException("Le Sprint n'appartient pas à ce projet");
+        }
+
+        // Vérifier si toutes les User Stories sont DONE
+        boolean allUserStoriesDone = sprint.getUserStories().stream()
+                .allMatch(us -> us.getStatus().equals(UserStoryStatus.DONE));
+
+        // Mettre à jour le statut si toutes les User Stories sont DONE
+        if (allUserStoriesDone && sprint.getStatus() != SprintStatus.COMPLETED) {
+            sprint.setStatus(SprintStatus.COMPLETED);
+            Sprint updatedSprint = sprintRepository.save(sprint);
+            historyService.addSprintHistory(
+                    updatedSprint.getId(),
+                    "UPDATE_STATUS",
+                    userIdStr,
+                    "Sprint complété : " + updatedSprint.getName()
+            );
+            return new SprintDTO(updatedSprint);
+        }
+
+        return new SprintDTO(sprint);
+    }
 }

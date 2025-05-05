@@ -163,4 +163,13 @@ public class UserStoryController {
     public List<Long> getUserStoryIdsOfActiveSprint(@PathVariable Long projectId) {
         return userStoryService.getUserStoryIdsOfActiveSprint(projectId);
     }
+
+    @PostMapping("/{projectId}/{userStoryId}/check-status")
+    public ResponseEntity<UserStoryDTO> checkAndUpdateUserStoryStatus(
+            @PathVariable Long projectId,
+            @PathVariable Long userStoryId,
+            @RequestHeader("Authorization") String token) {
+        UserStoryDTO updatedUserStory = userStoryService.checkAndUpdateUserStoryStatus(projectId, userStoryId, token);
+        return ResponseEntity.ok(updatedUserStory);
+    }
 }

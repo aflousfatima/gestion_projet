@@ -1,5 +1,6 @@
 package com.project.project_service.Service;
 
+import com.project.project_service.DTO.TaskDTO;
 import com.project.project_service.DTO.UserStoryDTO;
 import com.project.project_service.DTO.UserStoryRequest;
 import com.project.project_service.Entity.Projet;
@@ -9,21 +10,31 @@ import com.project.project_service.Entity.UserStory;
 import com.project.project_service.Enumeration.Priority;
 import com.project.project_service.Enumeration.SprintStatus;
 import com.project.project_service.Enumeration.UserStoryStatus;
+import com.project.project_service.Enumeration.WorkItemStatus;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.Repository.SprintRepository;
 import com.project.project_service.Repository.TagRepository;
 import com.project.project_service.Repository.UserStoryRepository;
 import com.project.project_service.config.AuthClient;
+import com.project.project_service.config.TaskClient;
+import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.OptimisticLockException;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 @Service
+@EnableScheduling
 public class UserStoryService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserStoryService.class);
     @Autowired
     private UserStoryRepository userStoryRepository;
 
@@ -37,12 +48,19 @@ public class UserStoryService {
     private TagRepository tagRepository;
     @Autowired
     private AuthClient authClient;
+
+    @Autowired
+    private TaskClient taskClient;
     @Autowired
     private HistoryService historyService;
+
+    @Autowired
+    private SprintService sprintService;
 
     private UserStoryDTO convertToDTO(UserStory userStory) {
         return new UserStoryDTO(userStory);
     }
+
     public UserStoryDTO createUserStory(Long projectId, UserStoryRequest request, String token) {
         System.out.println("Début de createUserStory pour projectId: " + projectId);
         System.out.println("Données reçues: " + request);
@@ -85,6 +103,7 @@ public class UserStoryService {
         );
         return new UserStoryDTO(savedStory);
     }
+
     // New method to update a user story
     public UserStoryDTO updateUserStory(Long projectId, Long userStoryId, UserStoryRequest request, String token) {
 
@@ -144,6 +163,7 @@ public class UserStoryService {
             throw new RuntimeException("Erreur lors de la mise à jour de la User Story", e);
         }
     }
+
     // New method to fetch all user stories for a project
     public List<UserStoryDTO> getUserStoriesByProjectId(Long projectId) {
         Projet projet = projetRepository.findById(projectId)
@@ -214,7 +234,7 @@ public class UserStoryService {
             }
         }
         userStory.setSprint(sprint);
-        updateStatusBasedOnDependencies(userStory); // Recalculer le statut
+        updateStatusBasedOnDependencies(userStory, token); // Recalculer le statut
         UserStory updatedUserStory = userStoryRepository.save(userStory);
 
         // Ajout de l'historique de suppression
@@ -226,6 +246,7 @@ public class UserStoryService {
         );
         return new UserStoryDTO(updatedUserStory);
     }
+
     // Nouvelle méthode pour retirer une user story d'un sprint
     public UserStoryDTO removeUserStoryFromSprint(Long projectId, Long userStoryId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -276,7 +297,7 @@ public class UserStoryService {
         userStory.setDependsOn(newDependsOn != null ? newDependsOn : new ArrayList<>());
 
         // Recalculer le statut en fonction des dépendances
-        updateStatusBasedOnDependencies(userStory);
+        updateStatusBasedOnDependencies(userStory, token);
 
         UserStory updatedStory = userStoryRepository.save(userStory);
         // Ajout de l'historique de suppression
@@ -321,11 +342,27 @@ public class UserStoryService {
         );
         return new UserStoryDTO(updatedStory);
     }
-    public void updateStatusBasedOnDependencies(UserStory userStory) {
+
+    public void updateStatusBasedOnDependencies(UserStory userStory, String token) {
+        // Vérifier si toutes les tâches sont DONE
+        List<TaskDTO> tasks = taskClient.getTasksByProjectAndUserStory(userStory.getProject().getId(), userStory.getId(), token);
+        boolean allTasksDone = tasks.stream().allMatch(task -> task.getStatus() == WorkItemStatus.DONE);
+
+        // Si toutes les tâches sont DONE, conserver DONE ou définir à DONE
+        if (allTasksDone) {
+            userStory.setStatus(UserStoryStatus.DONE);
+            return;
+        }
+
+        // Si le statut actuel est DONE, ne pas le modifier
+        if (userStory.getStatus() == UserStoryStatus.DONE) {
+            return;
+        }
+
         if (userStory.getDependsOn().isEmpty()) {
             if (userStory.getSprint() != null) {
                 userStory.setStatus(userStory.getSprint().getStatus() == SprintStatus.ACTIVE ? UserStoryStatus.IN_PROGRESS : UserStoryStatus.SELECTED_FOR_SPRINT);
-            } else if (!userStory.getStatus().equals(UserStoryStatus.DONE) && !userStory.getStatus().equals(UserStoryStatus.CANCELED)) {
+            } else if (!userStory.getStatus().equals(UserStoryStatus.CANCELED)) {
                 userStory.setStatus(UserStoryStatus.BACKLOG);
             }
             return;
@@ -346,20 +383,20 @@ public class UserStoryService {
         }
 
         if (userStory.getSprint() == null) {
-            userStory.setStatus(UserStoryStatus.BACKLOG); // Sans sprint, toujours BACKLOG si pas DONE/CANCELED
+            userStory.setStatus(UserStoryStatus.BACKLOG);
         } else if (userStory.getSprint().getStatus() == SprintStatus.PLANNED) {
             if (allDependenciesDone) {
                 userStory.setStatus(UserStoryStatus.SELECTED_FOR_SPRINT);
             } else {
-                userStory.setStatus(UserStoryStatus.ON_HOLD); // En attente car dépendances non terminées
+                userStory.setStatus(UserStoryStatus.ON_HOLD);
             }
         } else if (userStory.getSprint().getStatus() == SprintStatus.ACTIVE) {
             if (allDependenciesDone) {
                 userStory.setStatus(UserStoryStatus.IN_PROGRESS);
             } else if (allDependenciesInActiveSprint) {
-                userStory.setStatus(UserStoryStatus.BLOCKED); // Dépendances dans sprint actif mais pas DONE
+                userStory.setStatus(UserStoryStatus.BLOCKED);
             } else {
-                userStory.setStatus(UserStoryStatus.ON_HOLD); // Dépendances pas dans sprint actif
+                userStory.setStatus(UserStoryStatus.ON_HOLD);
             }
         }
     }
@@ -411,4 +448,106 @@ public class UserStoryService {
                 .collect(Collectors.toList());
     }
 
+
+    @Scheduled(fixedRate = 60000) // Toutes les minutes
+    public void checkStaleUserStories() {
+        logger.info("Checking for stale UserStories");
+        List<UserStory> inProgressStories = userStoryRepository.findByStatus(UserStoryStatus.IN_PROGRESS);
+        for (UserStory story : inProgressStories) {
+            logger.info("Checking UserStory {} in Project {}", story.getId(), story.getProject().getId());
+            try {
+                checkAndUpdateUserStoryStatus(story.getProject().getId(), story.getId(), null); // Pas de token pour tâche planifiée
+            } catch (Exception e) {
+                logger.error("Failed to check UserStory {}: {}", story.getId(), e.getMessage(), e);
+            }
+        }
+    }
+
+    public UserStoryDTO checkAndUpdateUserStoryStatus(Long projectId, Long userStoryId, String token) {
+        logger.info("Starting checkAndUpdateUserStoryStatus for UserStory {} in Project {}", userStoryId, projectId);
+
+        String userIdStr = token != null ? authClient.decodeToken(token) : "system-task"; // Utiliser system-task si pas de token
+        if (userIdStr == null && token != null) {
+            logger.error("Invalid token: unable to extract user ID");
+            throw new IllegalArgumentException("Token invalide ou utilisateur non identifié");
+        }
+        logger.debug("Decoded user ID: {}", userIdStr);
+
+        UserStory userStory = userStoryRepository.findById(userStoryId)
+                .orElseThrow(() -> {
+                    logger.error("User Story not found with ID: {}", userStoryId);
+                    return new RuntimeException("User Story non trouvée avec l'ID: " + userStoryId);
+                });
+        logger.debug("Found UserStory: {} with status: {}", userStory.getTitle(), userStory.getStatus());
+
+        if (!userStory.getProject().getId().equals(projectId)) {
+            logger.error("User Story {} does not belong to Project {}", userStoryId, projectId);
+            throw new RuntimeException("La User Story n'appartient pas à ce projet");
+        }
+
+        // Récupérer les tâches avec réessais
+        List<TaskDTO> tasks = fetchTasksWithRetry(projectId, userStoryId, token);
+        logger.info("Retrieved {} tasks for UserStory {}", tasks.size(), userStoryId);
+        tasks.forEach(task -> logger.info("TaskDTO id={} status={} (name={})",
+                task.getId(), task.getStatus(),
+                task.getStatus() != null ? task.getStatus().name() : "null"));
+
+        // Vérifier si toutes les tâches sont DONE
+        boolean allTasksDone = tasks.stream()
+                .allMatch(task -> task.getStatus() != null && task.getStatus() == WorkItemStatus.DONE);
+        logger.info("All tasks done for UserStory {}: {}", userStoryId, allTasksDone);
+
+        // Mettre à jour le statut si toutes les tâches sont DONE
+        if (allTasksDone && !userStory.getStatus().equals(UserStoryStatus.DONE)) {
+            logger.info("Updating UserStory {} status to DONE", userStoryId);
+            userStory.setStatus(UserStoryStatus.DONE);
+            UserStory updatedStory = userStoryRepository.save(userStory);
+            logger.info("Saved UserStory {} with status DONE", userStoryId);
+
+            historyService.addUserStoryHistory(
+                    updatedStory.getId(),
+                    "UPDATE_STATUS",
+                    userIdStr,
+                    "User Story marquée comme DONE : " + updatedStory.getTitle()
+            );
+
+            if (updatedStory.getSprint() != null) {
+                logger.info("Checking sprint status for Sprint {} in Project {}", updatedStory.getSprint().getId(), projectId);
+                sprintService.checkAndUpdateSprintStatus(projectId, updatedStory.getSprint().getId(), token != null ? token : null);
+            }
+            return new UserStoryDTO(updatedStory);
+        } else {
+            logger.info("No status update for UserStory {}: allTasksDone={}, currentStatus={}",
+                    userStoryId, allTasksDone, userStory.getStatus());
+        }
+
+        return new UserStoryDTO(userStory);
+    }
+
+    private List<TaskDTO> fetchTasksWithRetry(Long projectId, Long userStoryId, String token) {
+        int maxRetries = 3;
+        long delayMs = 500;
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                logger.info("Fetching tasks for UserStory {} (attempt {}/{})", userStoryId, attempt, maxRetries);
+                if (token == null) {
+                    return taskClient.getTasksByProjectAndUserStoryInternal(projectId, userStoryId);
+                } else {
+                    return taskClient.getTasksByProjectAndUserStory(projectId, userStoryId, token);
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to fetch tasks (attempt {}/{}): {}", attempt, maxRetries, e.getMessage());
+                if (attempt == maxRetries) {
+                    throw new RuntimeException("Échec après " + maxRetries + " tentatives", e);
+                }
+                try {
+                    Thread.sleep(delayMs);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Interruption pendant la tentative", ie);
+                }
+            }
+        }
+        return List.of();
+    }
 }

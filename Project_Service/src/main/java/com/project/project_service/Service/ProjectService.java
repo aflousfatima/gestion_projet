@@ -3,11 +3,13 @@ package com.project.project_service.Service;
 import com.project.project_service.DTO.*;
 import com.project.project_service.Entity.Client;
 import com.project.project_service.Entity.Entreprise;
+import com.project.project_service.Entity.GitHubLink;
 import com.project.project_service.Entity.Projet;
 import com.project.project_service.Enumeration.PhaseProjet;
 import com.project.project_service.Enumeration.PriorityProjet;
 import com.project.project_service.Enumeration.StatusProjet;
 import com.project.project_service.Repository.ClientRepository;
+import com.project.project_service.Repository.GitHubLinkRepository;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.config.AuthClient;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +29,8 @@ public class ProjectService {
     private ProjetRepository projectRepository;
     @Autowired
     private AuthClient authClient; // Inject the Feign clien
+    @Autowired
+    private GitHubLinkRepository gitHubLinkRepository;
     @Transactional
     public void createProject(String authId, String name, String description,
                               LocalDate startDate, LocalDate deadline,
@@ -290,6 +294,27 @@ public class ProjectService {
             e.printStackTrace();
             throw new RuntimeException("Erreur lors de la récupération des projets: " + e.getMessage());
         }
+    }
+
+    @Transactional
+    public void linkGitHubRepositoryToProject(Long projectId, String repositoryUrl) {
+        Projet project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
+
+        GitHubLink existingLink = gitHubLinkRepository.findByProjetId(projectId);
+        if (existingLink != null) {
+            existingLink.setRepositoryUrl(repositoryUrl);
+            gitHubLinkRepository.save(existingLink);
+            System.out.println("🔄 Lien GitHub mis à jour : " + repositoryUrl);
+        } else {
+            GitHubLink link = new GitHubLink(repositoryUrl, project);
+            gitHubLinkRepository.save(link);
+            System.out.println("🔗 Dépôt GitHub lié au projet : " + repositoryUrl);
+        }
+    }
+    public String getGitHubRepositoryUrl(Long projectId) {
+        GitHubLink link = gitHubLinkRepository.findByProjetId(projectId);
+        return (link != null) ? link.getRepositoryUrl() : null;
     }
 
 }
