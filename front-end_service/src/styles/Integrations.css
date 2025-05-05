@@ -1,0 +1,159 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+.integrations-page {
+  min-height: 200vh;
+  background: linear-gradient(135deg, #2E2E30 0%, #2E2E30 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+
+}
+
+.integrations-container {
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+}
+
+.integration-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(237, 234, 234, 0.877);
+  overflow: hidden;
+  transform: translateY(20px);
+  opacity: 0;
+  animation: slideIn 0.5s ease-out forwards;
+  margin-top: -500px;
+
+}
+
+@keyframes slideIn {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.card-header {
+  background: #2E2E30;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-header h2 {
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.github-icon {
+  font-size: 28px;
+  color: #ffffff;
+}
+
+.card-body {
+  padding: 24px;
+}
+
+.description {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #4a5568;
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.connected-message {
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #2d3748;
+  font-weight: 500;
+  margin: 0;
+}
+
+.connect-button {
+  background: #2E2E30;
+  color: #ffffff;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.connect-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.connect-button:disabled {
+  background: #4a5568;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.button-icon {
+  font-size: 18px;
+}
+
+.error-message {
+  background: #fee2e2;
+  color: #dc2626;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-message::before {
+  content: "⚠️";
+  font-size: 16px;
+}
+
+.success-message {
+  background: #d1fae5;
+  color: #059669;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.success-message::before {
+  content: "✅";
+  font-size: 16px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #1a1a2e;
+}
+
+.loading-img {
+  width: 60px;
+  height: 60px;
+  filter: brightness(0) invert(1);
+}

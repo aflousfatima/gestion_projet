@@ -470,6 +470,17 @@ export default function DashboardLayout({
                   <i className="fa fa-cog"></i>
                   <span>Settings</span>
                 </div>
+
+                <div className="dropdown-item">
+                  <i className="fab fa-github"></i>
+                  <Link
+                    href="/user/dashboard/integration"
+                    className="nav-link btn style-profile"
+                  >
+                    <span>Github Integration</span>
+                 </Link>
+                </div>
+
                 <div className="dropdown-divider"></div>
                 <div className="dropdown-item" onClick={handleLogout}>
                   <i className="fa fa-sign-out-alt logout-icon"></i>

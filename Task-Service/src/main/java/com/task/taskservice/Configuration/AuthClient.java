@@ -11,6 +11,8 @@ import java.util.Map;
 
 @FeignClient(name = "auth-service", url = "http://localhost:8083")  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface AuthClient {
+    @GetMapping("/api/auth/decode-token")
+    String decodeToken(@RequestHeader("Authorization") String authorization);
 
 
     @GetMapping("/api/auth/users/{authId}")
@@ -26,8 +28,6 @@ public interface AuthClient {
     );
 
     // Nouvelle méthode pour décoder le token
-    @GetMapping("/api/auth/decode-token")
-    String decodeToken(@RequestHeader("Authorization") String authorization);
 
 }
 
