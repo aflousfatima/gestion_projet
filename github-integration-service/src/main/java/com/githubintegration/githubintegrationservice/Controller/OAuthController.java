@@ -1,26 +1,25 @@
 package com.githubintegration.githubintegrationservice.Controller;
 
-import com.githubintegration.githubintegrationservice.Config.AuthClient;
+import com.githubintegration.githubintegrationservice.Entity.OAuthState;
+import com.githubintegration.githubintegrationservice.Repository.OAuthStateRepository;
 import com.githubintegration.githubintegrationservice.Service.GithubTokenService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
-import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
-
-// Interface Feign pour appeler le service d'authentification
-
+import java.util.UUID;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/api/github-integration")
-@RequiredArgsConstructor
 public class OAuthController {
+
+    private static final Logger LOGGER = Logger.getLogger(OAuthController.class.getName());
 
     @Value("${github.client-id}")
     private String clientId;
@@ -28,77 +27,101 @@ public class OAuthController {
     @Value("${github.redirect-uri}")
     private String redirectUri;
 
-    @Value("${github.client-secret}")
-    private String clientSecret;
-
-    private final RestTemplate restTemplate;
     private final GithubTokenService githubTokenService;
-    private final AuthClient authClient;
+    private final OAuthStateRepository oauthStateRepository;
+
+    public OAuthController(GithubTokenService githubTokenService, OAuthStateRepository oauthStateRepository) {
+        this.githubTokenService = githubTokenService;
+        this.oauthStateRepository = oauthStateRepository;
+    }
 
     @GetMapping("/oauth/login")
-    public ResponseEntity<Void> loginWithGithub() {
-        String githubUrl = "https://github.com/login/oauth/authorize"
-                + "?client_id=" + clientId
-                + "&redirect_uri=" + redirectUri
-                + "&scope=repo,user";
+    public ResponseEntity<Void> loginWithGithub(@RequestParam(value = "accessToken", required = false) String accessToken) {
+        try {
+            LOGGER.info("Requête /oauth/login reçue avec accessToken: " + (accessToken != null ? accessToken : "absent"));
+            String state = UUID.randomUUID().toString();
+            String userId = accessToken != null ? githubTokenService.getUserIdFromToken("Bearer " + accessToken) : null;
+            if (userId != null) {
+                OAuthState oauthState = new OAuthState();
+                oauthState.setState(state);
+                oauthState.setUserId(userId);
+                oauthStateRepository.save(oauthState);
+                LOGGER.info("État OAuth enregistré: state=" + state + ", userId=" + userId);
+            } else {
+                LOGGER.warning("Aucun userId disponible pour l'état OAuth. Le state sera utilisé sans userId: " + state);
+                String encodedMessage = URLEncoder.encode("Aucun token d'accès valide fourni", StandardCharsets.UTF_8);
+                String redirectUrl = "http://localhost:3000/user/dashboard/integration?github=error&message=" + encodedMessage;
+                return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+            }
 
-        URI redirect = URI.create(githubUrl);
-        return ResponseEntity.status(HttpStatus.FOUND).location(redirect).build();
+            String githubUrl = "https://github.com/login/oauth/authorize"
+                    + "?client_id=" + clientId
+                    + "&redirect_uri=" + redirectUri
+                    + "&scope=repo,user"
+                    + "&state=" + state;
+            LOGGER.info("Redirection vers GitHub OAuth: " + githubUrl);
+            URI redirect = URI.create(githubUrl);
+            return ResponseEntity.status(HttpStatus.FOUND).location(redirect).build();
+        } catch (Exception e) {
+            LOGGER.severe("Erreur dans /oauth/login: " + e.getMessage());
+            String encodedMessage = URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            String redirectUrl = "http://localhost:3000/user/dashboard/integration?github=error&message=" + encodedMessage;
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
+        }
     }
 
     @GetMapping("/oauth/callback")
     public ResponseEntity<Void> callback(
             @RequestParam("code") String code,
-            @RequestHeader("Authorization") String authorization) {
+            @RequestParam(value = "state", required = false) String state) {
         try {
-            String tokenUrl = "https://github.com/login/oauth/access_token";
-            HttpHeaders headers = new HttpHeaders();
-            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-
-            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
-            body.add("client_id", clientId);
-            body.add("client_secret", clientSecret);
-            body.add("code", code);
-
-            HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
-
-            if (response.getBody().containsKey("error")) {
-                throw new RuntimeException("Erreur GitHub : " + response.getBody().get("error_description"));
+            LOGGER.info("Callback reçu avec code: " + code + ", state: " + (state != null ? state : "absent"));
+            String userId = null;
+            if (state != null) {
+                userId = oauthStateRepository.findById(state)
+                        .map(OAuthState::getUserId)
+                        .orElse(null);
+                if (userId != null) {
+                    LOGGER.info("UserId récupéré depuis state: " + userId);
+                    oauthStateRepository.deleteById(state); // Nettoyage
+                } else {
+                    LOGGER.warning("Aucun userId trouvé pour state: " + state);
+                }
+            } else {
+                LOGGER.warning("Paramètre state manquant dans le callback");
             }
 
-            String accessToken = (String) response.getBody().get("access_token");
-            String userId = authClient.decodeToken(authorization);
-            if (userId == null || userId.isEmpty()) {
-                throw new RuntimeException("Impossible de récupérer le userId depuis le token JWT");
+            if (userId == null) {
+                throw new IllegalArgumentException("Impossible de déterminer le userId pour associer le token GitHub");
             }
 
-            githubTokenService.saveToken(userId, accessToken);
-
+            githubTokenService.exchangeCodeForToken(code, userId);
+            LOGGER.info("Token GitHub échangé avec succès pour le code: " + code);
             return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("http://localhost:3000/user/settings/integrations?github=success"))
+                    .location(URI.create("http://localhost:3000/user/dashboard/integration?github=success"))
                     .build();
         } catch (Exception e) {
+            LOGGER.severe("Erreur dans /oauth/callback: " + e.getMessage());
+            String encodedMessage = URLEncoder.encode(e.getMessage(), StandardCharsets.UTF_8);
+            String redirectUrl = "http://localhost:3000/user/dashboard/integration?github=error&message=" + encodedMessage;
+            LOGGER.info("Redirection avec erreur: " + redirectUrl);
             return ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create("http://localhost:3000/user/settings/integrations?github=error&message=" + e.getMessage()))
+                    .location(URI.create(redirectUrl))
                     .build();
         }
     }
 
     @GetMapping("/check-token")
-    public ResponseEntity<Map<String, Boolean>> checkGithubToken(
+    public ResponseEntity<Map<String, Object>> checkGithubToken(
             @RequestHeader("Authorization") String authorization) {
         try {
-            String userId = authClient.decodeToken(authorization);
-            if (userId == null || userId.isEmpty()) {
-                throw new RuntimeException("Impossible de récupérer le userId depuis le token JWT");
-            }
-            boolean hasToken = githubTokenService.getAccessTokenByUserId(userId) != null;
+            LOGGER.info("Vérification du token pour Authorization: " + authorization);
+            boolean hasToken = githubTokenService.hasGithubToken(authorization);
             return ResponseEntity.ok(Map.of("hasToken", hasToken));
         } catch (Exception e) {
+            LOGGER.severe("Erreur dans /check-token: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("hasToken", false));
+                    .body(Map.of("hasToken", false, "error", e.getMessage()));
         }
     }
 }
