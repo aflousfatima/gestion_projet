@@ -15,10 +15,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @Component
 public class TaskMapper {
-
+    private static final Logger logger = LoggerFactory.getLogger(TaskMapper.class);
 
     @Autowired
     private CloudinaryService cloudinaryService;
@@ -45,6 +46,12 @@ public class TaskMapper {
         taskDTO.setProjectId(task.getProjectId());
         taskDTO.setCreatedBy(task.getCreatedBy());
 
+
+        logger.info("Mapping Task {}: status={} (name={}) to TaskDTO status={} (name={})",
+                task.getId(), task.getStatus(),
+                task.getStatus() != null ? task.getStatus().name() : "null",
+                taskDTO.getStatus(),
+                taskDTO.getStatus() != null ? taskDTO.getStatus().name() : "null");
         // Mapper les dépendances
         if (task.getDependencies() != null) {
             taskDTO.setDependencyIds(task.getDependencies().stream()
@@ -118,7 +125,11 @@ public class TaskMapper {
         if (taskDTO.getAssignedUserIds() != null) {
             task.setAssignedUserIds(new HashSet<>(taskDTO.getAssignedUserIds()));
         }
-
+        logger.info("Mapping TaskDTO {}: status={} (name={}) to Task status={} (name={})",
+                taskDTO.getId(), taskDTO.getStatus(),
+                taskDTO.getStatus() != null ? taskDTO.getStatus().name() : "null",
+                task.getStatus(),
+                task.getStatus() != null ? task.getStatus().name() : "null");
         return task;
     }
 

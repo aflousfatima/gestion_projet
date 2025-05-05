@@ -240,4 +240,12 @@ public class TaskController {
         long count = taskService.countTasksByProjectId(projectId);
         return ResponseEntity.ok(count);
     }
+
+
+    @GetMapping("/internal/{projectId}/{userStoryId}")
+    public List<TaskDTO> getTasksByProjectAndUserStoryInternal(
+            @PathVariable Long projectId,
+            @PathVariable Long userStoryId) {
+        return taskService.getTasksByProjectAndUserStoryInternal(projectId, userStoryId);
+    }
 }
