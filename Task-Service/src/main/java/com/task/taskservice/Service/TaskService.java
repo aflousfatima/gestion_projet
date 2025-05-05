@@ -3,6 +3,8 @@ import com.task.taskservice.DTO.*;
 import com.task.taskservice.Entity.*;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +15,10 @@ import com.task.taskservice.Repository.FileAttachmentRepository;
 import com.task.taskservice.Repository.TagRepository;
 import com.task.taskservice.Repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import com.task.taskservice.Entity.FileAttachment;
@@ -29,15 +34,15 @@ import java.util.stream.Collectors;
 
 @Service
 public class TaskService {
-
     private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
-
     private final TaskRepository taskRepository;
     private final TagRepository tagRepository;
     private final TaskMapper taskMapper;
     private final AuthClient authClient;
 
     private final ProjectClient projectClient;
+    @Autowired
+    private EntityManager entityManager;
 
     private final FileAttachmentRepository fileAttachmentRepository;
     @Autowired
@@ -138,7 +143,6 @@ public class TaskService {
     }
 
 
-
     @Transactional
     public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
         // Validate token
@@ -194,11 +198,30 @@ public class TaskService {
             task.setStatus(newStatus);
 
             // Si DONE, définir completedDate
-            if (newStatus == WorkItemStatus.DONE) {
-                task.setCompletedDate(LocalDate.now());
+            // Notifier Project-Service si la tâche est DONE
+            if (taskDTO.getStatus() == WorkItemStatus.DONE && task.getUserStory() != null) {
+                try {
+                    logger.info("Notifying Project-Service for UserStory {}", task.getUserStory());
+                    projectClient.checkAndUpdateUserStoryStatus(task.getProjectId(), task.getUserStory(), token);
+                    logger.info("Successfully notified Project-Service for UserStory {}", task.getUserStory());
+                } catch (Exception e) {
+                    logger.error("Failed to notify Project-Service for UserStory {}: {}", task.getUserStory(), e.getMessage(), e);
+                }
             }
         }
 
+        if (taskDTO.getStatus() != null) {
+            task.setStatus(taskDTO.getStatus());
+            if (taskDTO.getStatus() == WorkItemStatus.DONE) {
+                task.setCompletedDate(LocalDate.now());
+            }
+            Task savedTask = taskRepository.save(task);
+            logger.info("After save: Task {} status={}", taskId, savedTask.getStatus());
+            taskMapper.toDTO(savedTask); // Forcer le flush si nécessaire
+            if (taskDTO.getStatus() == WorkItemStatus.DONE) {
+                notifyUserStoryStatusUpdate(task.getProjectId(), task.getUserStory(), token);
+            }
+        }
 
         // Update fields
         if (taskDTO.getTitle() != null && !taskDTO.getTitle().equals(task.getTitle())) {
@@ -225,14 +248,18 @@ public class TaskService {
             changes.append("Date de début changée à ").append(taskDTO.getStartDate()).append("; ");
             task.setStartDate(taskDTO.getStartDate());
         }
-
         if (taskDTO.getStatus() != null) {
             task.setStatus(taskDTO.getStatus());
-            // Gérer completedDate
             if (taskDTO.getStatus() == WorkItemStatus.DONE) {
                 task.setCompletedDate(LocalDate.now());
-            } else {
-                task.setCompletedDate(null); // Réinitialiser si le statut change
+            }
+            Task savedTask = taskRepository.save(task);
+            logger.info("After save: Task {} status={}", taskId, savedTask.getStatus());
+            taskRepository.flush(); // Forcer l'écriture en base
+            entityManager.clear(); // Vider la session Hibernate
+            logger.info("After flush and clear: Task {} status={}", taskId, savedTask.getStatus());
+            if (taskDTO.getStatus() == WorkItemStatus.DONE) {
+                notifyUserStoryStatusUpdate(task.getProjectId(), task.getUserStory(), token);
             }
         }
         task.setUpdatedBy(updatedBy);
@@ -274,7 +301,19 @@ public class TaskService {
         updateProgress(task);
         // Save the updated task
         Task updatedTask = taskRepository.save(task);
+        taskRepository.flush(); // Forcer l'écriture
+        entityManager.clear(); // Vider la session
+        logger.info("After final save: Task {} status={}", taskId, updatedTask.getStatus());
+        // Relire la tâche pour confirmer
+        // Relire la tâche pour confirmer
+        Task reloadedTask = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found after save: " + taskId));
+        logger.info("After reload: Task {} status={}", taskId, reloadedTask.getStatus());
 
+        // Notifier Project-Service si la tâche est DONE
+        if (taskDTO.getStatus() == WorkItemStatus.DONE && task.getUserStory() != null) {
+            notifyUserStoryStatusUpdate(task.getProjectId(), task.getUserStory(), token);
+        }
         // Convert to DTO
         TaskDTO responseDTO = taskMapper.toDTO(updatedTask);
 
@@ -354,8 +393,19 @@ public class TaskService {
         }
 
         // Fetch tasks
+        entityManager.clear(); // Vider la session Hibernate
         List<Task> tasks = taskRepository.findByProjectIdAndUserStory(projectId, userStoryId);
+        logger.info("Retrieved {} tasks for projectId={} and userStoryId={}", tasks.size(), projectId, userStoryId);
+        tasks.forEach(task -> logger.info("Task id={} status={}", task.getId(), task.getStatus()));
 
+        // Débogage : Vérifier directement dans la base
+        Query debugQuery = entityManager.createNativeQuery(
+                "SELECT id, status FROM WorkItem WHERE id = :taskId AND projectId = :projectId AND userStory = :userStoryId");
+        debugQuery.setParameter("taskId", 20L);
+        debugQuery.setParameter("projectId", projectId);
+        debugQuery.setParameter("userStoryId", userStoryId);
+        List<Object[]> debugResult = debugQuery.getResultList();
+        debugResult.forEach(row -> logger.info("Debug DB: Task id={} status={}", row[0], row[1]));
         // Convert to DTOs
         return tasks.stream()
                 .map(taskMapper::toDTO)
@@ -1034,4 +1084,34 @@ public class TaskService {
         return taskRepository.findByProjectId(projectId).size();
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void notifyUserStoryStatusUpdate(Long projectId, Long userStoryId, String token) {
+        logger.info("Calling checkAndUpdateUserStoryStatus for UserStory {}", userStoryId);
+        try {
+            Thread.sleep(200); // Attendre 200ms pour propagation
+            projectClient.checkAndUpdateUserStoryStatus(projectId, userStoryId, token);
+            logger.info("Successfully updated UserStory {}", userStoryId);
+        } catch (Exception e) {
+            logger.error("Failed to update UserStory {}: {}", userStoryId, e.getMessage(), e);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public List<TaskDTO> getTasksByProjectAndUserStoryInternal(Long projectId, Long userStoryId) {
+        entityManager.clear(); // Vider la session Hibernate
+        List<Task> tasks = taskRepository.findByProjectIdAndUserStory(projectId, userStoryId);
+        logger.info("Retrieved {} tasks for projectId={} and userStoryId={}", tasks.size(), projectId, userStoryId);
+        tasks.forEach(task -> logger.info("Task id={} status={}", task.getId(), task.getStatus()));
+
+        // Débogage natif
+        Query debugQuery = entityManager.createNativeQuery(
+                "SELECT id, status FROM WorkItem WHERE id = :taskId AND projectId = :projectId AND userStory = :userStoryId");
+        debugQuery.setParameter("taskId", 20L);
+        debugQuery.setParameter("projectId", projectId);
+        debugQuery.setParameter("userStoryId", userStoryId);
+        List<Object[]> debugResult = debugQuery.getResultList();
+        debugResult.forEach(row -> logger.info("Debug DB: Task id={} status={}", row[0], row[1]));
+
+        return tasks.stream().map(taskMapper::toDTO).collect(Collectors.toList());
+    }
 }

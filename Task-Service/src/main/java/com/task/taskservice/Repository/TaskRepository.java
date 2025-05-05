@@ -3,6 +3,7 @@ package com.task.taskservice.Repository;
 import com.task.taskservice.Entity.FileAttachment;
 import com.task.taskservice.Entity.Task;
 import com.task.taskservice.Enumeration.WorkItemStatus;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TaskRepository extends JpaRepository<Task, Long> {
+    @Query("SELECT t FROM Task t WHERE t.projectId = :projectId AND t.userStory = :userStoryId")
     List<Task> findByProjectIdAndUserStory(Long projectId, Long userStoryId);
     List<Task> findByProjectId(Long projectId);
     List<Task> findByUserStoryIn(List<Long> userStoryIds);

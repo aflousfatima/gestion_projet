@@ -3,6 +3,7 @@ package com.task.taskservice.Configuration;
 import com.task.taskservice.DTO.ProjectDTO;
 import com.task.taskservice.DTO.ProjectResponseWithRoleDTO;
 import com.task.taskservice.DTO.UserDTO;
+import com.task.taskservice.DTO.UserStoryDTO;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,11 @@ public interface ProjectClient {
     @GetMapping("/api/projects/{projectId}/sprint/actif/user_stories")
     List<Long> getUserStoriesOfActiveSprint(@PathVariable("projectId") Long projectId);
 
-
+    @PostMapping("/api/projects/{projectId}/{userStoryId}/check-status")
+    UserStoryDTO checkAndUpdateUserStoryStatus(
+            @PathVariable("projectId") Long projectId,
+            @PathVariable("userStoryId") Long userStoryId,
+            @RequestHeader("Authorization") String token);
 }
 
 
