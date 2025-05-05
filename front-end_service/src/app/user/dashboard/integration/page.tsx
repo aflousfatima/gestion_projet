@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import useAxios from "../../../../hooks/useAxios";
+
 import "../../../../styles/Integrations.css";
 
 const Integrations: React.FC = () => {
@@ -51,7 +52,7 @@ const Integrations: React.FC = () => {
       setSuccessMessage("GitHub connecté avec succès !");
       setGithubConnected(true);
     } else if (params.get("github") === "error") {
-      setError(params.get("message") || "Erreur lors de la connexion à GitHub");
+      setError(decodeURIComponent(params.get("message") || "Erreur lors de la connexion à GitHub"));
     }
   }, []);
 
@@ -62,11 +63,16 @@ const Integrations: React.FC = () => {
     setSuccessMessage(null);
     try {
       console.log("🔄 Redirection vers l'authentification GitHub...");
-      // Rediriger le navigateur vers l'endpoint /oauth/login
-      window.location.href = "http://localhost:8087/api/github-integration/oauth/login";
+      if (!accessToken) {
+        throw new Error("Aucun token d'accès disponible. Veuillez vous connecter.");
+      }
+      // Ajouter le token comme paramètre d'URL (solution temporaire)
+      const githubLoginUrl = `http://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(accessToken)}`;
+      console.log("🔄 Redirection vers:", githubLoginUrl);
+      window.location.href = githubLoginUrl;
     } catch (err: any) {
       console.error("Erreur lors de la redirection GitHub:", err);
-      setError("Erreur lors de la redirection vers GitHub");
+      setError(err.message || "Erreur lors de la connexion à GitHub");
       setGithubLoading(false);
     }
   };
@@ -87,7 +93,8 @@ const Integrations: React.FC = () => {
 
         <div className="integration-card">
           <div className="card-header">
-          <i className="fab fa-github github-icon"></i>
+
+            <i className="fab fa-github github-icon"></i>
             <h2>GitHub Integration</h2>
           </div>
           <div className="card-body">
@@ -103,10 +110,10 @@ const Integrations: React.FC = () => {
                 <button
                   className="connect-button"
                   onClick={handleConnectGithub}
-                  disabled={githubLoading}
+                  disabled={githubLoading || !accessToken}
                 >
                   <i className="fab fa-github button-icon"></i>
-                  {githubLoading ? "Connexion..." : "Connect GitHub"}
+                  {githubLoading ? "Connexion..." : "Connecter GitHub"}
                 </button>
               </>
             )}
