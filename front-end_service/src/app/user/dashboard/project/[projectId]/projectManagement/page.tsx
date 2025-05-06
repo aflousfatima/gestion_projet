@@ -113,11 +113,7 @@ const ProjectManagement: React.FC = () => {
 
   return (
     <div className="project-management-page">
-      <img
-        src="/github_integration.png"
-        alt="Intégration GitHub"
-        className="github-integ"
-      />
+
       <div className="project-card-manag" data-tilt>
         {error && <div className="alert alert-error">{error}</div>}
         {successMessage && (
@@ -125,7 +121,7 @@ const ProjectManagement: React.FC = () => {
         )}
 
         <div className="github-section">
-          <h2 className="section-title">Lier un dépôt GitHub</h2>
+          <h2 className="section-title">Link a Github Repo</h2>
           {linkedRepository ? (
             <div className="linked-repo">
               <span className="linked-icon">✔</span> Lié :{" "}
@@ -159,7 +155,7 @@ const ProjectManagement: React.FC = () => {
             {loading ? (
               <span className="button-loading">Liaison en cours...</span>
             ) : linkedRepository ? (
-              "Mettre à jour le dépôt"
+              "Update the Repo"
             ) : (
               "Lier le dépôt"
             )}
