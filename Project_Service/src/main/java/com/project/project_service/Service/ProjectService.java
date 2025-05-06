@@ -1,5 +1,6 @@
 package com.project.project_service.Service;
 
+import com.project.project_service.Controller.ProjectController;
 import com.project.project_service.DTO.*;
 import com.project.project_service.Entity.Client;
 import com.project.project_service.Entity.Entreprise;
@@ -13,24 +14,33 @@ import com.project.project_service.Repository.GitHubLinkRepository;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.config.AuthClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
+import java.util.logging.Logger;
 @Service
 public class ProjectService {
     @Autowired
     private ClientRepository clientRepository;
-
+    private static final Logger LOGGER = Logger.getLogger(ProjectController.class.getName());
     @Autowired
     private ProjetRepository projectRepository;
     @Autowired
     private AuthClient authClient; // Inject the Feign clien
     @Autowired
     private GitHubLinkRepository gitHubLinkRepository;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
     @Transactional
     public void createProject(String authId, String name, String description,
                               LocalDate startDate, LocalDate deadline,
@@ -187,6 +197,7 @@ public class ProjectService {
             return null;
         }
     }
+
     public ProjectDTO getProjectDetails(Long projectId, String accessToken) {
         Projet project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
@@ -297,24 +308,85 @@ public class ProjectService {
     }
 
     @Transactional
-    public void linkGitHubRepositoryToProject(Long projectId, String repositoryUrl) {
+    public void linkGitHubRepositoryToProject(Long projectId, String repositoryUrl, String authorization) {
+        LOGGER.info("Tentative de liaison du dépôt GitHub pour le projet ID: " + projectId + ", URL: " + repositoryUrl);
+
+        // Extraire userId depuis le token
+        String userId = authClient.decodeToken(authorization);
+        if (userId == null || userId.trim().isEmpty()) {
+            LOGGER.warning("userId null ou vide après décodage du token");
+            throw new IllegalArgumentException("Utilisateur non authentifié");
+        }
+
+        // Valider l'URL du dépôt
+        if (!isValidGitHubRepositoryUrl(repositoryUrl)) {
+            LOGGER.warning("URL du dépôt GitHub invalide: " + repositoryUrl);
+            throw new IllegalArgumentException("L'URL du dépôt GitHub est invalide");
+        }
+
+        // Extraire owner et repo de l'URL
+        String[] repoDetails = extractOwnerAndRepo(repositoryUrl);
+        String owner = repoDetails[0];
+        String repo = repoDetails[1];
+
+        // Vérifier si le dépôt existe via githubintegrationservice
+        String githubServiceUrl = "http://localhost:8087/fetch_data/repos/" + owner + "/" + repo + "/exists?userId=" + userId;
+        try {
+            ResponseEntity<Map> response = restTemplate.getForEntity(githubServiceUrl, Map.class);
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Boolean exists = (Boolean) response.getBody().get("exists");
+                if (exists == null || !exists) {
+                    LOGGER.warning("Le dépôt " + owner + "/" + repo + " n'existe pas ou n'est pas accessible");
+                    throw new IllegalArgumentException("Le dépôt GitHub n'existe pas ou n'est pas accessible. Vérifiez l'URL ou les permissions du token.");
+                }
+            } else {
+                LOGGER.warning("Réponse invalide du service GitHub: " + response.getStatusCode());
+                throw new IllegalArgumentException("Erreur lors de la vérification du dépôt: réponse invalide du service GitHub.");
+            }
+        } catch (HttpClientErrorException e) {
+            LOGGER.severe("Erreur HTTP lors de la vérification du dépôt: " + e.getMessage());
+            throw new IllegalArgumentException("Erreur lors de la vérification du dépôt: " + e.getMessage());
+        } catch (Exception e) {
+            LOGGER.severe("Erreur inattendue lors de la vérification du dépôt: " + e.getMessage());
+            throw new IllegalArgumentException("Erreur serveur lors de la vérification du dépôt: " + e.getMessage());
+        }
+
+        // Vérifier si le projet existe
         Projet project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
 
+        // Créer ou mettre à jour le lien GitHub
         GitHubLink existingLink = gitHubLinkRepository.findByProjetId(projectId);
         if (existingLink != null) {
             existingLink.setRepositoryUrl(repositoryUrl);
             gitHubLinkRepository.save(existingLink);
-            System.out.println("🔄 Lien GitHub mis à jour : " + repositoryUrl);
+            LOGGER.info("🔄 Lien GitHub mis à jour : " + repositoryUrl);
         } else {
             GitHubLink link = new GitHubLink(repositoryUrl, project);
             gitHubLinkRepository.save(link);
-            System.out.println("🔗 Dépôt GitHub lié au projet : " + repositoryUrl);
+            LOGGER.info("🔗 Dépôt GitHub lié au projet : " + repositoryUrl);
         }
     }
+
     public String getGitHubRepositoryUrl(Long projectId) {
         GitHubLink link = gitHubLinkRepository.findByProjetId(projectId);
         return (link != null) ? link.getRepositoryUrl() : null;
     }
 
+    private boolean isValidGitHubRepositoryUrl(String url) {
+        String regex = "^https://github\\.com/([a-zA-Z0-9-]+)/([a-zA-Z0-9-_]+)$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(url.trim());
+        return matcher.matches();
+    }
+
+    private String[] extractOwnerAndRepo(String url) {
+        String regex = "^https://github\\.com/([a-zA-Z0-9-]+)/([a-zA-Z0-9-_]+)$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(url.trim());
+        if (matcher.matches()) {
+            return new String[]{matcher.group(1), matcher.group(2)};
+        }
+        throw new IllegalArgumentException("Impossible d'extraire owner et repo depuis l'URL: " + url);
+    }
 }
