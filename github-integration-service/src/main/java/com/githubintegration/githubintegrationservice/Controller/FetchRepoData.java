@@ -125,6 +125,33 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching branches: " + e.getMessage()));
         }
     }
+
+
+    @GetMapping("/repos/{owner}/{repo}/pulls")
+    public ResponseEntity<Object> getPullRequests(
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @RequestHeader("Authorization") String authorization) {
+        LOGGER.info("Fetching pull requests for: " + owner + "/" + repo);
+        try {
+            String userId = gitHubIntegrationService.extractUserId(authorization);
+            Object pullRequests = gitHubIntegrationService.getPullRequests(owner, repo, userId);
+            LOGGER.info("Pull requests fetched successfully: " + pullRequests);
+            return ResponseEntity.ok(pullRequests);
+        } catch (IllegalArgumentException e) {
+            LOGGER.warning("Validation error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            LOGGER.warning("Error fetching pull requests: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Failed to fetch pull requests: " + e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching pull requests: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected error fetching pull requests: " + e.getMessage()));
+        }
+    }
     @GetMapping("/user")
     public ResponseEntity<Object> getAuthenticatedUser(@RequestParam String userId) {
         String accessToken = githubTokenService.getAccessTokenByUserId(userId);
