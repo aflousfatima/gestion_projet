@@ -1788,7 +1788,10 @@ left:10%;
   to { transform: translateY(0); opacity: 1; }
 }
 
-
+.github-img{
+width:23px;
+height:23px;
+}
 .table-act{
   margin-left:20px;
   background-color: #FF584A;

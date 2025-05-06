@@ -319,7 +319,7 @@ export default function ProjectLayout({
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [manager, setManager] = useState<Manager | null>(null);
   const [showAllMembers, setShowAllMembers] = useState(false);
-  const [projectName, setProjectName] = useState<string>("Projet 1");
+  const [projectName, setProjectName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedSprintStories, setExpandedSprintStories] = useState<
@@ -900,6 +900,7 @@ export default function ProjectLayout({
           >
             <i className="fa fa-rocket"></i> Agile
           </button>
+
         </div>
       </div>
 
@@ -951,7 +952,8 @@ export default function ProjectLayout({
           >
             <i className="fa fa-calendar"></i> Calendar
           </Link>
-
+        
+  
           <button className="tasks-tab">
             <i className="fa fa-comment"></i> Messages
           </button>
@@ -963,6 +965,7 @@ export default function ProjectLayout({
           <button className="tasks-tab">
             <i className="fa fa-plus"></i>
           </button>
+
         </div>
       </div>
 
@@ -992,6 +995,15 @@ export default function ProjectLayout({
           <button className="tasks-option">
             <i className="fa fa-gear"></i> Options
           </button>
+          <Link
+            className={` ${
+              pathname.includes("/projectManagement")
+            }`}
+            href={`/user/dashboard/project/${projectId}/projectManagement`}
+          >
+            <img src="/Github.svg" alt="github" className="github-img" />
+                   
+          </Link>
         </div>
       </div>
 
