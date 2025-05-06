@@ -187,3 +187,34 @@
       font-size: 0.9rem;
     }
   }
+
+  .commits-section,
+.branches-section {
+  margin-top: 20px;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.commit-list,
+.branch-list {
+  list-style: none;
+  padding: 0;
+}
+
+.commit-item,
+.branch-item {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.commit-item a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.commit-item a:hover {
+  text-decoration: underline;
+}
