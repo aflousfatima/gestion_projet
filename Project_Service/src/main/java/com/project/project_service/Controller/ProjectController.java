@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 @RestController
 @RequestMapping("/api")
 @OpenAPIDefinition(info = @Info(
@@ -32,6 +34,7 @@ import java.util.Map;
                 url = "http://localhost:8085/"
         ))
 public class ProjectController {
+    private static final Logger LOGGER = Logger.getLogger(ProjectController.class.getName());
     @Autowired
     private AuthClient authClient;  // Injecter le client Auth pour extraire l'ID de l'utilisateur
     @Autowired
@@ -212,4 +215,51 @@ public class ProjectController {
         return projectService.getProjectsByUser(authId);
     }
 
-}
+
+    @PostMapping("/{projectId}/github-link")
+    public ResponseEntity<Map<String, String>> linkGitHubRepository(
+            @PathVariable Long projectId,
+            @RequestBody Map<String, String> requestBody,
+            @RequestHeader("Authorization") String authorization) {
+        try {
+            String repositoryUrl = requestBody.get("repositoryUrl");
+            if (repositoryUrl == null || repositoryUrl.trim().isEmpty()) {
+                LOGGER.warning("URL du dépôt manquante ou vide");
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "L'URL du dépôt est requise"));
+            }
+            LOGGER.info("Requête pour lier le dépôt GitHub au projet ID: " + projectId + ", URL: " + repositoryUrl);
+            projectService.linkGitHubRepositoryToProject(projectId, repositoryUrl, authorization);
+            return ResponseEntity.ok(Map.of("message", "Dépôt GitHub lié avec succès"));
+        } catch (IllegalArgumentException e) {
+            LOGGER.warning("Erreur de validation: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.severe("Erreur serveur lors de la liaison du dépôt: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur serveur: impossible de lier le dépôt."));
+        }
+    }
+
+    @GetMapping("/{projectId}/github-link")
+    public ResponseEntity<Map<String, String>> getGitHubRepository(
+            @PathVariable Long projectId) {
+        try {
+            String repositoryUrl = projectService.getGitHubRepositoryUrl(projectId);
+            if (repositoryUrl == null) {
+                LOGGER.info("Aucun dépôt GitHub lié pour le projet ID: " + projectId);
+                return ResponseEntity.ok(Map.of("repositoryUrl", ""));
+            }
+            LOGGER.info("Récupération du dépôt GitHub pour le projet ID: " + projectId + ", URL: " + repositoryUrl);
+            return ResponseEntity.ok(Map.of("repositoryUrl", repositoryUrl));
+        } catch (Exception e) {
+            LOGGER.severe("Erreur lors de la récupération du dépôt GitHub: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur lors de la récupération du dépôt."));
+        }
+    }
+
+    }
+
+

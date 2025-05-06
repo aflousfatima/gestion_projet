@@ -25,6 +25,8 @@ import org.springframework.stereotype.Service;
 import jakarta.persistence.OptimisticLockException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -401,6 +403,7 @@ public class UserStoryService {
         }
     }
 
+
     public UserStoryDTO updateTags(Long projectId, Long userStoryId, List<String> tagNames, String authorizationHeader) {
         // Vérifiez l'autorisation ici si nécessaire...
 
@@ -449,7 +452,8 @@ public class UserStoryService {
     }
 
 
-    @Scheduled(fixedRate = 60000) // Toutes les minutes
+    @Scheduled(fixedRate = 120000) // Toutes les minutes
+    @Transactional
     public void checkStaleUserStories() {
         logger.info("Checking for stale UserStories");
         List<UserStory> inProgressStories = userStoryRepository.findByStatus(UserStoryStatus.IN_PROGRESS);
