@@ -8,6 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface GithubTokenRepository extends JpaRepository<GithubToken, Long> {
-
+    void deleteByUserId(String userId);
     Optional<GithubToken> findByUserId(String userId);
 }

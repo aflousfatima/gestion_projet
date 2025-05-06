@@ -124,4 +124,20 @@ public class OAuthController {
                     .body(Map.of("hasToken", false, "error", e.getMessage()));
         }
     }
+
+    @DeleteMapping("/remove-token")
+    public ResponseEntity<Void> removeGithubToken(@RequestHeader("Authorization") String authorization) {
+        LOGGER.info("Requête de suppression du token reçue avec Authorization: " + authorization);
+        try {
+            githubTokenService.removeToken(authorization);
+            LOGGER.info("Token GitHub supprimé avec succès");
+            return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException e) {
+            LOGGER.warning("Échec de la suppression du token : " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            LOGGER.severe("Erreur lors de la suppression du token : " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

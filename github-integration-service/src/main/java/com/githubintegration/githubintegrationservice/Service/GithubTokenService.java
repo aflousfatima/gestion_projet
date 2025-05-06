@@ -6,6 +6,7 @@ import com.githubintegration.githubintegrationservice.Repository.GithubTokenRepo
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
@@ -146,5 +147,17 @@ public class GithubTokenService {
         return tokenRepository.findByUserId(userId)
                 .map(GithubToken::getAccessToken)
                 .orElse(null);
+    }
+    @Transactional
+    public void removeToken(String authorization) {
+        LOGGER.info("Suppression du token pour Authorization: " + authorization);
+        String userId = getUserIdFromToken(authorization);
+        if (userId != null) {
+            tokenRepository.deleteByUserId(userId);
+            LOGGER.info("Token GitHub supprimé pour userId: " + userId);
+        } else {
+            LOGGER.warning("Aucun userId trouvé pour supprimer le token");
+            throw new IllegalArgumentException("Utilisateur non trouvé pour le token fourni");
+        }
     }
 }
