@@ -1,7 +1,6 @@
 package com.githubintegration.githubintegrationservice.Service;
 
 import com.githubintegration.githubintegrationservice.Config.AuthClient;
-import com.githubintegration.githubintegrationservice.Repository.GithubTokenRepository;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -20,7 +19,6 @@ public class GitHubIntegrationService {
     private final GithubTokenService githubTokenService;
     private final RestTemplate restTemplate;
 
-    // Constructor for dependency injection
     public GitHubIntegrationService(
             AuthClient authClient,
             GithubTokenService githubTokenService,
@@ -30,7 +28,6 @@ public class GitHubIntegrationService {
         this.restTemplate = restTemplate;
     }
 
-    // Extract userId from Authorization header
     public String extractUserId(String authorization) {
         LOGGER.info("Extracting userId from authorization header");
         try {
@@ -88,7 +85,6 @@ public class GitHubIntegrationService {
 
     public Object getCommits(String owner, String repo, String userId) {
         LOGGER.info("Fetching commits for repository: " + owner + "/" + repo + " for user ID: " + userId);
-
         try {
             String accessToken = githubTokenService.getAccessTokenByUserId(userId);
             if (accessToken == null || accessToken.trim().isEmpty()) {
@@ -113,7 +109,7 @@ public class GitHubIntegrationService {
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("Git Repository is empty")) {
                 LOGGER.info("Repository " + owner + "/" + repo + " is empty (HTTP 409)");
-                return Collections.emptyList(); // Return empty list for empty repository
+                return Collections.emptyList();
             }
             LOGGER.warning("HTTP error fetching commits for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
             throw new RuntimeException("Failed to fetch commits: " + e.getMessage(), e);
@@ -125,7 +121,6 @@ public class GitHubIntegrationService {
 
     public Object getBranches(String owner, String repo, String userId) {
         LOGGER.info("Fetching branches for repository: " + owner + "/" + repo + " for user ID: " + userId);
-
         try {
             String accessToken = githubTokenService.getAccessTokenByUserId(userId);
             if (accessToken == null || accessToken.trim().isEmpty()) {
@@ -148,11 +143,54 @@ public class GitHubIntegrationService {
             LOGGER.info("GitHub response for branches: HTTP " + response.getStatusCode());
             return response.getBody();
         } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("Git Repository is empty")) {
+                LOGGER.info("Repository " + owner + "/" + repo + " is empty (HTTP 409)");
+                return Collections.emptyList();
+            }
             LOGGER.warning("HTTP error fetching branches for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
             throw new RuntimeException("Failed to fetch branches: " + e.getMessage(), e);
         } catch (Exception e) {
             LOGGER.severe("Unexpected error fetching branches for " + owner + "/" + repo + ": " + e.getMessage());
             throw new RuntimeException("Unexpected error fetching branches: " + e.getMessage());
+        }
+    }
+
+    public Object getPullRequests(String owner, String repo, String userId) {
+        LOGGER.info("Fetching pull requests for repository: " + owner + "/" + repo + " for user ID: " + userId);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls";
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for pull requests: HTTP " + response.getStatusCode());
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode().value() == 404) {
+                LOGGER.warning("Repository " + owner + "/" + repo + " not found (HTTP 404)");
+                throw new IllegalArgumentException("Repository not found");
+            } else if (e.getStatusCode().value() == 403) {
+                LOGGER.warning("Access denied to repository " + owner + "/" + repo + " (HTTP 403) - Check token permissions");
+                throw new IllegalArgumentException("Access denied to repository");
+            }
+            LOGGER.warning("HTTP error fetching pull requests for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch pull requests: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching pull requests for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching pull requests: " + e.getMessage());
         }
     }
 
