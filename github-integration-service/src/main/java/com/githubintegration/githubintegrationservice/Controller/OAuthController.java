@@ -140,4 +140,23 @@ public class OAuthController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
+
+    @GetMapping("/token/{userId}")
+    public ResponseEntity<Map<String, String>> getAccessToken(@PathVariable String userId) {
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken != null) {
+                LOGGER.info("Retrieved GitHub token for userId: " + userId);
+                return ResponseEntity.ok(Map.of("accessToken", accessToken));
+            }
+            LOGGER.warning("No GitHub token found for userId: " + userId);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "No GitHub token found for userId: " + userId));
+        } catch (Exception e) {
+            LOGGER.severe("Error fetching token for userId: " + userId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to fetch token: " + e.getMessage()));
+        }
+    }
 }
