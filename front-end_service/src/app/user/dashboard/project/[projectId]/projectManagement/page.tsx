@@ -79,7 +79,7 @@ const ProjectManagement: React.FC = () => {
   const axiosInstance = useAxios();
   const params = useParams();
   const projectId = params.projectId as string;
-
+  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [repositoryUrl, setRepositoryUrl] = useState<string>("");
   const [linkedRepository, setLinkedRepository] = useState<string>("");
@@ -534,38 +534,44 @@ const ProjectManagement: React.FC = () => {
                 )}
               </div>
             )}
-            {activeTab === "branches" && (
-              <div className="branches-section">
-                {branches.length > 0 ? (
-                  <div className="branch-grid">
-                    {branches.map((branch) => (
-                      <div key={branch.name} className="branch-card">
-                        <div className="branch-header">
-                          <span className="branch-name">{branch.name}</span>
-                          <div className="branch-badges">
-                            {branch.protected && <span className="badge protected">Protected</span>}
-                            {branch.merged && <span className="badge merged">Merged</span>}
-                          </div>
-                        </div>
-                        <div className="branch-info">
-                          <span>
-                            Last commit By {branch.commit.commit.author.name}:{" "}
-                            <span
-                              dangerouslySetInnerHTML={{
-                                __html: parseIssueReferences(branch.commit.commit.message),
-                              }}
-                            />
-                          </span>
-                        </div>
-                
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-data">No branches found.</p>
-                )}
+          {activeTab === "branches" && (
+  <div className="branches-section">
+    {branches.length > 0 ? (
+      <div className="branch-tree">
+        <div className="tree-trunk">
+          <span className="trunk-label">Main</span>
+        </div>
+        <div className="branch-nodes">
+          {branches.map((branch, index) => (
+            <div key={branch.name} className="branch-node" style={{ top: `${index * 80 + 50}px` }}>
+              <div className="branch-connector" style={{ height: `${index * 80 + 30}px` }}></div>
+              <div
+                className={`node ${
+                  branch.name.toLowerCase().includes("main") || branch.name.toLowerCase().includes("master")
+                    ? "main-branch"
+                    : branch.protected
+                    ? "protected-branch"
+                    : branch.merged
+                    ? "merged-branch"
+                    : ""
+                }`}
+              >
+                <span className="branch-name">{branch.name}</span>
+                <div className="branch-badges">
+                  {branch.protected && <span className="badge protected">Protected</span>}
+                  {branch.merged && <span className="badge merged">Merged</span>}
+                </div>
+         
               </div>
-            )}
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : (
+      <p className="no-data">No branches found.</p>
+    )}
+  </div>
+)}
             {activeTab === "pulls" && (
               <div className="pull-requests-section">
                 <div className="filter-section">

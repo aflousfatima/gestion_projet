@@ -5,6 +5,7 @@ import com.task.taskservice.DTO.ProjectResponseWithRoleDTO;
 import com.task.taskservice.DTO.UserDTO;
 import com.task.taskservice.DTO.UserStoryDTO;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +17,8 @@ public interface ProjectClient {
     @GetMapping("/api/projects/by-user")
     ProjectResponseWithRoleDTO getProjectsByUser(@RequestParam("authId") String authId);
 
+
+
     // Méthode pour récupérer les UserStoryIds du sprint actif pour un projet
     @GetMapping("/api/projects/{projectId}/sprint/actif/user_stories")
     List<Long> getUserStoriesOfActiveSprint(@PathVariable("projectId") Long projectId);
@@ -25,6 +28,18 @@ public interface ProjectClient {
             @PathVariable("projectId") Long projectId,
             @PathVariable("userStoryId") Long userStoryId,
             @RequestHeader("Authorization") String token);
+
+    @GetMapping("/api/projects/{projectId}/user-stories")
+    ResponseEntity<List<UserStoryDTO>> getUserStoriesByProjectId(@PathVariable("projectId") Long projectId);
+
+    @GetMapping("/api/{projectId}/github-user")
+    ResponseEntity<Map<String, String>> getGitHubUserId(@PathVariable("projectId") Long projectId);
+
+    @GetMapping("/api/{projectId}/github-link")
+    ResponseEntity<Map<String, String>> getGitHubRepository(@PathVariable("projectId") Long projectId);
+
+    @GetMapping("/api/active")
+    ResponseEntity<List<Long>> getActiveProjectIds();
 }
 
 

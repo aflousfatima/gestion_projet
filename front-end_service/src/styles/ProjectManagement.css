@@ -196,6 +196,7 @@ body {
   backdrop-filter: blur(10px);
   border-radius: 12px;
   padding: 2rem;
+  height:1000px;
 }
 
 /* Tabs */
@@ -471,11 +472,7 @@ justify-content: center;
   margin-bottom: 0.75rem;
 }
 
-.branch-name {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #2d3748;
-}
+
 
 .branch-badges {
   display: flex;
@@ -640,4 +637,154 @@ justify-content: center;
   .tab.active::after {
     width: 50px;
   }
+}
+
+
+
+.node.selected {
+  background: linear-gradient(45deg, #3182ce, #63b3ed);
+  color: white;
+}
+
+.node.selected .branch-name,
+.node.selected .badge {
+  color: white;
+}
+
+
+
+.badge.protected {
+  background: #6b46c1;
+  color: white;
+}
+
+.badge.merged {
+  background: #2f855a;
+  color: white;
+}
+
+
+
+
+
+/* hna */
+.branches-section {
+  padding: 2rem;
+  position: relative;
+}
+
+.branch-tree {
+  position: relative;
+  min-height: 200px;
+  padding: 2rem 0;
+}
+
+.tree-trunk {
+  position: absolute;
+  left: 50px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #718096;
+  border-radius: 2px;
+  height:160px;
+}
+
+.trunk-label {
+  position: absolute;
+  top: -30px;
+  left: -20px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #2d3748;
+  background: #c6f6d5;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.branch-nodes {
+  position: relative;
+}
+
+.branch-node {
+  position: absolute;
+  left: 70px;
+  display: flex;
+  align-items: center;
+  animation: growBranch 0.5s ease-in;
+}
+
+.branch-connector {
+  position: absolute;
+  left: -20px;
+  top: -10px;
+  width: 20px;
+  border-left: 2px solid #718096;
+  border-bottom: 2px solid #718096;
+  border-bottom-left-radius: 8px;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+  max-width: 600px;
+  flex-wrap: wrap;
+}
+
+.node:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.node.main-branch {
+  background: #c6f6d5;
+  color: #2f855a;
+}
+
+.node.protected-branch {
+  background: #d6bcfa;
+  color: #6b46c1;
+}
+
+.node.merged-branch {
+  background: #edf2f7;
+  color: #718096;
+}
+
+.branch-name {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+
+.branch-details {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: inherit;
+  max-width: 300px;
+}
+
+.branch-details span {
+  margin-bottom: 0.25rem;
+}
+
+.branch-details a {
+  color: #3182ce;
+  text-decoration: none;
+}
+
+.branch-details a:hover {
+  text-decoration: underline;
+}
+
+.commit-date {
+  font-size: 0.8rem;
+  color: #718096;
 }
