@@ -1,8 +1,10 @@
 package com.task.taskservice.Service;
+import com.task.taskservice.Configuration.GitHubIntegrationClient;
 import com.task.taskservice.DTO.*;
 import com.task.taskservice.Entity.*;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
+import com.task.taskservice.Repository.ProcessedCommitRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.slf4j.Logger;
@@ -16,7 +18,9 @@ import com.task.taskservice.Repository.TagRepository;
 import com.task.taskservice.Repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,10 +33,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
 @Service
+@EnableScheduling
 public class TaskService {
     private static final Logger logger = LoggerFactory.getLogger(TaskService.class);
     private final TaskRepository taskRepository;
@@ -41,15 +48,18 @@ public class TaskService {
     private final AuthClient authClient;
 
     private final ProjectClient projectClient;
+    private final GitHubIntegrationClient gitHubIntegrationClient;
     @Autowired
     private EntityManager entityManager;
 
     private final FileAttachmentRepository fileAttachmentRepository;
+
+    private  final ProcessedCommitRepository processedCommitRepository;
     @Autowired
     private final  CloudinaryService cloudinaryService;
     @Autowired
     public TaskService(TaskRepository taskRepository,
-                       TagRepository tagRepository, TaskMapper taskMapper, AuthClient authClient,ProjectClient projectClient , CloudinaryService cloudinaryService , FileAttachmentRepository fileAttachmentRepository) {
+                       TagRepository tagRepository, TaskMapper taskMapper, AuthClient authClient,ProjectClient projectClient , CloudinaryService cloudinaryService , FileAttachmentRepository fileAttachmentRepository , GitHubIntegrationClient gitHubIntegrationClient , ProcessedCommitRepository processedCommitRepository) {
         this.taskRepository = taskRepository;
         this.tagRepository = tagRepository;
         this.taskMapper = taskMapper;
@@ -57,6 +67,8 @@ public class TaskService {
         this.projectClient = projectClient;
         this.cloudinaryService = cloudinaryService;
         this.fileAttachmentRepository = fileAttachmentRepository;
+        this.gitHubIntegrationClient= gitHubIntegrationClient;
+        this.processedCommitRepository= processedCommitRepository;
     }
 
     @Transactional
@@ -331,6 +343,148 @@ public class TaskService {
         } else {
             responseDTO.setAssignedUsers(Collections.emptyList());
         }
+
+        return responseDTO;
+    }
+
+
+    @Transactional
+    public TaskDTO updateTask_bycommit(Long taskId, TaskDTO taskDTO) {
+        // Validate token
+
+        // Fetch existing task
+        Task task = taskRepository.findById(taskId)
+                .orElseThrow(() -> new NoSuchElementException("Task not found with ID: " + taskId));
+
+        // Valider les dépendances si le statut change à IN_PROGRESS ou DONE
+        if (taskDTO.getStatus() != null &&
+                (taskDTO.getStatus() == WorkItemStatus.IN_PROGRESS || taskDTO.getStatus() == WorkItemStatus.DONE)) {
+            validateDependencies(task);
+        }
+
+// Suivre les changements pour l'historique
+        StringBuilder changes = new StringBuilder();
+
+        // Gérer le chronomètre pour le timeSpent
+        if (taskDTO.getStatus() != null) {
+            WorkItemStatus newStatus = taskDTO.getStatus();
+            WorkItemStatus currentStatus = task.getStatus();
+
+            // Si on passe à IN_PROGRESS, démarrer le chronomètre
+            if (newStatus == WorkItemStatus.IN_PROGRESS && currentStatus != WorkItemStatus.IN_PROGRESS) {
+                task.setStartTime(LocalDateTime.now());
+                changes.append("Status Changed from ").append(currentStatus).append(" à IN_PROGRESS; ");
+            }
+            // Si on quitte IN_PROGRESS
+            else if (currentStatus == WorkItemStatus.IN_PROGRESS && newStatus != WorkItemStatus.IN_PROGRESS) {
+                if (task.getStartTime() != null) {
+                    long minutes = ChronoUnit.MINUTES.between(task.getStartTime(), LocalDateTime.now());
+                    if (minutes > 0) {
+                        // Ajouter au totalTimeSpent
+                        task.setTotalTimeSpent(task.getTotalTimeSpent() != null ? task.getTotalTimeSpent() + minutes : minutes);
+
+                        // Enregistrer dans l'historique
+                        TimeEntry timeEntry = new TimeEntry();
+                        timeEntry.setWorkItem(task);
+                        timeEntry.setDuration(minutes);
+                        timeEntry.setAddedAt(LocalDateTime.now());
+                        timeEntry.setType("travail");
+                        task.getTimeEntries().add(timeEntry);
+                        changes.append("Added Time: ").append(minutes).append(" minutes; ");
+                    }
+                    task.setStartTime(null); // Réinitialiser
+                }
+                changes.append("Status changed from IN_PROGRESS to ").append(newStatus).append("; ");
+            }
+
+            // Mettre à jour le statut
+            task.setStatus(newStatus);
+
+            // Si DONE, définir completedDate
+            // Notifier Project-Service si la tâche est DONE
+
+        }
+
+
+        // Update fields
+        if (taskDTO.getTitle() != null && !taskDTO.getTitle().equals(task.getTitle())) {
+            changes.append("Titre changé de '").append(task.getTitle()).append("' à '").append(taskDTO.getTitle()).append("'; ");
+            task.setTitle(taskDTO.getTitle());
+        }
+        if (taskDTO.getDescription() != null && !taskDTO.getDescription().equals(task.getDescription())) {
+            changes.append("Description modifiée; ");
+            task.setDescription(taskDTO.getDescription());
+        }
+        if (taskDTO.getDueDate() != null && !taskDTO.getDueDate().equals(task.getDueDate())) {
+            changes.append("Date d'échéance changée à ").append(taskDTO.getDueDate()).append("; ");
+            task.setDueDate(taskDTO.getDueDate());
+        }
+        if (taskDTO.getPriority() != null && taskDTO.getPriority() != task.getPriority()) {
+            changes.append("Priorité changée de ").append(task.getPriority()).append(" à ").append(taskDTO.getPriority()).append("; ");
+            task.setPriority(taskDTO.getPriority());
+        }
+        if (taskDTO.getEstimationTime() != null && !taskDTO.getEstimationTime().equals(task.getEstimationTime())) {
+            changes.append("Estimation changée à ").append(taskDTO.getEstimationTime()).append(" minutes; ");
+            task.setEstimationTime(taskDTO.getEstimationTime());
+        }
+        if (taskDTO.getStartDate() != null && !taskDTO.getStartDate().equals(task.getStartDate())) {
+            changes.append("Date de début changée à ").append(taskDTO.getStartDate()).append("; ");
+            task.setStartDate(taskDTO.getStartDate());
+        }
+
+        task.setLastModifiedDate(LocalDate.now());
+
+        // Mise à jour des dépendances
+        if (taskDTO.getDependencyIds() != null) {
+            List<Task> dependencies = taskRepository.findAllById(taskDTO.getDependencyIds());
+            if (dependencies.size() != taskDTO.getDependencyIds().size()) {
+                throw new IllegalArgumentException("One or more dependency IDs are invalid");
+            }
+            // Vérifier les cycles
+            checkForDependencyCycles(task, dependencies);
+            task.setDependencies(dependencies);
+        }
+
+        // Update assigned user IDs only if explicitly provided and non-empty
+        if (taskDTO.getAssignedUserIds() != null && !taskDTO.getAssignedUserIds().isEmpty()) {
+            Set<String> newUserIds = new HashSet<>(taskDTO.getAssignedUserIds());
+            if (!newUserIds.equals(task.getAssignedUserIds())) {
+                changes.append("Utilisateurs assignés modifiés; ");
+                task.setAssignedUserIds(newUserIds);
+            }
+        }
+
+        // Update tags
+        if (taskDTO.getTags() != null && !taskDTO.getTags().equals(task.getTags().stream().map(Tag::getName).collect(Collectors.toSet()))) {
+            changes.append("Tags modifiés; ");
+            Set<Tag> tags = taskDTO.getTags().stream().map(tagName ->
+                            tagRepository.findByName(tagName)
+                                    .orElseGet(() -> tagRepository.save(new Tag())))
+                    .collect(Collectors.toSet());
+            task.setTags(tags);
+        }
+
+        if (changes.length() > 0) {
+            logHistory_bycommit(task, "MISE_A_JOUR", changes.toString());
+        }
+        updateProgress(task);
+        // Save the updated task
+        Task updatedTask = taskRepository.save(task);
+        taskRepository.flush(); // Forcer l'écriture
+        entityManager.clear(); // Vider la session
+        logger.info("After final save: Task {} status={}", taskId, updatedTask.getStatus());
+        // Relire la tâche pour confirmer
+        // Relire la tâche pour confirmer
+        Task reloadedTask = taskRepository.findById(taskId)
+                .orElseThrow(() -> new RuntimeException("Task not found after save: " + taskId));
+        logger.info("After reload: Task {} status={}", taskId, reloadedTask.getStatus());
+
+        // Notifier Project-Service si la tâche est DONE
+
+        // Convert to DTO
+        TaskDTO responseDTO = taskMapper.toDTO(updatedTask);
+
+
 
         return responseDTO;
     }
@@ -1027,6 +1181,15 @@ public class TaskService {
         workItem.getHistory().add(history);
     }
 
+
+    private void logHistory_bycommit(WorkItem workItem, String action, String description) {
+        WorkItemHistory history = new WorkItemHistory();
+        history.setWorkItem(workItem);
+        history.setAction(action);
+        history.setDescription(description);
+        history.setTimestamp(LocalDateTime.now());
+        workItem.getHistory().add(history);
+    }
     @Transactional(readOnly = true)
     public List<WorkItemHistoryDTO> getTaskHistory(Long taskId, String token) {
         String userId = authClient.decodeToken(token);
@@ -1113,5 +1276,254 @@ public class TaskService {
         debugResult.forEach(row -> logger.info("Debug DB: Task id={} status={}", row[0], row[1]));
 
         return tasks.stream().map(taskMapper::toDTO).collect(Collectors.toList());
+    }
+
+    @Transactional
+    public TaskDTO createTask_bycommit(Long projectId, Long userStoryId, TaskDTO taskDTO) {
+        // Validate token
+
+        // Set defaults
+        if (taskDTO.getCreationDate() == null) {
+            taskDTO.setCreationDate(LocalDate.now());
+        }
+        taskDTO.setProjectId(projectId);
+        taskDTO.setUserStoryId(userStoryId);
+
+        // Convert DTO to entity
+        Task task = taskMapper.toEntity(taskDTO);
+
+        // Fetch and set dependencies
+        if (taskDTO.getDependencyIds() != null && !taskDTO.getDependencyIds().isEmpty()) {
+            List<Task> dependencies = taskRepository.findAllById(taskDTO.getDependencyIds());
+            if (dependencies.size() != taskDTO.getDependencyIds().size()) {
+                throw new IllegalArgumentException("One or more dependency IDs are invalid");
+            }
+            checkForDependencyCycles(task, dependencies);
+            task.setDependencies(dependencies);
+        }
+        // Directly set user IDs without validation
+        if (taskDTO.getAssignedUserIds() != null) {
+            System.out.println("➡️ Liste des userIds assignés reçue : " + taskDTO.getAssignedUserIds());
+
+            Set<String> userIdsSet = new HashSet<>(taskDTO.getAssignedUserIds());
+            System.out.println("➡️ Conversion en Set (suppression des doublons éventuels) : " + userIdsSet);
+
+            task.setAssignedUserIds(userIdsSet);
+            System.out.println("✅ Les userIds ont été assignés à la tâche : " + task.getAssignedUserIds());
+        } else {
+            System.out.println("⚠️ Aucun userId assigné reçu dans le taskDTO.");
+        }
+
+
+        // Gestion des tags
+        if (taskDTO.getTags() != null && !taskDTO.getTags().isEmpty()) {
+            logger.info("➡️ Tags reçus pour la tâche : {}", taskDTO.getTags());
+
+            Set<Tag> tags = new HashSet<>();
+            for (String tagName : taskDTO.getTags()) {
+                logger.info("🔍 Vérification du tag : {}", tagName);
+                Tag tag = tagRepository.findByName(tagName)
+                        .orElseGet(() -> {
+                            logger.info("➕ Tag non trouvé, création du tag : {}", tagName);
+                            Tag newTag = new Tag();
+                            newTag.setName(tagName);
+                            newTag.setWorkItems(new HashSet<>()); // Initialiser la collection
+                            return tagRepository.save(newTag); // Sauvegarder explicitement le tag
+                        });
+                tags.add(tag);
+                logger.info("✅ Tag ajouté à la liste : {}", tag.getName());
+            }
+
+            // Réinitialiser les tags de la tâche
+            task.setTags(new HashSet<>());
+            // Associer les tags à la tâche et synchroniser la relation bidirectionnelle
+            for (Tag tag : tags) {
+                task.getTags().add(tag); // Ajouter au côté WorkItem
+                tag.getWorkItems().add(task); // Synchroniser le côté Tag
+                logger.info("🔗 Tag associé à la tâche : {}", tag.getName());
+            }
+
+            logger.info("✅ Tous les tags ont été associés à la tâche : {}", tags.stream().map(Tag::getName).collect(Collectors.toSet()));
+        } else {
+            logger.info("⚠️ Aucun tag reçu pour la tâche.");
+        }
+
+        // Enregistrer l'historique pour la création
+        logHistory_bycommit(task, "CREATION", "Task created: " + task.getTitle());
+
+        updateProgress(task);
+        // Save the task
+        Task savedTask = taskRepository.save(task);
+
+        // Convert back to DTO and return
+        return taskMapper.toDTO(savedTask);
+    }
+    private Map<String, Object> parseCommitMessage(String commitMessage) {
+        Map<String, Object> result = new HashMap<>();
+        Pattern pattern = Pattern.compile("\\b(fix|task|issue)\\s+'([^']+)'(?:\\s+#US(\\d+))?", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(commitMessage);
+        if (matcher.find()) {
+            String type = matcher.group(1).toLowerCase();
+            String title = matcher.group(2);
+            String userStoryId = matcher.group(3); // Peut être null si #USxxx absent
+            result.put("type", type.equals("fix") || type.equals("task") ? "task" : "issue");
+            result.put("title", title);
+            if (userStoryId != null) {
+                result.put("userStoryId", Long.parseLong(userStoryId));
+            }
+            logger.info("Parsed commit message: type={}, title={}, userStoryId={}",
+                    result.get("type"), title, userStoryId != null ? userStoryId : "none");
+        } else {
+            logger.info("No match found for commit message: {}", commitMessage);
+        }
+        return result;
+    }
+
+    private void processCommit(Map<String, Object> commit, Long projectId) {
+        String commitSha = (String) commit.get("sha");
+        if (commitSha == null) {
+            logger.info("Commit SHA is null for commit: {}", commit);
+            return;
+        }
+
+        if (processedCommitRepository.existsByCommitShaAndProjectId(commitSha, projectId)) {
+            logger.info("Commit {} already processed for project {}", commitSha, projectId);
+            return;
+        }
+
+        String message = (String) ((Map<String, Object>) commit.get("commit")).get("message");
+        Map<String, Object> parsed = parseCommitMessage(message);
+        if (parsed.isEmpty()) {
+            logger.info("No task or issue reference found in commit message: {}", message);
+            return;
+        }
+
+        String type = (String) parsed.get("type");
+        String title = (String) parsed.get("title");
+        Long userStoryId = (Long) parsed.get("userStoryId");
+
+        // Si aucun userStoryId n'est fourni, utiliser une user story par défaut
+        if (userStoryId == null) {
+            List<Long> userStoryIds = projectClient.getUserStoriesOfActiveSprint(projectId);
+            if (userStoryIds != null && !userStoryIds.isEmpty()) {
+                userStoryId = userStoryIds.get(0);
+                logger.info("No user story ID in commit message, using default userStoryId: {}", userStoryId);
+            } else {
+                logger.info("No active user stories found for project {}, skipping commit: {}", projectId, message);
+                return;
+            }
+        }
+
+        if ("task".equals(type)) {
+            List<Task> tasks = taskRepository.findByProjectIdAndUserStory(projectId, userStoryId);
+            Optional<Task> matchingTask = tasks.stream()
+                    .filter(task -> task.getTitle().equalsIgnoreCase(title))
+                    .findFirst();
+            if (matchingTask.isPresent()) {
+                TaskDTO taskDTO = taskMapper.toDTO(matchingTask.get());
+                taskDTO.setStatus(WorkItemStatus.DONE);
+                updateTask_bycommit(matchingTask.get().getId(), taskDTO);
+                logger.info("Updated task with title '{}' to DONE based on commit", title);
+            } else {
+                logger.info("Task with title '{}' not found, creating new task", title);
+                createTaskFromCommit(projectId, userStoryId, title, message);
+            }
+        } else if ("issue".equals(type)) {
+            createTaskFromCommit(projectId, userStoryId, title, message);
+        }
+
+        ProcessedCommit processedCommit = new ProcessedCommit();
+        processedCommit.setCommitSha(commitSha);
+        processedCommit.setProjectId(projectId);
+        processedCommitRepository.save(processedCommit);
+        logger.info("Marked commit {} as processed for project {}", commitSha, projectId);
+    }
+
+    private void createTaskFromCommit(Long projectId, Long userStoryId, String title, String commitMessage) {
+        try {
+            TaskDTO taskDTO = new TaskDTO();
+            taskDTO.setTitle(title);
+            taskDTO.setDescription("Created from commit: " + commitMessage);
+            taskDTO.setStatus(WorkItemStatus.TO_DO);
+            taskDTO.setPriority(WorkItemPriority.MEDIUM);
+            taskDTO.setCreationDate(LocalDate.now());
+            taskDTO.setProjectId(projectId);
+            createTask_bycommit(projectId, userStoryId, taskDTO);
+            logger.info("Created new task with title '{}' in project {} for user story {}", title, projectId, userStoryId);
+        } catch (Exception e) {
+            logger.error("Failed to create task for commit with title '{}': {}", title, e.getMessage());
+        }
+    }
+
+    @Scheduled(fixedRate = 300000)
+    @Transactional
+    public void processCommitsForProjects() {
+        logger.info("Starting scheduled commit processing for all projects");
+        try {
+            ResponseEntity<List<Long>> projectsResponse = projectClient.getActiveProjectIds();
+            if (!projectsResponse.getStatusCode().is2xxSuccessful() || projectsResponse.getBody() == null) {
+                logger.info("Failed to fetch active projects");
+                return;
+            }
+            List<Long> projectIds = projectsResponse.getBody();
+
+            for (Long projectId : projectIds) {
+                ResponseEntity<Map<String, String>> repoResponse = projectClient.getGitHubRepository(projectId);
+                if (!repoResponse.getStatusCode().is2xxSuccessful() || repoResponse.getBody() == null) {
+                    logger.info("No GitHub repository linked for project: " + projectId);
+                    continue;
+                }
+                String repoUrl = repoResponse.getBody().get("repositoryUrl");
+                if (repoUrl == null || repoUrl.isEmpty()) {
+                    logger.info("No GitHub repository linked for project: " + projectId);
+                    continue;
+                }
+
+                Map<String, String> repoDetails = extractRepoDetails(repoUrl);
+                String owner = repoDetails.get("owner");
+                String repo = repoDetails.get("repo");
+                if (owner == null || repo == null) {
+                    logger.info("Invalid repository URL for project: " + projectId + ", URL: " + repoUrl);
+                    continue;
+                }
+
+                ResponseEntity<Map<String, String>> userResponse = projectClient.getGitHubUserId(projectId);
+                if (!userResponse.getStatusCode().is2xxSuccessful() || userResponse.getBody() == null || userResponse.getBody().get("userId") == null) {
+                    logger.info("No GitHub user linked for project: " + projectId);
+                    continue;
+                }
+                String userId = userResponse.getBody().get("userId");
+
+                ResponseEntity<Object> commitsResponse = gitHubIntegrationClient.getCommitsByUserId(
+                        owner, repo, userId, null, 30);
+                if (commitsResponse.getStatusCode().is2xxSuccessful() && commitsResponse.getBody() != null) {
+                    List<Map<String, Object>> commits = (List<Map<String, Object>>) commitsResponse.getBody();
+                    if (commits.isEmpty()) {
+                        logger.info("No new commits found for project: " + projectId + ", owner/repo: " + owner + "/" + repo);
+                        continue;
+                    }
+
+                    for (Map<String, Object> commit : commits) {
+                        processCommit(commit, projectId);
+                    }
+                } else {
+                    logger.info("Failed to fetch commits for project: " + projectId + ", owner/repo: " + owner + "/" + repo);
+                }
+            }
+            logger.info("Completed scheduled commit processing");
+        } catch (Exception e) {
+            logger.info("Error during scheduled commit processing: " + e.getMessage());
+        }
+    }
+
+    private Map<String, String> extractRepoDetails(String repoUrl) {
+        if (repoUrl == null || !repoUrl.startsWith("https://github.com/")) {
+            return Map.of();
+        }
+        String[] parts = repoUrl.replace("https://github.com/", "").split("/");
+        if (parts.length >= 2) {
+            return Map.of("owner", parts[0], "repo", parts[1].replace(".git", ""));
+        }
+        return Map.of();
     }
 }
