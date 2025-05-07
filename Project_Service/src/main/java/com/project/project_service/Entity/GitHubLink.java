@@ -14,12 +14,15 @@ public class GitHubLink {
     @OneToOne
     private Projet projet;
 
+    private String userId;
+
     // Constructeurs, getters et setters
     public GitHubLink() {}
 
-    public GitHubLink(String repositoryUrl, Projet projet) {
+    public GitHubLink(String repositoryUrl, Projet projet , String userId) {
         this.repositoryUrl = repositoryUrl;
         this.projet = projet;
+        this.userId=userId;
     }
 
     public Long getId() {
@@ -40,5 +43,13 @@ public class GitHubLink {
 
     public void setProjet(Projet projet) {
         this.projet = projet;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

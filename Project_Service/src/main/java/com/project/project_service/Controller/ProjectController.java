@@ -18,10 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 @RestController
 @RequestMapping("/api")
@@ -260,6 +257,35 @@ public class ProjectController {
         }
     }
 
+    @GetMapping("/{projectId}/github-user")
+    public ResponseEntity<Map<String, String>> getGitHubUserId(@PathVariable Long projectId) {
+        try {
+            Map<String, String> userIdMap = projectService.getGitHubUserId(projectId);
+            if (!userIdMap.isEmpty()) {
+                LOGGER.info("Retrieved GitHub userId for project ID: " + projectId);
+            } else {
+                LOGGER.info("No GitHub user linked for project ID: " + projectId);
+            }
+            return ResponseEntity.ok(userIdMap);
+        } catch (Exception e) {
+            LOGGER.severe("Error retrieving GitHub userId: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to retrieve GitHub userId"));
+        }
     }
 
+
+    @GetMapping("/active")
+    public ResponseEntity<List<Long>> getActiveProjectIds() {
+        try {
+            List<Long> projectIds = projectService.getActiveProjectIds();
+            LOGGER.info("Retrieved project IDs: " + projectIds.size() + " projects");
+            return ResponseEntity.ok(projectIds);
+        } catch (Exception e) {
+            LOGGER.severe("Error retrieving project IDs: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Collections.emptyList());
+        }
+    }
+}
 
