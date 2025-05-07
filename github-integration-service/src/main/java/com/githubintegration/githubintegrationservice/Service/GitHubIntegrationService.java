@@ -83,7 +83,7 @@ public class GitHubIntegrationService {
         }
     }
 
-    public Object getCommits(String owner, String repo, String userId) {
+    public Object getCommits(String owner, String repo, String userId, String branch, String author, String since, String until) {
         LOGGER.info("Fetching commits for repository: " + owner + "/" + repo + " for user ID: " + userId);
         try {
             String accessToken = githubTokenService.getAccessTokenByUserId(userId);
@@ -98,14 +98,22 @@ public class GitHubIntegrationService {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/commits";
+            StringBuilder url = new StringBuilder("https://api.github.com/repos/" + owner + "/" + repo + "/commits");
+            if (branch != null || author != null || since != null || until != null) {
+                url.append("?");
+                if (branch != null) url.append("sha=").append(branch).append("&");
+                if (author != null) url.append("author=").append(author).append("&");
+                if (since != null) url.append("since=").append(since).append("&");
+                if (until != null) url.append("until=").append(until).append("&");
+                url.setLength(url.length() - 1); // Remove trailing &
+            }
             LOGGER.info("Sending request to GitHub: " + url);
 
             ResponseEntity<Object> response = restTemplate.exchange(
-                    url, HttpMethod.GET, entity, Object.class);
+                    url.toString(), HttpMethod.GET, entity, Object.class);
 
             LOGGER.info("GitHub response for commits: HTTP " + response.getStatusCode());
-            return response.getBody();
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("Git Repository is empty")) {
                 LOGGER.info("Repository " + owner + "/" + repo + " is empty (HTTP 409)");
@@ -116,6 +124,38 @@ public class GitHubIntegrationService {
         } catch (Exception e) {
             LOGGER.severe("Unexpected error fetching commits for " + owner + "/" + repo + ": " + e.getMessage());
             throw new RuntimeException("Unexpected error fetching commits: " + e.getMessage());
+        }
+    }
+
+    public Object getCommitDetails(String owner, String repo, String sha, String userId) {
+        LOGGER.info("Fetching commit details for SHA: " + sha + " in repository: " + owner + "/" + repo);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/commits/" + sha;
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for commit details: HTTP " + response.getStatusCode());
+            return response.getBody();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warning("HTTP error fetching commit details for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch commit details: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching commit details for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching commit details: " + e.getMessage());
         }
     }
 
@@ -141,7 +181,7 @@ public class GitHubIntegrationService {
                     url, HttpMethod.GET, entity, Object.class);
 
             LOGGER.info("GitHub response for branches: HTTP " + response.getStatusCode());
-            return response.getBody();
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
         } catch (HttpClientErrorException e) {
             if (e.getStatusCode().value() == 409 && e.getResponseBodyAsString().contains("Git Repository is empty")) {
                 LOGGER.info("Repository " + owner + "/" + repo + " is empty (HTTP 409)");
@@ -155,7 +195,39 @@ public class GitHubIntegrationService {
         }
     }
 
-    public Object getPullRequests(String owner, String repo, String userId) {
+    public Object getBranchDetails(String owner, String repo, String branch, String userId) {
+        LOGGER.info("Fetching branch details for: " + branch + " in repository: " + owner + "/" + repo);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/branches/" + branch;
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for branch details: HTTP " + response.getStatusCode());
+            return response.getBody();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warning("HTTP error fetching branch details for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch branch details: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching branch details for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching branch details: " + e.getMessage());
+        }
+    }
+
+    public Object getPullRequests(String owner, String repo, String userId, String state) {
         LOGGER.info("Fetching pull requests for repository: " + owner + "/" + repo + " for user ID: " + userId);
         try {
             String accessToken = githubTokenService.getAccessTokenByUserId(userId);
@@ -170,7 +242,7 @@ public class GitHubIntegrationService {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls";
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls" + (state != null ? "?state=" + state : "");
             LOGGER.info("Sending request to GitHub: " + url);
 
             ResponseEntity<Object> response = restTemplate.exchange(
@@ -191,6 +263,134 @@ public class GitHubIntegrationService {
         } catch (Exception e) {
             LOGGER.severe("Unexpected error fetching pull requests for " + owner + "/" + repo + ": " + e.getMessage());
             throw new RuntimeException("Unexpected error fetching pull requests: " + e.getMessage());
+        }
+    }
+
+    public Object getPullRequestCommits(String owner, String repo, String pullNumber, String userId) {
+        LOGGER.info("Fetching commits for pull request #" + pullNumber + " in repository: " + owner + "/" + repo);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + pullNumber + "/commits";
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for pull request commits: HTTP " + response.getStatusCode());
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warning("HTTP error fetching pull request commits for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch pull request commits: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching pull request commits for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching pull request commits: " + e.getMessage());
+        }
+    }
+
+    public Object getPullRequestFiles(String owner, String repo, String pullNumber, String userId) {
+        LOGGER.info("Fetching files for pull request #" + pullNumber + " in repository: " + owner + "/" + repo);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + pullNumber + "/files";
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for pull request files: HTTP " + response.getStatusCode());
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warning("HTTP error fetching pull request files for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch pull request files: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching pull request files for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching pull request files: " + e.getMessage());
+        }
+    }
+
+    public Object getPullRequestReviews(String owner, String repo, String pullNumber, String userId) {
+        LOGGER.info("Fetching reviews for pull request #" + pullNumber + " in repository: " + owner + "/" + repo);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/pulls/" + pullNumber + "/reviews";
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for pull request reviews: HTTP " + response.getStatusCode());
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warning("HTTP error fetching pull request reviews for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch pull request reviews: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching pull request reviews for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching pull request reviews: " + e.getMessage());
+        }
+    }
+
+    public Object getPullRequestEvents(String owner, String repo, String pullNumber, String userId) {
+        LOGGER.info("Fetching events for pull request #" + pullNumber + " in repository: " + owner + "/" + repo);
+        try {
+            String accessToken = githubTokenService.getAccessTokenByUserId(userId);
+            if (accessToken == null || accessToken.trim().isEmpty()) {
+                LOGGER.warning("No access token found for user ID: " + userId);
+                throw new IllegalArgumentException("No access token found for user");
+            }
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON));
+
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+            String url = "https://api.github.com/repos/" + owner + "/" + repo + "/issues/" + pullNumber + "/events";
+            LOGGER.info("Sending request to GitHub: " + url);
+
+            ResponseEntity<Object> response = restTemplate.exchange(
+                    url, HttpMethod.GET, entity, Object.class);
+
+            LOGGER.info("GitHub response for pull request events: HTTP " + response.getStatusCode());
+            return response.getBody() != null ? response.getBody() : Collections.emptyList();
+        } catch (HttpClientErrorException e) {
+            LOGGER.warning("HTTP error fetching pull request events for " + owner + "/" + repo + ": " + e.getStatusCode() + " - " + e.getMessage());
+            throw new RuntimeException("Failed to fetch pull request events: " + e.getMessage(), e);
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching pull request events for " + owner + "/" + repo + ": " + e.getMessage());
+            throw new RuntimeException("Unexpected error fetching pull request events: " + e.getMessage());
         }
     }
 
