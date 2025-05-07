@@ -13,6 +13,7 @@ import com.project.project_service.Repository.ClientRepository;
 import com.project.project_service.Repository.GitHubLinkRepository;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.config.AuthClient;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 import java.util.logging.Logger;
 @Service
 public class ProjectService {
+
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(UserStoryService.class);
     @Autowired
     private ClientRepository clientRepository;
     private static final Logger LOGGER = Logger.getLogger(ProjectController.class.getName());
@@ -362,7 +365,7 @@ public class ProjectService {
             gitHubLinkRepository.save(existingLink);
             LOGGER.info("🔄 Lien GitHub mis à jour : " + repositoryUrl);
         } else {
-            GitHubLink link = new GitHubLink(repositoryUrl, project);
+            GitHubLink link = new GitHubLink(repositoryUrl, project , userId);
             gitHubLinkRepository.save(link);
             LOGGER.info("🔗 Dépôt GitHub lié au projet : " + repositoryUrl);
         }
@@ -388,5 +391,22 @@ public class ProjectService {
             return new String[]{matcher.group(1), matcher.group(2)};
         }
         throw new IllegalArgumentException("Impossible d'extraire owner et repo depuis l'URL: " + url);
+    }
+
+    public Map<String, String> getGitHubUserId(Long projectId) {
+        Optional<GitHubLink> gitHubLink = gitHubLinkRepository.findByProjectId(projectId);
+        if (gitHubLink.isPresent()) {
+            LOGGER.info("Found GitHub userId for project ID: " + projectId);
+            return Map.of("userId", gitHubLink.get().getUserId());
+        }
+        LOGGER.info("No GitHub link found for project ID: " + projectId);
+        return Map.of();
+    }
+
+    public List<Long> getActiveProjectIds() {
+        return projectRepository.findAll()
+                .stream()
+                .map(Projet::getId)
+                .collect(Collectors.toList());
     }
 }

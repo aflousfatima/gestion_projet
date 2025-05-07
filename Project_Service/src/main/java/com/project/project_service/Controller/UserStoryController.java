@@ -56,8 +56,7 @@ public class UserStoryController {
 
     @GetMapping("/{projectId}/user-stories")
     public ResponseEntity<List<UserStoryDTO>> getUserStories(
-            @PathVariable Long projectId,
-            @RequestHeader("Authorization") String authorizationHeader) {
+            @PathVariable Long projectId ) {
         System.out.println("Appel de getUserStories pour projectId: " + projectId);
         try {
             List<UserStoryDTO> userStories = userStoryService.getUserStoriesByProjectId(projectId);
