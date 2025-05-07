@@ -66,6 +66,36 @@ public class FetchRepoData {
         }
     }
 
+
+    @GetMapping("/repos/{owner}/{repo}/commits-by-user")
+    public ResponseEntity<Object> getCommitsByUserId(
+            @PathVariable String owner,
+            @PathVariable String repo,
+            @RequestParam String userId,
+            @RequestParam(required = false) String branch,
+            @RequestParam(required = false) String author,
+            @RequestParam(required = false) String since,
+            @RequestParam(required = false) String until) {
+        LOGGER.info("Fetching commits for: " + owner + "/" + repo + " with userId: " + userId);
+        try {
+            Object commits = gitHubIntegrationService.getCommits(owner, repo, userId, branch, author, since, until);
+            LOGGER.info("Commits fetched successfully: " + commits);
+            return ResponseEntity.ok(commits);
+        } catch (IllegalArgumentException e) {
+            LOGGER.warning("Validation error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            LOGGER.warning("Error fetching commits: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", "Failed to fetch commits: " + e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.severe("Unexpected error fetching commits: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Unexpected error fetching commits: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/repos/{owner}/{repo}/commits/{sha}")
     public ResponseEntity<Object> getCommitDetails(
             @PathVariable String owner,

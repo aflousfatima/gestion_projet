@@ -148,6 +148,8 @@ public class GithubTokenService {
                 .map(GithubToken::getAccessToken)
                 .orElse(null);
     }
+
+
     @Transactional
     public void removeToken(String authorization) {
         LOGGER.info("Suppression du token pour Authorization: " + authorization);

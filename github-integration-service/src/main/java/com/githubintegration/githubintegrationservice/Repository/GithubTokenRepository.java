@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface GithubTokenRepository extends JpaRepository<GithubToken, Long> {
     void deleteByUserId(String userId);
     Optional<GithubToken> findByUserId(String userId);
+
 }
