@@ -489,11 +489,6 @@ export default function ProjectLayout({
           effortPoints: newUserStory.effortPoints,
           dependsOn: newUserStory.dependsOn || [],
           tags: newUserStory.tags || [],
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
         }
       );
 
@@ -672,7 +667,6 @@ export default function ProjectLayout({
       // Fetch backlog
       const backlogResponse = await axiosInstance.get(
         `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setBacklog(backlogResponse.data);
       console.log("📚 Backlog récupéré :", backlogResponse.data);

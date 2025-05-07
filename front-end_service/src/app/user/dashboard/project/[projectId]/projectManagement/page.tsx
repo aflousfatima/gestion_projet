@@ -79,7 +79,6 @@ const ProjectManagement: React.FC = () => {
   const axiosInstance = useAxios();
   const params = useParams();
   const projectId = params.projectId as string;
-  const [selectedBranch, setSelectedBranch] = useState<string | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [repositoryUrl, setRepositoryUrl] = useState<string>("");
   const [linkedRepository, setLinkedRepository] = useState<string>("");
