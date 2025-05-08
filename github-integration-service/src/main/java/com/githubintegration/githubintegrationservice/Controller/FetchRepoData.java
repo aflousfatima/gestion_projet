@@ -1,6 +1,12 @@
 package com.githubintegration.githubintegrationservice.Controller;
 
 import com.githubintegration.githubintegrationservice.Service.GitHubIntegrationService;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
@@ -8,6 +14,14 @@ import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/fetch_data")
+@OpenAPIDefinition(info = @Info(
+        title = "API d'Intégration GitHub",
+        version = "1.0",
+        description = "Cette API permet de récupérer des données depuis GitHub, telles que les dépôts, commits, branches et pull requests."
+),
+        servers = @Server(
+                url = "http://localhost:8087/"
+        ))
 public class FetchRepoData {
     private static final Logger LOGGER = Logger.getLogger(FetchRepoData.class.getName());
     private final GitHubIntegrationService gitHubIntegrationService;
@@ -15,7 +29,14 @@ public class FetchRepoData {
     public FetchRepoData(GitHubIntegrationService gitHubIntegrationService) {
         this.gitHubIntegrationService = gitHubIntegrationService;
     }
-
+    @Operation(summary = "Vérifier l'existence d'un dépôt",
+            description = "Cette méthode permet de vérifier si un dépôt GitHub existe pour un propriétaire et un nom de dépôt donnés.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Vérification effectuée avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la vérification du dépôt")
+    })
     @GetMapping("/repos/{owner}/{repo}/exists")
     public ResponseEntity<Map<String, Boolean>> checkRepositoryExists(
             @PathVariable String owner,
@@ -36,6 +57,14 @@ public class FetchRepoData {
         }
     }
 
+    @Operation(summary = "Récupérer les commits d'un dépôt",
+            description = "Cette méthode permet de récupérer la liste des commits d'un dépôt GitHub, avec des filtres optionnels pour la branche, l'auteur, et les dates.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Commits récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des commits")
+    })
     @GetMapping("/repos/{owner}/{repo}/commits")
     public ResponseEntity<Object> getCommits(
             @PathVariable String owner,
@@ -66,7 +95,14 @@ public class FetchRepoData {
         }
     }
 
-
+    @Operation(summary = "Récupérer les commits d'un dépôt par utilisateur",
+            description = "Cette méthode permet de récupérer la liste des commits d'un dépôt GitHub pour un utilisateur spécifique, avec des filtres optionnels.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Commits récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des commits")
+    })
     @GetMapping("/repos/{owner}/{repo}/commits-by-user")
     public ResponseEntity<Object> getCommitsByUserId(
             @PathVariable String owner,
@@ -95,7 +131,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching commits: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les détails d'un commit",
+            description = "Cette méthode permet de récupérer les détails d'un commit spécifique dans un dépôt GitHub en utilisant son SHA.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Détails du commit récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des détails du commit")
+    })
     @GetMapping("/repos/{owner}/{repo}/commits/{sha}")
     public ResponseEntity<Object> getCommitDetails(
             @PathVariable String owner,
@@ -123,6 +166,14 @@ public class FetchRepoData {
         }
     }
 
+    @Operation(summary = "Récupérer les branches d'un dépôt",
+            description = "Cette méthode permet de récupérer la liste des branches d'un dépôt GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Branches récupérées avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des branches")
+    })
     @GetMapping("/repos/{owner}/{repo}/branches")
     public ResponseEntity<Object> getBranches(
             @PathVariable String owner,
@@ -148,7 +199,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching branches: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les détails d'une branche",
+            description = "Cette méthode permet de récupérer les détails d'une branche spécifique dans un dépôt GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Détails de la branche récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des détails de la branche")
+    })
     @GetMapping("/repos/{owner}/{repo}/branches/{branch}")
     public ResponseEntity<Object> getBranchDetails(
             @PathVariable String owner,
@@ -175,7 +233,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching branch details: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les pull requests d'un dépôt",
+            description = "Cette méthode permet de récupérer la liste des pull requests d'un dépôt GitHub, avec un état spécifié (ouvert, fermé, tous).")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Pull requests récupérées avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des pull requests")
+    })
     @GetMapping("/repos/{owner}/{repo}/pulls")
     public ResponseEntity<Object> getPullRequests(
             @PathVariable String owner,
@@ -202,7 +267,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching pull requests: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les commits d'une pull request",
+            description = "Cette méthode permet de récupérer la liste des commits associés à une pull request spécifique dans un dépôt GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Commits de la pull request récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des commits de la pull request")
+    })
     @GetMapping("/repos/{owner}/{repo}/pulls/{pullNumber}/commits")
     public ResponseEntity<Object> getPullRequestCommits(
             @PathVariable String owner,
@@ -229,7 +301,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching pull request commits: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les fichiers d'une pull request",
+            description = "Cette méthode permet de récupérer la liste des fichiers modifiés dans une pull request spécifique dans un dépôt GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Fichiers de la pull request récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des fichiers de la pull request")
+    })
     @GetMapping("/repos/{owner}/{repo}/pulls/{pullNumber}/files")
     public ResponseEntity<Object> getPullRequestFiles(
             @PathVariable String owner,
@@ -256,7 +335,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching pull request files: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les revues d'une pull request",
+            description = "Cette méthode permet de récupérer la liste des revues associées à une pull request spécifique dans un dépôt GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Revues de la pull request récupérées avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des revues de la pull request")
+    })
     @GetMapping("/repos/{owner}/{repo}/pulls/{pullNumber}/reviews")
     public ResponseEntity<Object> getPullRequestReviews(
             @PathVariable String owner,
@@ -283,7 +369,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching pull request reviews: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les événements d'une pull request",
+            description = "Cette méthode permet de récupérer la liste des événements associés à une pull request spécifique dans un dépôt GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Événements de la pull request récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des événements de la pull request")
+    })
     @GetMapping("/repos/{owner}/{repo}/pulls/{pullNumber}/events")
     public ResponseEntity<Object> getPullRequestEvents(
             @PathVariable String owner,
@@ -310,7 +403,14 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching pull request events: " + e.getMessage()));
         }
     }
-
+    @Operation(summary = "Récupérer les informations de l'utilisateur authentifié",
+            description = "Cette méthode permet de récupérer les informations de l'utilisateur authentifié via GitHub.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Informations de l'utilisateur récupérées avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des informations de l'utilisateur")
+    })
     @GetMapping("/user")
     public ResponseEntity<Object> getAuthenticatedUser(
             @RequestHeader("Authorization") String authorization) {
