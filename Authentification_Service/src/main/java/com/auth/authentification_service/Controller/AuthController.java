@@ -264,6 +264,14 @@ public class AuthController {
         return keycloakService.getTeamMembersbyProject(accessToken, projectId);
     }
 
+
+    @Operation(summary = "Récupérer les détails d'un utilisateur par ID d'authentification",
+            description = "Cette méthode permet de récupérer les détails d'un utilisateur en utilisant son ID d'authentification et un token d'administration.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Détails de l'utilisateur récupérés avec succès"),
+            @ApiResponse(responseCode = "401", description = "Token invalide ou non autorisé"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des détails")
+    })
     @GetMapping("/auth/users/{authId}")
     public ResponseEntity<Map<String, Object>> getUserDetailsByAuthId(
             @PathVariable String authId,
@@ -273,6 +281,14 @@ public class AuthController {
         return ResponseEntity.ok(userDetails);
     }
 
+
+    @Operation(summary = "Décoder un token d'accès",
+            description = "Cette méthode permet de décoder un token d'accès pour extraire des informations, comme l'ID de l'utilisateur.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token décodé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Token manquant ou mal formaté"),
+            @ApiResponse(responseCode = "500", description = "Erreur lors du décodage du token")
+    })
     @GetMapping("/auth/decode-token")
     public ResponseEntity<?> decodeToken(@RequestHeader("Authorization") String authorization) {
         try {
@@ -292,6 +308,14 @@ public class AuthController {
                     .body("Erreur lors du décodage du token : " + e.getMessage());
         }
     }
+
+    @Operation(summary = "Récupérer des utilisateurs par leurs IDs",
+            description = "Cette méthode permet de récupérer les informations des utilisateurs en fonction d'une liste d'IDs fournie.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Utilisateurs récupérés avec succès"),
+            @ApiResponse(responseCode = "401", description = "Token invalide ou non autorisé"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des utilisateurs")
+    })
     @PostMapping("/tasks_reponsibles/by-ids")
     public List<UserDto> getUsersByIds(
             @RequestHeader("Authorization") String authorizationHeader,
@@ -302,6 +326,14 @@ public class AuthController {
         return keycloakService.getUsersByIds(userIds);
     }
 
+
+    @Operation(summary = "Récupérer les membres de projets par ID utilisateur",
+            description = "Cette méthode permet de récupérer la liste des projets auxquels un utilisateur est associé, en fonction de son ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Membres de projets récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "ID utilisateur invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des membres")
+    })
     @GetMapping("/project-members/by-user")
     public ResponseEntity<List<ProjectMemberDTO>> getProjectMembersByUserId(@RequestParam String userId) {
         System.out.println("🔍 Récupération des membres de projet pour userId: " + userId);
@@ -315,7 +347,13 @@ public class AuthController {
     }
 
 
-
+    @Operation(summary = "Mettre à jour les informations d'un utilisateur",
+            description = "Cette méthode permet de mettre à jour les informations d'un utilisateur en utilisant un token d'accès et les données fournies.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Utilisateur mis à jour avec succès"),
+            @ApiResponse(responseCode = "401", description = "Token invalide ou non autorisé"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la mise à jour")
+    })
     @PutMapping("/update")
     public ResponseEntity<String> updateUser(
             @RequestHeader("Authorization") String authorizationHeader,
@@ -324,6 +362,14 @@ public class AuthController {
         return keycloakService.updateUser(accessToken, userData);
     }
 
+
+    @Operation(summary = "Changer le mot de passe d'un utilisateur",
+            description = "Cette méthode permet de modifier le mot de passe d'un utilisateur en utilisant un token d'accès et les données du mot de passe.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Mot de passe changé avec succès"),
+            @ApiResponse(responseCode = "401", description = "Token invalide ou non autorisé"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors du changement de mot de passe")
+    })
     @PostMapping("/change-password")
     public ResponseEntity<String> changePassword(
             @RequestHeader("Authorization") String authorizationHeader,
