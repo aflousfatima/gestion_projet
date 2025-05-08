@@ -156,6 +156,12 @@ public class ProjectController {
         }
     }
 
+    @Operation(summary = "Récupérer un projet par ID",
+            description = "Cette méthode permet de récupérer les détails d'un projet spécifique en utilisant son ID.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Projet récupéré avec succès"),
+            @ApiResponse(responseCode = "404", description = "Projet non trouvé")
+    })
     @GetMapping("/projects/{projectId}")
     public ResponseEntity<ProjectDTO> getProjectById(@PathVariable Long projectId) {
         try {
@@ -197,6 +203,13 @@ public class ProjectController {
         }
     }
 
+    @Operation(summary = "Récupérer les détails d'un projet",
+            description = "Cette méthode permet de récupérer les détails d'un projet spécifique pour un utilisateur authentifié.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Détails du projet récupérés avec succès"),
+            @ApiResponse(responseCode = "401", description = "Token invalide"),
+            @ApiResponse(responseCode = "404", description = "Projet non trouvé")
+    })
     @GetMapping("/manager/{projectId}")
     public ResponseEntity<ProjectDTO> getProjectDetails(
             @PathVariable Long projectId,
@@ -207,12 +220,26 @@ public class ProjectController {
         return ResponseEntity.ok(projectDetails);
     }
 
+    @Operation(summary = "Récupérer les projets d'un utilisateur",
+            description = "Cette méthode permet de récupérer la liste des projets associés à un utilisateur spécifique en fonction de son ID d'authentification.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Projets récupérés avec succès"),
+            @ApiResponse(responseCode = "400", description = "ID d'authentification invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des projets")
+    })
     @GetMapping("/projects/by-user")
     public ProjectResponseWithRoleDTO getProjectsByUser(@RequestParam String authId) {
         return projectService.getProjectsByUser(authId);
     }
 
-
+    @Operation(summary = "Lier un dépôt GitHub à un projet",
+            description = "Cette méthode permet de lier un dépôt GitHub à un projet spécifique en utilisant l'URL du dépôt.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Dépôt GitHub lié avec succès"),
+            @ApiResponse(responseCode = "400", description = "URL du dépôt manquante ou invalide"),
+            @ApiResponse(responseCode = "401", description = "Token invalide"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la liaison du dépôt")
+    })
     @PostMapping("/{projectId}/github-link")
     public ResponseEntity<Map<String, String>> linkGitHubRepository(
             @PathVariable Long projectId,
@@ -239,6 +266,13 @@ public class ProjectController {
         }
     }
 
+    @Operation(summary = "Récupérer l'URL du dépôt GitHub lié à un projet",
+            description = "Cette méthode permet de récupérer l'URL du dépôt GitHub associé à un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "URL du dépôt récupérée avec succès"),
+            @ApiResponse(responseCode = "404", description = "Aucun dépôt GitHub lié au projet"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération de l'URL")
+    })
     @GetMapping("/{projectId}/github-link")
     public ResponseEntity<Map<String, String>> getGitHubRepository(
             @PathVariable Long projectId) {
@@ -257,6 +291,13 @@ public class ProjectController {
         }
     }
 
+    @Operation(summary = "Récupérer l'ID de l'utilisateur GitHub lié à un projet",
+            description = "Cette méthode permet de récupérer l'ID de l'utilisateur GitHub associé à un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "ID de l'utilisateur GitHub récupéré avec succès"),
+            @ApiResponse(responseCode = "404", description = "Aucun utilisateur GitHub lié au projet"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération de l'ID")
+    })
     @GetMapping("/{projectId}/github-user")
     public ResponseEntity<Map<String, String>> getGitHubUserId(@PathVariable Long projectId) {
         try {
@@ -274,7 +315,12 @@ public class ProjectController {
         }
     }
 
-
+    @Operation(summary = "Récupérer les IDs des projets actifs",
+            description = "Cette méthode permet de récupérer la liste des IDs des projets actuellement actifs.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "IDs des projets actifs récupérés avec succès"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la récupération des IDs")
+    })
     @GetMapping("/active")
     public ResponseEntity<List<Long>> getActiveProjectIds() {
         try {

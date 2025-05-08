@@ -7,6 +7,12 @@ import com.project.project_service.Entity.SprintHistory;
 import com.project.project_service.Repository.SprintHistoryRepository;
 import com.project.project_service.Service.HistoryService;
 import com.project.project_service.Service.SprintService;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,12 +22,28 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/projects")
+@OpenAPIDefinition(info = @Info(
+        title = "API de Gestion des Sprints",
+        version = "1.0",
+        description = "Cette API permet de gérer les sprints associés aux projets."
+),
+        servers = @Server(
+                url = "http://localhost:8085/"
+        ))
 public class SprintController {
 
     @Autowired
     private SprintService sprintService;
   @Autowired
   private HistoryService historyService;
+
+    @Operation(summary = "Créer un sprint",
+            description = "Cette méthode permet de créer un nouveau sprint pour un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Sprint créé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide")
+    })
     @PostMapping("/{projectId}/sprints")
     public ResponseEntity<SprintDTO> createSprint(
             @PathVariable Long projectId,
@@ -37,6 +59,12 @@ public class SprintController {
         }
     }
 
+    @Operation(summary = "Récupérer les sprints d'un projet",
+            description = "Cette méthode permet de récupérer la liste des sprints associés à un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des sprints récupérée avec succès"),
+            @ApiResponse(responseCode = "404", description = "Projet ou sprints non trouvés")
+    })
     @GetMapping("/{projectId}/sprints")
     public ResponseEntity<List<SprintDTO>> getSprints(
             @PathVariable Long projectId,
@@ -49,6 +77,13 @@ public class SprintController {
         }
     }
 
+    @Operation(summary = "Mettre à jour un sprint",
+            description = "Cette méthode permet de modifier un sprint existant pour un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Sprint mis à jour avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Sprint ou projet non trouvé")
+    })
     @PutMapping("/{projectId}/sprints/{sprintId}")
     public ResponseEntity<SprintDTO> updateSprint(
             @PathVariable Long projectId,
@@ -65,6 +100,12 @@ public class SprintController {
         }
     }
 
+    @Operation(summary = "Supprimer un sprint",
+            description = "Cette méthode permet de supprimer un sprint spécifique d'un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Sprint supprimé avec succès"),
+            @ApiResponse(responseCode = "404", description = "Sprint ou projet non trouvé")
+    })
     @DeleteMapping("/{projectId}/sprints/{sprintId}")
     public ResponseEntity<Void> deleteSprint(
             @PathVariable Long projectId,
@@ -78,7 +119,13 @@ public class SprintController {
         }
     }
 
-    // Endpoint pour annuler un sprint
+    @Operation(summary = "Annuler un sprint",
+            description = "Cette méthode permet d'annuler un sprint spécifique pour un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Sprint annulé avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Sprint ou projet non trouvé")
+    })
     @PostMapping("/{projectId}/sprints/{sprintId}/cancel")
     public ResponseEntity<SprintDTO> cancelSprint(
             @PathVariable Long projectId,
@@ -88,7 +135,14 @@ public class SprintController {
         return ResponseEntity.ok(updatedSprint);
     }
 
-    // Endpoint pour archiver un sprint
+
+    @Operation(summary = "Archiver un sprint",
+            description = "Cette méthode permet d'archiver un sprint spécifique pour un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Sprint archivé avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Sprint ou projet non trouvé")
+    })
     @PostMapping("/{projectId}/sprints/{sprintId}/archive")
     public ResponseEntity<SprintDTO> archiveSprint(
             @PathVariable Long projectId,
@@ -98,6 +152,13 @@ public class SprintController {
         return ResponseEntity.ok(updatedSprint);
     }
 
+    @Operation(summary = "Activer un sprint",
+            description = "Cette méthode permet d'activer un sprint spécifique pour un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Sprint activé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide")
+    })
     @PostMapping("/{projectId}/sprints/{sprintId}/activate")
     public ResponseEntity<SprintDTO> activateSprint(
             @PathVariable Long projectId,
@@ -113,6 +174,14 @@ public class SprintController {
         }
     }
 
+
+    @Operation(summary = "Mettre à jour le statut d'un sprint",
+            description = "Cette méthode permet de mettre à jour le statut d'un sprint spécifique pour un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Statut du sprint mis à jour avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide")
+    })
     @PostMapping("/{projectId}/sprints/{sprintId}/update-status")
     public ResponseEntity<SprintDTO> updateSprintStatus(
             @PathVariable Long projectId,
@@ -128,6 +197,13 @@ public class SprintController {
         }
     }
 
+    @Operation(summary = "Récupérer l'historique d'un sprint",
+            description = "Cette méthode permet de récupérer l'historique des modifications d'un sprint spécifique, incluant les noms des auteurs.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Historique du sprint récupéré avec succès"),
+            @ApiResponse(responseCode = "204", description = "Aucun historique trouvé pour le sprint"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide")
+    })
     @GetMapping("/sprint/{sprintId}/history")
     public ResponseEntity<List<SprintHistoryDto>> getSprintHistory(
             @PathVariable Long sprintId,
