@@ -7,6 +7,12 @@ import com.task.taskservice.DTO.TimeEntryDTO;
 import com.task.taskservice.Entity.Bug;
 import com.task.taskservice.Mapper.BugMapper;
 import com.task.taskservice.Service.BugService;
+import io.swagger.v3.oas.annotations.OpenAPIDefinition;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.info.Info;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.servers.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +26,14 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/project/bugs")
+@OpenAPIDefinition(info = @Info(
+        title = "API de Gestion des Bugs",
+        version = "1.0",
+        description = "Cette API permet de gérer les bugs associés aux projets et user stories."
+),
+        servers = @Server(
+                url = "http://localhost:8086/"
+        ))
 public class BugController {
 
     private static final Logger logger = LoggerFactory.getLogger(BugService.class);
@@ -28,7 +42,13 @@ public class BugController {
     private BugService bugService;
     @Autowired
     private BugMapper bugMapper;
-
+    @Operation(summary = "Créer un bug",
+            description = "Cette méthode permet de créer un nouveau bug pour une user story spécifique dans un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Bug créé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide")
+    })
     @PostMapping("/{projectId}/{userStoryId}/createBug")
     public ResponseEntity<BugDTO> createBug(
             @PathVariable Long projectId,
@@ -38,7 +58,14 @@ public class BugController {
         BugDTO createdBug = bugService.createBug(projectId, userStoryId, bugDTO, token);
         return new ResponseEntity<>(createdBug, HttpStatus.CREATED);
     }
-
+    @Operation(summary = "Mettre à jour un bug",
+            description = "Cette méthode permet de modifier un bug existant.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Bug mis à jour avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Bug non trouvé")
+    })
     @PutMapping("/{bugId}/updateBug")
     public ResponseEntity<BugDTO> updateBug(
             @PathVariable Long bugId,
@@ -47,13 +74,24 @@ public class BugController {
         BugDTO updatedBug = bugService.updateBug(bugId, bugDTO, token);
         return new ResponseEntity<>(updatedBug, HttpStatus.OK);
     }
-
+    @Operation(summary = "Supprimer un bug",
+            description = "Cette méthode permet de supprimer un bug spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "Bug supprimé avec succès"),
+            @ApiResponse(responseCode = "404", description = "Bug non trouvé")
+    })
     @DeleteMapping("/{bugId}/deleteBug")
     public ResponseEntity<Void> deleteBug(@PathVariable Long bugId) {
         bugService.deleteBug(bugId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-
+    @Operation(summary = "Récupérer un bug",
+            description = "Cette méthode permet de récupérer les détails d'un bug spécifique dans une user story et un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Bug récupéré avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Bug, user story ou projet non trouvé")
+    })
     @GetMapping("/{projectId}/{userStoryId}/{bugId}")
     public ResponseEntity<BugDTO> getBug(
             @PathVariable Long projectId,
@@ -63,7 +101,13 @@ public class BugController {
         BugDTO bugDTO = bugService.getBugById(projectId, userStoryId, bugId, token);
         return new ResponseEntity<>(bugDTO, HttpStatus.OK);
     }
-
+    @Operation(summary = "Récupérer les bugs d'une user story",
+            description = "Cette méthode permet de récupérer la liste des bugs associés à une user story spécifique dans un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des bugs récupérée avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "User story ou projet non trouvé")
+    })
     @GetMapping("/{projectId}/{userStoryId}")
     public ResponseEntity<List<BugDTO>> getBugsByProjectAndUserStory(
             @PathVariable Long projectId,
@@ -72,7 +116,13 @@ public class BugController {
         List<BugDTO> bugs = bugService.getBugsByProjectAndUserStory(projectId, userStoryId, token);
         return new ResponseEntity<>(bugs, HttpStatus.OK);
     }
-
+    @Operation(summary = "Récupérer les bugs d'un projet",
+            description = "Cette méthode permet de récupérer la liste des bugs associés à un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des bugs récupérée avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Projet non trouvé")
+    })
     @GetMapping("/{projectId}")
     public ResponseEntity<List<BugDTO>> getBugsByProject(
             @PathVariable Long projectId,
@@ -80,7 +130,13 @@ public class BugController {
         List<BugDTO> bugs = bugService.getBugsByProjectId(projectId, token);
         return new ResponseEntity<>(bugs, HttpStatus.OK);
     }
-
+    @Operation(summary = "Récupérer les bugs du sprint actif",
+            description = "Cette méthode permet de récupérer la liste des bugs associés au sprint actif d'un projet.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Liste des bugs récupérée avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Projet ou sprint actif non trouvé")
+    })
     @GetMapping("/active_sprint/{projectId}")
     public ResponseEntity<List<BugDTO>> getBugsOfActiveSprint(
             @PathVariable Long projectId,
@@ -89,6 +145,14 @@ public class BugController {
         return new ResponseEntity<>(bugs, HttpStatus.OK);
     }
 
+    @Operation(summary = "Joindre un fichier à un bug",
+            description = "Cette méthode permet de joindre un fichier à un bug spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Fichier joint avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Bug non trouvé"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de l'upload du fichier")
+    })
     @PostMapping("/{bugId}/attachments")
     public ResponseEntity<BugDTO> uploadFileToBug(
             @PathVariable Long bugId,
@@ -102,7 +166,15 @@ public class BugController {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-
+    @Operation(summary = "Supprimer un fichier d'un bug",
+            description = "Cette méthode permet de supprimer un fichier joint à un bug en utilisant son publicId.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Fichier supprimé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Fichier non trouvé"),
+            @ApiResponse(responseCode = "500", description = "Erreur serveur lors de la suppression du fichier")
+    })
     @DeleteMapping("/delete")
     public ResponseEntity<String> deleteFile(
             @RequestParam String publicId,
@@ -122,7 +194,13 @@ public class BugController {
             return new ResponseEntity<>("Failed to delete file: " + e.getMessage(), HttpStatus.BAD_REQUEST);
         }
     }
-
+    @Operation(summary = "Récupérer les statistiques du tableau de bord",
+            description = "Cette méthode permet de récupérer les statistiques du tableau de bord pour un projet spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Statistiques récupérées avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Projet non trouvé")
+    })
     @GetMapping("/dashboard/{projectId}")
     public ResponseEntity<DashboardStatsDTO> getDashboardStats(
             @PathVariable Long projectId,
@@ -131,6 +209,13 @@ public class BugController {
         return new ResponseEntity<>(stats, HttpStatus.OK);
     }
 
+    @Operation(summary = "Récupérer les bugs pour le calendrier",
+            description = "Cette méthode permet de récupérer la liste des bugs d'un projet formatée pour un affichage dans un calendrier.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Bugs pour le calendrier récupérés avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Projet non trouvé")
+    })
     @GetMapping("/calendar/{projectId}")
     public ResponseEntity<List<BugCalendarDTO>> getBugsForCalendar(
             @PathVariable Long projectId,
@@ -138,7 +223,14 @@ public class BugController {
         List<BugCalendarDTO> bugs = bugService.getBugsForCalendar(projectId, token);
         return new ResponseEntity<>(bugs, HttpStatus.OK);
     }
-
+    @Operation(summary = "Ajouter une entrée de temps manuelle à un bug",
+            description = "Cette méthode permet d'ajouter une entrée de temps manuelle à un bug spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Entrée de temps ajoutée avec succès"),
+            @ApiResponse(responseCode = "400", description = "Requête invalide"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Bug non trouvé")
+    })
     @PostMapping("/{bugId}/time-entry")
     public ResponseEntity<Void> addManualTimeEntry(
             @PathVariable Long bugId,
@@ -149,6 +241,13 @@ public class BugController {
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
+    @Operation(summary = "Récupérer les entrées de temps d'un bug",
+            description = "Cette méthode permet de récupérer la liste des entrées de temps associées à un bug spécifique.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Entrées de temps récupérées avec succès"),
+            @ApiResponse(responseCode = "401", description = "Non autorisé, token invalide"),
+            @ApiResponse(responseCode = "404", description = "Bug non trouvé")
+    })
     @GetMapping("/{bugId}/time-entries")
     public ResponseEntity<List<TimeEntryDTO>> getTimeEntries(
             @PathVariable Long bugId,
