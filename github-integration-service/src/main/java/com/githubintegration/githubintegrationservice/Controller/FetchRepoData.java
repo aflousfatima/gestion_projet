@@ -403,7 +403,7 @@ public class FetchRepoData {
                     .body(Map.of("error", "Unexpected error fetching pull request events: " + e.getMessage()));
         }
     }
-    @Operation(summary = "Récupérer les informations de l'utilisateur authentifié",
+    @Operation(summary = "Récupérer les informations de l'utilisateur authentifie",
             description = "Cette méthode permet de récupérer les informations de l'utilisateur authentifié via GitHub.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Informations de l'utilisateur récupérées avec succès"),
