@@ -1,0 +1,262 @@
+/* Importer une police moderne */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.teams-container {
+  width: 900px; /* Légèrement plus large pour accueillir les cartes */
+  margin: 40px auto; /* Plus d'espace autour */
+  padding: 30px;
+  font-family: "Inter", "Arial", sans-serif;
+  background-color: #ffffff; /* Fond blanc pour un look plus propre */
+  min-height: 82vh;
+  border-radius: 20px; /* Bordures arrondies plus subtiles */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1); /* Ombre douce pour la profondeur */
+  margin-top:1px;
+}
+
+.teams-header {
+  text-align: center;
+  margin-bottom: 48px; /* Plus d'espace en bas */
+}
+
+.teams-title {
+  font-size: 36px; /* Titre plus grand */
+  font-weight: 500; /* Plus audacieux */
+  color: #1a202c; /* Gris très foncé */
+  margin-bottom: 8px;
+  
+}
+
+.teams-subtitle {
+  font-size: 15px;
+  font-weight: 300;
+  color: #3a3533; /* Gris doux */
+}
+
+.teams-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 32px;
+}
+
+.teams-inviteButton {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #ebaf66, #fa8d34); /* Dégradé orange pour un look moderne */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+  margin-top: -25px;
+}
+
+.teams-inviteButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(246, 173, 85, 0.4); /* Ombre au survol */
+}
+
+/* Liste des membres sous forme de grille de cartes */
+.teams-teamList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* Grille responsive */
+  gap: 24px; /* Espacement entre les cartes */
+}
+
+.teams-teamMemberCard {
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* Ombre douce */
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Espacement entre l'avatar et les infos */
+}
+
+.teams-teamMemberCard:hover {
+  transform: translateY(-5px); /* Effet de soulèvement au survol */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); /* Ombre plus prononcée */
+}
+
+.teams-memberAvatar img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%; /* Avatar circulaire */
+  object-fit: cover;
+  border: 2px solid #e2e8f0; /* Bordure subtile */
+}
+
+.teams-memberInfo {
+  flex: 1;
+}
+
+.teams-memberName {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 4px;
+}
+
+.teams-memberRole {
+  font-size: 14px;
+  font-weight: 500;
+  color: #4a5568; /* Gris moyen */
+  margin-bottom: 4px;
+}
+
+.teams-memberProject {
+  font-size: 14px;
+  font-weight: 400;
+  color: #718096; /* Gris plus clair */
+}
+
+/* Styles du pop-up (modal) - Harmonisé avec le nouveau design */
+.teams-modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(101, 97, 97, 0.11); /* Fond plus sombre pour plus de contraste */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(5px); /* Effet de flou en arrière-plan (support moderne) */
+  animation: fadeInModal 0.3s ease-out; /* Animation d’apparition */
+}
+
+.teams-modal {
+  background-color: #fff; /* Fond blanc pour le pop-up */
+  padding: 30px;
+  border-radius: 20px;
+  width: 110%;
+  max-width: 600px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  animation: slideIn 0.3s ease;
+  position: relative;
+}
+
+.teams-modalTitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.teams-form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.teams-formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.teams-formGroup label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1a202c;
+}
+
+.teams-formGroup input,
+.teams-formGroup select {
+  padding: 14px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  color: #1a202c;
+  background-color: #f7fafc;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.teams-formGroup input:focus,
+.teams-formGroup select:focus {
+  border-color: #ed8936; /* Orange pour harmoniser avec le bouton */
+  box-shadow: 0 0 0 3px rgba(237, 137, 54, 0.1);
+}
+
+.teams-message {
+  font-size: 14px;
+  color: #38a169; /* Vert pour les messages de succès */
+  text-align: center;
+  margin-top: 12px;
+}
+
+.teams-modalActions {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.teams-submitButton {
+  padding: 12px 28px;
+  background: linear-gradient(135deg, #f6ad55, #ed8936); /* Dégradé orange */
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.3s ease;
+}
+
+.teams-submitButton:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(246, 173, 85, 0.4);
+}
+
+.teams-cancelButton {
+  padding: 12px 28px;
+  background-color: #e2e8f0;
+  color: #1a202c;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.teams-cancelButton:hover {
+  background-color: #cbd5e0;
+  transform: translateY(-3px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInModal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Responsive : ajuste pour petits écrans */
+@media (max-width: 500px) {
+  .teams-modal {
+    width: 90%;
+    padding: 15px;
+    border-radius: 10px;
+  }
+
+}

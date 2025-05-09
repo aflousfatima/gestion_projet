@@ -1,0 +1,253 @@
+.hero-section {
+    padding: 80px 0;
+    margin-top: -120px; /* Ajuste selon la hauteur de ta Navbar */
+    font-family:  Garamond, serif;
+
+  }
+
+  
+  .highlight {
+    color: #ff9900;
+    font-weight: bold;
+  }
+  
+  .description {
+    margin: 20px 0;
+    font-size: 18px;
+  }
+  
+  .hero-buttons .btn {
+    font-size: 16px;
+    padding: 10px 20px;
+    background-color: #1C4545;
+    color: rgb(255, 255, 255);
+  }
+  
+  .hero-image {
+    max-width: 130%;
+    height: auto;
+    border-radius: 10px;
+    margin-left: -100px;
+  }
+  
+  
+  .headline {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: #1C4545;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+}
+
+.headline i {
+  margin-left: 10px;
+  color: #FFA800;
+}
+
+
+
+.highlight {
+  font-weight: 700;
+  color: #FFA800;
+}
+
+.hero-buttons .btn {
+  font-size: 1.2rem;
+  background-color: #1C4545;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  transition: background-color 0.3s ease;
+  font-family:  Garamond, serif;
+
+}
+
+.hero-buttons .btn:hover {
+  background-color: #0056b3;
+}
+
+.hero-buttons .btn i {
+  margin-right: 8px;
+}
+
+
+
+
+.description {
+    font-size: 1.1rem;
+    color: #333;
+    line-height: 1.8;
+    margin-bottom: 30px;
+  }
+  
+  
+  
+  .bold-text {
+    font-weight: 600;
+    color: #333;
+    letter-spacing: 0.5px;
+    font-size: 1.2rem;
+    margin-top: 10px;
+  }
+  
+  .bold-text:hover {
+    color: #ff6f61;
+    cursor: pointer;
+  }
+  
+  .description br {
+    margin-bottom: 8px;
+  }
+  
+
+
+  .separateur-image {
+    max-width: 110%;
+    margin-left: -65px;
+    margin-top: -38px;;
+  }
+
+
+
+  .cards-container {
+    display: flex;
+    gap: 50px;
+    margin-left:180px;
+    margin-top: 30px;
+}
+.card {
+    background: white;
+    padding: 30px;
+    width: 250px;
+    border-radius: 20px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+ .card::after {
+    content: "";
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    border: 3px solid #1C4545;
+}
+.card::before {
+    top: 0;
+    left: 0;
+    border-radius: 0 0 40px 0;
+}
+.card::after {
+    bottom: 0;
+    right: 0;
+    border-radius: 40px 0 0 0;
+}
+.icon {
+    width: 50px;
+    height: 50px;
+    background-color: #1C4545;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    margin-bottom: 10px;
+}
+.icon i {
+    color: white;
+    font-size: 24px;
+}
+.title {
+    font-weight: bold;
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+.description {
+    font-size: 20px;
+    color: #000000;
+    margin-bottom: 15px;
+}
+.read-more {
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: black;
+    text-decoration: none;
+}
+.read-more i {
+    font-size: 16px;
+}
+
+.style-reasons{
+    margin-left: 400px;
+    color: #000000;
+    font-weight: bold;
+    margin-top: 20px;
+}
+
+
+
+.section4-image {
+  max-width: 350%;
+  margin-top: 5px;
+  margin-left: 50px;
+}
+
+
+.feedback-image {
+  max-width: 40%;
+  margin-top: 5px;
+  margin-left: 460px;
+}
+.container-image {
+  display: flex;
+  justify-content: center; /* Centre les images */
+  align-items: center; /* Aligne verticalement */
+  gap: 20px; /* Espace entre les images */
+}
+
+.section-text{
+  color: #000000;
+  justify-content: center;
+  text-align: center; /* Centre le texte */
+
+
+}
+
+
+
+
+.cta-button {
+  padding: 12px 25px;
+  background-color: #1C4545; /* Couleur principale */
+  color: white;
+  border: none;
+  border-radius: 30px; /* Coins arrondis pour un effet plus doux */
+  font-size: 18px;
+  font-weight: bold;
+  text-transform: uppercase; /* Texte en majuscule */
+  cursor: pointer;
+  transition: all 0.3s ease; /* Transition fluide */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Ombre légère */
+}
+
+.cta-button:hover {
+  background-color: #45a049; /* Couleur légèrement plus foncée au survol */
+  transform: translateY(-4px); /* Effet de remontée lors du survol */
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Ombre plus prononcée */
+}
+
+.cta-button:active {
+  transform: translateY(2px); /* Effet de clic */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Ombre plus petite au clic */
+}
+
+.cta-button:focus {
+  outline: none; /* Enlève le contour par défaut */
+  border: 2px solid #1C4545; /* Bordure au focus pour un effet moderne */
+}
+
+

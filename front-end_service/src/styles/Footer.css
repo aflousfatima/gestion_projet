@@ -1,0 +1,52 @@
+/* Footer Styling */
+.footer {
+    background-color: #1C4545;
+    color:rgb(255, 255, 255);
+    margin-top: auto; /* Cela pousse le footer vers le bas, même s'il y a peu de contenu */
+    flex-direction: column;
+
+
+  }
+  
+  .footer-logo {
+    max-width: 140px;
+  }
+  
+  .footer-text {
+    font-size: 14px;
+    opacity: 0.8;
+  }
+  
+  .footer h5 {
+    font-size: 16px;
+    margin-bottom: 15px;
+    font-weight: 600;
+  }
+  
+  .footer-link {
+    color: white;
+    text-decoration: none;
+    transition: 0.3s;
+  }
+  
+
+  
+  /* Social Media Icons */
+  .social-icon {
+    font-size: 20px;
+    color: white;
+    transition: transform 0.3s, color 0.3s;
+  }
+  
+  .social-icon:hover {
+    color: #bb0a0a;
+    transform: scale(1.2);
+  }
+  
+  /* Footer Bottom */
+  .footer .border-top {
+    border-color: rgba(255, 255, 255, 0.1) !important;
+  }
+  .btn-style{
+    background-color: #FFA800;
+  }

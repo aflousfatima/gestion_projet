@@ -1,0 +1,130 @@
+/* Style global de la navbar */
+.navbar {
+  background-color: #1C4545;
+  padding: 0;
+  height: 60px;
+  border-radius: 50px;
+  margin-top: 20px;
+  color: #ffffff;
+  max-width: 90%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Style de l'image du logo */
+.navbar-logo {
+  width: 100px;
+  height: 40px;
+  margin-right: 20px;
+  margin-left: -10px;
+}
+
+/* Assurez-vous que les éléments s'affichent correctement */
+.navbar-nav {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.navbar-nav .nav-item .nav-link {
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: 500;
+  font-family: Garamond, serif;
+  margin-left: 20px;
+  transition: color 0.3s ease;
+}
+
+.navbar-nav .nav-item .nav-link:hover {
+  color: #f9ee18;
+}
+
+/* Container pour les boutons d'authentification */
+.auth-buttons {
+  display: flex;
+  gap: 15px;
+  margin-left: auto;
+}
+
+/* Style pour Log In */
+.style-login {
+  color: #000000;
+  background-color: #ffffff;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 400;
+  font-family: Garamond, serif;
+  padding: 8px 20px;
+  transition: color 0.3s ease;
+}
+
+/* Style pour Start for Free */
+.style-try {
+  color: #000000;
+  background-color: #ffffff;
+  border-radius: 50px;
+  font-size: 18px;
+  font-weight: 400;
+  font-family: Garamond, serif;
+  padding: 8px 20px;
+  transition: color 0.3s ease;
+}
+
+/* Navbar toggler */
+.navbar-toggler {
+  border: none;
+  background-color: transparent;
+}
+
+.navbar-toggler-icon {
+  background-color: #ecf0f1;
+}
+
+/* Responsive CSS */
+@media (max-width: 992px) {
+  .navbar-nav {
+    flex-direction: column; /* Les liens s'empilent sur petits écrans */
+    text-align: center;
+    width: 100%;
+  }
+
+  .navbar-nav .nav-item .nav-link {
+    margin-left: 0;
+    padding: 10px 0;
+  }
+
+  .auth-buttons {
+    justify-content: center;
+    margin-top: 10px;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .style-login,
+  .style-try {
+    font-size: 16px;
+    padding: 6px 15px;
+  }
+
+  .navbar-logo {
+    height: 30px;
+    width: 80px;
+  }
+}
+
+@media (max-width: 576px) {
+  .navbar-nav .nav-item .nav-link {
+    font-size: 14px;
+  }
+
+  .auth-buttons {
+    flex-direction: row; /* Boutons côte à côte */
+    gap: 10px;
+  }
+
+  .style-login,
+  .style-try {
+    font-size: 14px;
+    padding: 5px 10px;
+  }
+}

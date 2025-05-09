@@ -1,0 +1,621 @@
+/* styles/Dashboard-Add-Task.css */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.modal-content-task {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 880px;
+  width: 90%;
+  max-height: 95vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  animation: slideIn 0.3s ease-out;
+}
+
+.close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: #374151;
+}
+
+.modal-header {
+  text-align: center;
+  margin-bottom: 24px;
+
+}
+
+.modal-header h2 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.type-toggle {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  background: #f3f4f6;
+  padding: 2px;
+  border-radius: 20px;
+  margin-left:28%;
+}
+
+.toggle-btn {
+  padding: 8px 20px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.toggle-btn.active,
+.toggle-btn:hover {
+  background: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-main {
+  background: #f5f7f7;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 16px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group h3 {
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+
+.options-group label{
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #333;
+}
+.title-input,
+.description-input,
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.95rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2937;
+  transition: all 0.2s ease;
+}
+
+.title-input:focus,
+.description-input:focus,
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.title-input {
+  font-size: 1.25rem;
+  font-weight: 500;
+}
+
+.description-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.timeline-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.timeline-item {
+  flex: 1;
+  min-width: 120px;
+}
+
+/* New Options Row */
+.options-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.options-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.options-group h3 {
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+
+
+
+
+.severity-icon {
+  font-size: 1rem;
+}
+
+/* Tags */
+.tags-input {
+  position: relative;
+}
+
+.tags-input input {
+  width: 100%;
+  padding: 8px;
+  font-size: 0.85rem;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+
+  border-radius: 6px;
+}
+
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  background: #7dd3fc;
+  color: #1e3a8a;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tag-chip button {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: #1e3a8a;
+  cursor: pointer;
+}
+
+.tag-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 6px;
+  z-index: 10;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.tag-suggestion {
+  display: block;
+  padding: 6px;
+  font-size: 0.8rem;
+  color: #1f2937;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tag-suggestion:hover {
+  background: #f3f4f6;
+}
+
+/* Team */
+/* styles/Dashboard-Add-Task.css */
+/* ... (previous styles for other sections remain unchanged) */
+
+/* Team */
+/* styles/Dashboard-Add-Task.css */
+/* ... (previous styles for other sections remain unchanged) */
+
+/* Team */
+.team-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+}
+
+.select-members {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  min-height: 36px;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.select-members:hover {
+  border-color: #3b82f6;
+  background: #f9fafb;
+}
+
+.select-members:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.select-members .avatar-stack {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.select-members .placeholder1 {
+  font-size: 0.85rem;
+  color: #6b7280;
+  flex-grow: 1;
+}
+
+.dropdown-arrow {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.team-list-task {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 4px;
+}
+
+.team-member {
+  cursor: pointer;
+}
+
+.team-member-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #f3f4f6;
+  transition: all 0.2s ease;
+  justify-content: flex-start;
+}
+
+.team-member-inner:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.team-member-inner.selected {
+  background: #dbeafe;
+  border: 1px solid #3b82f6;
+}
+
+.user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.user-avatar-stack {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+}
+
+.user-avatar-stack.more {
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+}
+
+.user-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1f2937;
+  text-align: left;
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ... (rest of the styles remain unchanged) */
+
+/* ... (rest of the styles remain unchanged) */
+
+.modal-actions-task {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: -50px;
+}
+
+.btn-task {
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-task.primary {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.btn-task.primary:hover {
+  background: #2563eb;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-task.secondary {
+  background: #e5e7eb;
+  color: #333;
+}
+
+.btn-task.secondary:hover {
+  background: #d1d5db;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+
+
+
+/* styles/Dashboard-Add-Task.css */
+/* ... (previous styles for other sections remain unchanged) */
+
+/* Severity */
+.severity-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.severity-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.severity-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.severity-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--severity-color);
+  transition: width 0.3s ease;
+}
+
+.severity-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #f9fafb, #ffffff);
+}
+
+.severity-btn.active {
+  border-color: var(--severity-color);
+  background: linear-gradient(135deg, #ffffff, color-mix(in srgb, var(--severity-color) 10%, #ffffff));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--severity-color) 50%, transparent);
+  transform: translateY(-1px);
+}
+
+.severity-btn.active::before {
+  width: 6px;
+}
+
+.severity-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--severity-color);
+}
+
+.severity-label {
+  flex-grow: 1;
+  text-align: left;
+}
+
+/* ... (rest of the styles remain unchanged) */
+
+
+
+/* styles/Dashboard-Add-Task.css */
+/* ... (previous styles for other sections remain unchanged) */
+
+/* Priority */
+.priority-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.priority-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.priority-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff, #f9fafb);
+  color: #1f2937;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.priority-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--priority-color);
+  transition: width 0.3s ease;
+}
+
+.priority-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #f9fafb, #ffffff);
+}
+
+.priority-btn.active {
+  border-color: var(--priority-color);
+  background: linear-gradient(135deg, #ffffff, color-mix(in srgb, var(--priority-color) 10%, #ffffff));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--priority-color) 50%, transparent);
+  transform: translateY(-1px);
+}
+
+.priority-btn.active::before {
+  width: 6px;
+}
+
+.priority-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--priority-color);
+}
+
+.priority-label {
+  flex-grow: 1;
+  text-align: left;
+}
+
+/* ... (rest of the styles remain unchanged) */

@@ -1,0 +1,633 @@
+/* Importation d'une police moderne */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+/* Conteneur principal */
+.profile-container {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 40px;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(145deg, #ffffff 0%, #ffffff 100%);
+  min-height: 100vh;
+  color: #000000;
+  overflow: hidden;
+  position: relative;
+  margin-top:-30px;
+  width:1000px;
+}
+
+/* Effet de particules en arrière-plan (optionnel, pour un look futuriste) */
+.profile-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 1%, transparent 1%);
+  background-size: 20px 20px;
+  opacity: 0.3;
+  z-index: 0;
+}
+
+/* En-tête */
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 50px;
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.profile-title {
+  font-size: 2.8rem;
+  font-weight: 700;
+  color: #272525;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, #00ddeb, #ff6f91);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+
+/* Messages d'erreur et de succès */
+.error-message {
+  background: rgba(255, 82, 82, 0.2);
+  color: #ff8a80;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 82, 82, 0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.success-message {
+  background: rgba(76, 175, 80, 0.2);
+  color: #111211;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 30px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(76, 175, 80, 0.5);
+  position: relative;
+  z-index: 1;
+}
+
+/* Grille de contenu */
+.profile-content {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 30px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Carte principale (Informations personnelles) */
+.full-width {
+  grid-column: 1 / -1;
+  position: relative;
+  transform: translateY(-10px);
+}
+
+/* Autres cartes (positionnées avec un léger décalage) */
+.profile-card:not(.full-width) {
+  transform: translateY(20px);
+}
+
+.profile-card:nth-child(2) {
+  transform: translateY(10px) translateX(10px);
+}
+
+.profile-card:nth-child(3) {
+  transform: translateY(30px) translateX(-10px);
+}
+
+.profile-card:nth-child(4) {
+  transform: translateY(20px);
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .profile-content {
+    grid-template-columns: 1fr;
+  }
+  .profile-card:not(.full-width) {
+    transform: none;
+  }
+  .profile-card:nth-child(2),
+  .profile-card:nth-child(3),
+  .profile-card:nth-child(4) {
+    transform: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 20px;
+  }
+  .profile-title {
+    font-size: 2.2rem;
+  }
+  .profile-content {
+    gap: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 15px;
+  }
+  .profile-title {
+    font-size: 1.8rem;
+  }
+  .back-btn {
+    font-size: 1rem;
+    padding: 8px 16px;
+  }
+}
+
+/* Carte générique */
+.profile-card {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+}
+
+.profile-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Corps de carte */
+.card-body {
+  padding: 30px;
+  color: #2e2e30;
+}
+
+/* Section avatar */
+/* Avatar */
+/* Section avatar */
+.avatar-section {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.avatar:hover {
+  transform: scale(1.08);
+}
+
+.user-avatar-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #FF584A, #FF584A);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 2rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  border: 3px solid #FF584A;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.user-avatar-placeholder:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px #FF584A;
+}
+
+.avatar-upload {
+  margin-top: 10px;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgb(67, 66, 66);
+  border-radius: 6px;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+
+/* Formulaire générique */
+.profile-form,
+.notification-form,
+.password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-weight: 500;
+  font-size: 1rem;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  background: rgba(46, 45, 45, 0.961);
+  color: #333;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+/* Liste d'informations */
+.info-list p {
+  margin: 18px 0;
+  font-size: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-list p strong {
+  color: #333;
+  flex: 0 0 35%;
+}
+
+/* Tableau des rôles dans les projets */
+.project-roles-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.project-roles-table th {
+  padding: 1px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.project-roles-table td {
+  padding: 1px 9px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+.project-roles-table th {
+  text-align: center;
+  background: #333333ce;
+  font-weight: 400;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.project-roles-table td {
+  color: #333;
+  font-size: 1rem;
+}
+
+.view-project-btn {
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 300;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: #FF584A;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.view-project-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FF584A;
+}
+
+/* Boutons */
+.edit-btn,
+.save-btn,
+.cancel-btn {
+  padding: 8px 10px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: transform 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+.edit-btn {
+  background: linear-gradient(90deg, #f7cc77, #f7cc77);
+  color: #333;
+}
+
+.edit-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 221, 235, 0.6);
+}
+
+.save-btn {
+  background: linear-gradient(90deg, #20a8b7, #20a8b7);
+  color: #fdfdfd;
+}
+
+.save-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(40, 167, 69, 0.6);
+}
+
+.cancel-btn {
+  background: linear-gradient(90deg, #f46b6b, #fa3535);
+  color: #ffffff;
+}
+
+.cancel-btn:hover {
+  transform: translateY(-3px);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-start; /* ou 'center' si tu veux centré */
+  align-items: center;
+  gap: 10px; /* espace entre les boutons */
+}
+
+.form-actions button {
+  width: auto;      /* pour éviter qu'ils prennent toute la ligne */
+  display: inline-block;
+}
+
+
+/* Cases à cocher pour les notifications */
+.notification-form .form-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-form .form-group label {
+  font-weight: 500;
+  margin: 0;
+}
+
+.notification-form input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #00ddeb;
+}
+
+
+.profile-card {
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+.profile-card:nth-child(1) { animation-delay: 0.1s; }
+.profile-card:nth-child(2) { animation-delay: 0.2s; }
+.profile-card:nth-child(3) { animation-delay: 0.3s; }
+.profile-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .profile-title {
+    font-size: 2.4rem;
+  }
+  .card-header h2 {
+    font-size: 1.4rem;
+  }
+  .avatar {
+    width: 140px;
+    height: 140px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .profile-title {
+    font-size: 2rem;
+  }
+  .card-body {
+    padding: 20px;
+  }
+  .project-roles-table {
+    display: block;
+    overflow-x: auto;
+  }
+  .profile-container {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 15px;
+  }
+  .profile-title {
+    font-size: 1.6rem;
+  }
+  .back-btn {
+    font-size: 0.95rem;
+    padding: 8px 14px;
+  }
+  .avatar {
+    width: 120px;
+    height: 120px;
+  }
+  .form-group input,
+  .form-group textarea {
+    font-size: 0.95rem;
+  }
+  .edit-btn,
+  .save-btn,
+  .cancel-btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+}
+
+
+/* Disposition en colonnes */
+.info-columns,
+.form-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.info-column,
+.form-column {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Liste d'informations */
+.info-column p {
+  margin: 0;
+  font-size: 1rem;
+  display: flex;
+}
+
+.info-column p strong {
+  color: #333;
+  flex: 0 0 40%;
+}
+
+/* Formulaire */
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+
+
+.form-group input,
+.form-group textarea {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  background: #33333330;
+  color: #fffdfd;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  background: #333;
+  box-shadow: 0 0 0 3px rgba(56, 58, 58, 0.3);
+  outline: none;
+}
+
+.form-group input:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: #333;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+
+
+/* Animation d'apparition */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .info-columns,
+  .form-columns {
+    grid-template-columns: 1fr;
+  }
+  .avatar {
+    width: 80px;
+    height: 80px;
+  }
+  .card-body {
+    padding: 15px;
+  }
+  .card-header h2 {
+    font-size: 1.3rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .avatar {
+    width: 70px;
+    height: 70px;
+  }
+  .form-group input,
+  .form-group textarea {
+    font-size: 0.9rem;
+  }
+  .edit-btn,
+  .save-btn,
+  .cancel-btn {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+  }
+}
+
+
+
+/* Styles spécifiques à la section Informations personnelles */
+.profile-card.full-width {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  transition: transform 0.4s ease, box-shadow 0.4s ease;
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+.profile-card.full-width:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-body {
+  padding: 20px;
+  color: #333;
+  font-family: 'Poppins', sans-serif;
+}

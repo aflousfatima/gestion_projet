@@ -1,0 +1,9 @@
+
+@import "tailwindcss";
+
+
+
+body, html {
+  overflow-x: hidden; /* Empêche le débordement horizontal */
+  width: 100%; /* Assure que le contenu prend toute la largeur disponible */
+}

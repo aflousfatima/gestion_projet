@@ -1,0 +1,206 @@
+/* Container for the form */
+.container1 {
+    display: flex;
+    width: 108%;
+    max-width: 3000px;
+    gap: 20px; /* Espace entre le formulaire et l’image */
+    margin-top: 10px;
+    height: 480px;
+  }
+  
+  /* Form Box */
+  .form-box1 {
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border: 2px solid #1C4545;
+    background: #fff;
+    margin-left:80px;
+  }
+  
+  /* Horizontal Sections (Left and Right) */
+  .signup-sections {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 30px;
+    margin-left: -70px;
+    
+  }
+  
+  
+  
+  /* Personal Sign Up (Right Section) */
+  .personal-signup {
+    width: 48%;
+  }
+  
+  .checkbox-group1 {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: small;
+  }
+  
+  .submit-btn {
+    padding: 12px 20px;
+    background-color: #FFA800;
+    color: rgb(255, 255, 255);
+    border: none;
+    border-radius: 20px;
+    font-size: 16px;
+    width: 50%;
+    cursor: pointer;
+    margin-top: 20px;
+    margin-left:60px;
+  }
+  
+  .input-group {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  
+  .input-group i {
+    margin-right: 10px;
+  }
+  
+  .input-field {
+    width: 90%;
+    padding: 10px 12px 10px 40px; /* Laisse plus de place à gauche pour l'icône */
+    font-size: 14px;
+    border: 1px solid #212020b1;
+    padding-left: 40px; /* Décale le texte pour l'icône */
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    border-width: 1px;
+
+
+}
+  .custom-input {
+    width: 44%; /* Largeur de 40% pour ces deux champs */
+    margin-right: 11px; /* Espacement entre le champ Prénom et Nom */
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 13px; /* Positionne l'icône à l'intérieur du champ */
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #1C4545; /* Couleur de l'icône */
+  }
+
+  .vertical-line {
+    width: 1px;           /* Largeur de la ligne verticale */
+    height: 40%;          /* Hauteur de la ligne */
+    background-color: #1C4545; /* Couleur de la ligne */
+    margin: 5 15px;        /* Espacement autour de la ligne */
+    margin-left: -35px;
+}
+
+      
+      .or-text {
+        font-size: 10px;
+        font-weight: bold;
+        color: #1C4545;
+        margin-top:1px;
+        margin-left: -45px;
+
+      }
+
+.title1up{
+    font-size: 30px;
+margin-left:130px
+}
+.title2up{
+    margin-top: 10px;
+    font-size: 15px;
+margin-left:123px
+}
+.social-signup {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Crée 2 colonnes égales */
+    justify-items: center;  /* Centre les icônes horizontalement */
+    gap: 30px; /* Espacement uniforme entre les icônes, à la fois horizontal et vertical */
+    max-width: 500px;  /* Limite la largeur du conteneur */
+    padding: 90px 0; /* Ajoute un peu d'espacement vertical au conteneur */
+    margin: 0 auto;  /* Centre le conteneur */
+margin-top: -50px;
+margin-left:100px
+}
+  
+  .social-icon {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 60px;
+    border-radius: 50%;
+    text-decoration: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .social-icon:hover {
+    transform: scale(1.2);  /* Agrandit l'icône au survol */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);  /* Ombre douce au survol */
+  }
+  
+  .google-icon {
+    background-color: #eff3f5;  /* Couleur de fond de Google */
+    color: rgb(226, 35, 35);
+  }
+  
+  .facebook-icon {
+    background-color: #eff3f5;  /* Couleur de fond de Facebook */
+    color: #4267B2;
+  }
+  
+  .microsoft-icon {
+    background-color: #eff3f5;  /* Couleur de fond de Microsoft */
+    color: #00a4ef;
+  }
+  
+  .apple-icon {
+    background-color: #eff3f5;  /* Couleur de fond de Apple */
+    color: #000000;
+  }
+  
+
+  .law-custom{
+    color:#000000;
+  }
+
+/* Image */
+.signup-image {
+    width: 400px;
+    margin-top: -10px;
+    margin-right: 150px;
+    height:500px;
+}
+
+/* Responsive : Passe en colonne sur petits écrans */
+@media (max-width: 768px) {
+    .signup-container {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .signup-form,
+    .signup-image-container {
+        width: 100%;
+    }
+}
+.low-custom1{
+  color:#cc3434;
+  text-decoration: underline;
+}
+.quest{
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: small;
+  margin-left: -140px;
+}

@@ -1,5 +1,5 @@
 
-        package com.auth.authentification_service.unit.Controller;
+package com.auth.authentification_service.unit.Controller;
 
 import com.auth.authentification_service.Controller.AuthController;
 import com.auth.authentification_service.DTO.*;
