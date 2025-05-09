@@ -1,8 +1,10 @@
-package com.auth.authentification_service.Service;
+package com.auth.authentification_service.unit.Service;
 
 import com.auth.authentification_service.DTO.InvitationRequest;
 import com.auth.authentification_service.Entity.Invitation;
 import com.auth.authentification_service.Repository.InvitationRepository;
+import com.auth.authentification_service.Service.EmailService;
+import com.auth.authentification_service.Service.InvitationService;
 import jakarta.mail.MessagingException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

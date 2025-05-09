@@ -1,8 +1,11 @@
-package com.auth.authentification_service.Service;
+package com.auth.authentification_service.unit.Service;
 
 import com.auth.authentification_service.DTO.KeycloakTokenResponse;
 import com.auth.authentification_service.DTO.TokenDto;
 import com.auth.authentification_service.DTO.UserInfoDto;
+import com.auth.authentification_service.Service.KeycloakService;
+import com.auth.authentification_service.Service.LoginService;
+import com.auth.authentification_service.Service.VaultService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

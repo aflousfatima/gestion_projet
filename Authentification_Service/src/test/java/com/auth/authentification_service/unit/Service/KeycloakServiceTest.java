@@ -1,4 +1,4 @@
-package com.auth.authentification_service.Service;
+package com.auth.authentification_service.unit.Service;
 
 import com.auth.authentification_service.DTO.KeycloakTokenResponse;
 import com.auth.authentification_service.DTO.TokenDto;
@@ -8,6 +8,8 @@ import com.auth.authentification_service.Entity.ProjectMember;
 import com.auth.authentification_service.Entity.ProjectMemberId;
 import com.auth.authentification_service.Repository.InvitationRepository;
 import com.auth.authentification_service.Repository.ProjectMemberRepository;
+import com.auth.authentification_service.Service.KeycloakService;
+import com.auth.authentification_service.Service.VaultService;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
