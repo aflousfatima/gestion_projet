@@ -1,5 +1,6 @@
-package com.auth.authentification_service.Service;
+package com.auth.authentification_service.unit.Service;
 
+import com.auth.authentification_service.Service.VaultService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

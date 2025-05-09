@@ -1,6 +1,7 @@
-package com.auth.authentification_service.Repository;
+package com.auth.authentification_service.unit.Repository;
 
 import com.auth.authentification_service.Entity.Invitation;
+import com.auth.authentification_service.Repository.InvitationRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
