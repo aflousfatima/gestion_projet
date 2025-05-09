@@ -5,18 +5,21 @@ import com.auth.authentification_service.DTO.TokenDto;
 import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.Entity.Invitation;
 import com.auth.authentification_service.Entity.ProjectMember;
+import com.auth.authentification_service.Entity.ProjectMemberId;
 import com.auth.authentification_service.Repository.InvitationRepository;
 import com.auth.authentification_service.Repository.ProjectMemberRepository;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -24,9 +27,7 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -1002,6 +1003,159 @@ public class KeycloakServiceTest {
                 any(HttpEntity.class),
                 eq(KeycloakTokenResponse.class)
         );
+    }
+
+
+    @Test
+    void testGetTeamMembers_KeycloakError() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String adminToken = "fake-admin-token";
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            ProjectMemberId memberId1 = new ProjectMemberId(1L,"user-456");
+            ProjectMember member1 = new ProjectMember();
+            member1.setId(memberId1);
+            member1.setRoleInProject("DEVELOPER");
+
+            List<ProjectMember> members = List.of(member1);
+            when(projectMemberRepository.findAll()).thenReturn(members);
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    any(ParameterizedTypeReference.class)
+            )).thenThrow(new HttpClientErrorException(HttpStatus.INTERNAL_SERVER_ERROR, "Keycloak error"));
+
+            RuntimeException exception = assertThrows(
+                    RuntimeException.class,
+                    () -> keycloakServiceSpy.getTeamMembers(accessToken),
+                    "Une RuntimeException doit être levée si Keycloak échoue"
+            );
+
+            assertEquals("Erreur lors de la récupération des utilisateurs depuis Keycloak", exception.getMessage());
+            verify(projectMemberRepository, times(1)).findAll();
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    any(ParameterizedTypeReference.class)
+            );
+            verify(restTemplate, never()).getForEntity(anyString(), any());
+        }
+    }
+    @Test
+    void testGetTeamMembersbyProject_EmptyProjectMembers() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String projectId = "1";
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            when(projectMemberRepository.findByIdProjectId(1L)).thenReturn(Collections.emptyList());
+
+            List<Map<String, Object>> result = keycloakServiceSpy.getTeamMembersbyProject(accessToken, projectId);
+
+            assertTrue(result.isEmpty(), "La liste des membres doit être vide");
+            verify(projectMemberRepository, times(1)).findByIdProjectId(1L);
+            verify(restTemplate, never()).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), any(ParameterizedTypeReference.class));
+            verify(restTemplate, never()).getForEntity(anyString(), any());
+        }
+    }
+
+    @Test
+    void testGetTeamMembersbyProject_NullUserInfo() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String projectId = "1";
+        String adminToken = "fake-admin-token";
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            ProjectMemberId memberId1 = new ProjectMemberId(1L,"user-456");
+            ProjectMember member1 = new ProjectMember();
+            member1.setId(memberId1);
+            member1.setRoleInProject("DEVELOPER");
+
+            List<ProjectMember> members = List.of(member1);
+            when(projectMemberRepository.findByIdProjectId(1L)).thenReturn(members);
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/user-456"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    any(ParameterizedTypeReference.class)
+            )).thenReturn(new ResponseEntity<>(null, HttpStatus.OK));
+
+            List<Map<String, Object>> result = keycloakServiceSpy.getTeamMembersbyProject(accessToken, projectId);
+
+            assertTrue(result.isEmpty(), "La liste des membres doit être vide si les infos utilisateurs sont null");
+            verify(projectMemberRepository, times(1)).findByIdProjectId(1L);
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/user-456"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    any(ParameterizedTypeReference.class)
+            );
+            verify(restTemplate, never()).getForEntity(anyString(), any());
+        }
+    }
+    @Test
+    void testGetTeamMembersbyProject_KeycloakUserError() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String projectId = "1";
+        String adminToken = "fake-admin-token";
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            ProjectMemberId memberId1 = new ProjectMemberId(1L,"user-456");
+            ProjectMember member1 = new ProjectMember();
+            member1.setId(memberId1);
+            member1.setRoleInProject("DEVELOPER");
+
+            List<ProjectMember> members = List.of(member1);
+            when(projectMemberRepository.findByIdProjectId(1L)).thenReturn(members);
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/user-456"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    any(ParameterizedTypeReference.class)
+            )).thenThrow(new HttpClientErrorException(HttpStatus.NOT_FOUND, "User not found"));
+
+            List<Map<String, Object>> result = keycloakServiceSpy.getTeamMembersbyProject(accessToken, projectId);
+
+            assertTrue(result.isEmpty(), "La liste des membres doit être vide si la récupération de l'utilisateur échoue");
+            verify(projectMemberRepository, times(1)).findByIdProjectId(1L);
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/user-456"),
+                    eq(HttpMethod.GET),
+                    any(HttpEntity.class),
+                    any(ParameterizedTypeReference.class)
+            );
+            verify(restTemplate, never()).getForEntity(anyString(), any());
+        }
     }
 
 }
