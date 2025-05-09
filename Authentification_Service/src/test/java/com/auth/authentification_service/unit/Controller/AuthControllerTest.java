@@ -2,10 +2,7 @@
         package com.auth.authentification_service.unit.Controller;
 
 import com.auth.authentification_service.Controller.AuthController;
-import com.auth.authentification_service.DTO.LoginRequest;
-import com.auth.authentification_service.DTO.TokenDto;
-import com.auth.authentification_service.DTO.UserDto;
-import com.auth.authentification_service.DTO.UserInfoDto;
+import com.auth.authentification_service.DTO.*;
 import com.auth.authentification_service.Service.KeycloakService;
 import com.auth.authentification_service.Service.LoginService;
 import com.auth.authentification_service.TestSecurityConfig;
@@ -23,13 +20,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(AuthController.class)
@@ -520,6 +517,243 @@ public class AuthControllerTest {
                 .andExpect(content().string("Erreur serveur lors du changement de mot de passe"));
 
         verify(keycloakService).changePassword(token, passwordData);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenGetUserDetailsByAuthIdSuccess_thenReturnUserDetails() throws Exception {
+        // Given
+        String authId = "auth-123";
+        String token = "valid-token";
+        Map<String, Object> userDetails = new HashMap<>();
+        userDetails.put("id", "user-123");
+        userDetails.put("username", "testuser");
+        when(keycloakService.getUserDetailsByAuthId(authId, token)).thenReturn(userDetails);
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/users/" + authId)
+                        .header("Authorization", "Bearer " + token)
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("user-123"))
+                .andExpect(jsonPath("$.username").value("testuser"));
+
+        verify(keycloakService).getUserDetailsByAuthId(authId, token);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenGetUserDetailsByAuthIdInvalidToken_thenReturnUnauthorized() throws Exception {
+        // Given
+        String authId = "auth-123";
+        String token = "invalid-token";
+        when(keycloakService.getUserDetailsByAuthId(authId, token)).thenReturn(null);
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/users/" + authId)
+                        .header("Authorization", "Bearer " + token)
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").doesNotExist());
+
+        verify(keycloakService).getUserDetailsByAuthId(authId, token);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenGetUserDetailsByAuthIdServerError_thenReturnInternalServerError() throws Exception {
+        // Given
+        String authId = "auth-123";
+        String token = "valid-token";
+        when(keycloakService.getUserDetailsByAuthId(authId, token)).thenReturn(null);
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/users/" + authId)
+                        .header("Authorization", "Bearer " + token)
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").doesNotExist());
+
+        verify(keycloakService).getUserDetailsByAuthId(authId, token);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenDecodeTokenSuccess_thenReturnDecodedResult() throws Exception {
+        // Given
+        String token = "valid-token";
+        String result = "user-123";
+        when(loginService.decodeToken(token)).thenReturn(result);
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/decode-token")
+                        .header("Authorization", "Bearer " + token)
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(result));
+
+        verify(loginService).decodeToken(token);
+        verifyNoInteractions(keycloakService);
+    }
+
+    @Test
+    public void whenDecodeTokenMissingOrMalformed_thenReturnBadRequest() throws Exception {
+        // Given
+        String token = "invalid-token";
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/decode-token")
+                        .header("Authorization", token) // Pas de "Bearer "
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Le token est manquant ou mal formaté."));
+
+        verifyNoInteractions(loginService);
+        verifyNoInteractions(keycloakService);
+    }
+
+    @Test
+    public void whenDecodeTokenThrowsException_thenReturnInternalServerError() throws Exception {
+        // Given
+        String token = "valid-token";
+        when(loginService.decodeToken(token)).thenThrow(new RuntimeException("Decode error"));
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/auth/decode-token")
+                        .header("Authorization", "Bearer " + token)
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isInternalServerError())
+                .andExpect(content().string("Erreur lors du décodage du token : Decode error"));
+
+        verify(loginService).decodeToken(token);
+        verifyNoInteractions(keycloakService);
+    }
+
+    @Test
+    public void whenGetUsersByIdsSuccess_thenReturnUserList() throws Exception {
+        // Given
+        String token = "valid-token";
+        List<String> userIds = Arrays.asList("user-123", "user-456");
+        UserDto user1 = new UserDto();
+        user1.setId("user-123");
+        user1.setUsername("testuser1");
+        user1.setEmail("test1@example.com");
+        UserDto user2 = new UserDto();
+        user2.setId("user-456");
+        user2.setUsername("testuser2");
+        user2.setEmail("test2@example.com");
+        List<UserDto> users = Arrays.asList(user1, user2);
+        when(keycloakService.getUsersByIds(userIds)).thenReturn(users);
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/tasks_reponsibles/by-ids")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[\"user-123\", \"user-456\"]")
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("user-123"))
+                .andExpect(jsonPath("$[0].username").value("testuser1"))
+                .andExpect(jsonPath("$[0].email").value("test1@example.com"))
+                .andExpect(jsonPath("$[1].id").value("user-456"))
+                .andExpect(jsonPath("$[1].username").value("testuser2"))
+                .andExpect(jsonPath("$[1].email").value("test2@example.com"));
+
+        verify(keycloakService).getUsersByIds(userIds);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenGetUsersByIdsInvalidToken_thenReturnUnauthorized() throws Exception {
+        // Given
+        String token = "invalid-token";
+        List<String> userIds = Arrays.asList("user-123", "user-456");
+        when(keycloakService.getUsersByIds(userIds)).thenReturn(Collections.emptyList());
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/tasks_reponsibles/by-ids")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[\"user-123\", \"user-456\"]")
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        verify(keycloakService).getUsersByIds(userIds);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenGetUsersByIdsServerError_thenReturnInternalServerError() throws Exception {
+        // Given
+        String token = "valid-token";
+        List<String> userIds = Arrays.asList("user-123", "user-456");
+        when(keycloakService.getUsersByIds(userIds)).thenReturn(Collections.emptyList());
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/tasks_reponsibles/by-ids")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("[\"user-123\", \"user-456\"]")
+                        .with(SecurityMockMvcRequestPostProcessors.user("user-123").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        verify(keycloakService).getUsersByIds(userIds);
+        verifyNoInteractions(loginService);
+    }
+
+
+    @Test
+    public void whenGetProjectMembersByUserIdSuccess_thenReturnProjectMembers() throws Exception {
+        // Given
+        String userId = "user-123";
+        ProjectMemberDTO member1 = new ProjectMemberDTO(2L, "MEMBER");
+        ProjectMemberDTO member2 = new ProjectMemberDTO(3L, "LEADER");
+        List<ProjectMemberDTO> projectMembers = Arrays.asList(member1, member2);
+        when(keycloakService.getProjectMembersByUserId(userId)).thenReturn(projectMembers);
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/project-members/by-user")
+                        .param("userId", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].projectId").value(2L))
+                .andExpect(jsonPath("$[0].roleInProject").value("MEMBER"))
+                .andExpect(jsonPath("$[1].projectId").value(3L))
+                .andExpect(jsonPath("$[1].roleInProject").value("LEADER"));
+
+        verify(keycloakService).getProjectMembersByUserId(userId);
+        verifyNoInteractions(loginService);
+    }
+    @Test
+    public void whenGetProjectMembersByUserIdEmptyResult_thenReturnEmptyList() throws Exception {
+        // Given
+        String userId = "user-123";
+        when(keycloakService.getProjectMembersByUserId(userId)).thenReturn(Collections.emptyList());
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/project-members/by-user")
+                        .param("userId", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        verify(keycloakService).getProjectMembersByUserId(userId);
+        verifyNoInteractions(loginService);
+    }
+
+    @Test
+    public void whenGetProjectMembersByUserIdServerError_thenReturnInternalServerError() throws Exception {
+        // Given
+        String userId = "user-123";
+        when(keycloakService.getProjectMembersByUserId(userId)).thenReturn(Collections.emptyList());
+
+        // When & Then
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/project-members/by-user")
+                        .param("userId", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+
+        verify(keycloakService).getProjectMembersByUserId(userId);
         verifyNoInteractions(loginService);
     }
 }
