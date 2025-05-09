@@ -256,7 +256,7 @@ public class KeycloakService {
         }
     }
 
-    private String extractRoleIdFromResponse(String responseBody, String roleName) {
+    public String extractRoleIdFromResponse(String responseBody, String roleName) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode roles = mapper.readTree(responseBody);
