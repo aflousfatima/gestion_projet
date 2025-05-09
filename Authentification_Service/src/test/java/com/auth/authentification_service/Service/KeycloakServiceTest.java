@@ -1,22 +1,30 @@
 package com.auth.authentification_service.Service;
 
+import com.auth.authentification_service.DTO.KeycloakTokenResponse;
+import com.auth.authentification_service.DTO.TokenDto;
 import com.auth.authentification_service.DTO.UserDto;
 import com.auth.authentification_service.Entity.Invitation;
 import com.auth.authentification_service.Entity.ProjectMember;
 import com.auth.authentification_service.Repository.InvitationRepository;
 import com.auth.authentification_service.Repository.ProjectMemberRepository;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.Claim;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -24,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class KeycloakServiceTest {
 
     @Mock
@@ -47,7 +57,6 @@ public class KeycloakServiceTest {
 
     @BeforeEach
     public void setUp() {
-        MockitoAnnotations.openMocks(this);
         keycloakService = new KeycloakService(vaultService, restTemplate, invitationRepository, projectMemberRepository);
         keycloakServiceSpy = spy(keycloakService);
         setField(keycloakService, "keycloakUrl", "http://keycloak");
@@ -56,6 +65,7 @@ public class KeycloakServiceTest {
         setField(keycloakServiceSpy, "keycloakUrl", "http://keycloak");
         setField(keycloakServiceSpy, "keycloakRealm", "my-realm");
         setField(keycloakServiceSpy, "keycloakClientId", "my-client");
+        setupAdminTokenMock("secret123", "fake-admin-token");
     }
 
     private void setField(Object target, String fieldName, Object value) {
@@ -90,7 +100,6 @@ public class KeycloakServiceTest {
     }
 
     private void setupAssignRoleToUserMock(String userId, String role, String accessToken, String rolesJson, HttpStatus rolesStatus, HttpStatus roleMappingStatus) {
-        // Mock the GET request to retrieve roles
         when(restTemplate.exchange(
                 eq("http://keycloak/admin/realms/my-realm/roles"),
                 eq(HttpMethod.GET),
@@ -98,7 +107,6 @@ public class KeycloakServiceTest {
                 eq(String.class)
         )).thenReturn(new ResponseEntity<>(rolesJson, rolesStatus));
 
-        // Mock the POST request to assign the role
         when(restTemplate.exchange(
                 eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/role-mappings/realm"),
                 eq(HttpMethod.POST),
@@ -112,15 +120,10 @@ public class KeycloakServiceTest {
             Method method = KeycloakService.class.getDeclaredMethod("assignRoleToUser", String.class, String.class, String.class);
             method.setAccessible(true);
             method.invoke(keycloakServiceSpy, userId, roleName, accessToken);
-        } catch (InvocationTargetException e) {
-            // Propagate the cause of the InvocationTargetException
-            Throwable cause = e.getCause();
-            if (cause instanceof RuntimeException) {
-                throw (RuntimeException) cause;
-            } else {
-                throw new RuntimeException("Erreur lors de l'invocation de assignRoleToUser", cause);
-            }
         } catch (Exception e) {
+            if (e.getCause() instanceof RuntimeException) {
+                throw (RuntimeException) e.getCause();
+            }
             throw new RuntimeException("Erreur lors de l'invocation de assignRoleToUser", e);
         }
     }
@@ -606,4 +609,399 @@ public class KeycloakServiceTest {
                 eq(String.class)
         );
     }
+
+    @Test
+    void testUpdateUser_Success() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String adminToken = "fake-admin-token";
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("firstName", "UpdatedFirstName");
+        userData.put("lastName", "UpdatedLastName");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
+
+            ResponseEntity<String> response = keycloakServiceSpy.updateUser(accessToken, userData);
+
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertEquals("Profil mis à jour avec succès", response.getBody());
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        }
+    }
+
+    @Test
+    void testUpdateUser_Failure_Non204Status() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String adminToken = "fake-admin-token";
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("firstName", "UpdatedFirstName");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenReturn(new ResponseEntity<>("Erreur", HttpStatus.BAD_REQUEST));
+
+            ResponseEntity<String> response = keycloakServiceSpy.updateUser(accessToken, userData);
+
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals("Échec de la mise à jour du profil", response.getBody());
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        }
+    }
+
+    @Test
+    void testUpdateUser_HttpClientErrorException() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String adminToken = "fake-admin-token";
+        Map<String, Object> userData = new HashMap<>();
+        userData.put("lastName", "UpdatedLastName");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Erreur Keycloak"));
+
+            RuntimeException exception = assertThrows(
+                    RuntimeException.class,
+                    () -> keycloakServiceSpy.updateUser(accessToken, userData),
+                    "Une RuntimeException doit être levée en cas d'erreur HTTP"
+            );
+
+            assertTrue(exception.getMessage().contains("Erreur lors de la mise à jour de l'utilisateur"));
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        }
+    }
+
+    @Test
+    void testUpdateUser_EmptyUserData() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String adminToken = "fake-admin-token";
+        Map<String, Object> userData = new HashMap<>();
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
+
+            ResponseEntity<String> response = keycloakServiceSpy.updateUser(accessToken, userData);
+
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertEquals("Profil mis à jour avec succès", response.getBody());
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        }
+    }
+
+    @Test
+    void testChangePassword_Success() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String email = "test@example.com";
+        String adminToken = "fake-admin-token";
+        Map<String, String> passwordData = new HashMap<>();
+        passwordData.put("currentPassword", "oldPassword");
+        passwordData.put("newPassword", "newPassword");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            Claim emailClaim = mock(Claim.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            when(decodedJWT.getClaim("email")).thenReturn(emailClaim);
+            when(emailClaim.asString()).thenReturn(email);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(new TokenDto("access-token", "refresh-token")).when(keycloakServiceSpy).authenticateUser(email, "oldPassword");
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/reset-password"),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
+
+            ResponseEntity<String> response = keycloakServiceSpy.changePassword(accessToken, passwordData);
+
+            assertEquals(HttpStatus.OK, response.getStatusCode());
+            assertEquals("Mot de passe changé avec succès", response.getBody());
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/reset-password"),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void testChangePassword_Failure_NullEmailInToken() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        Map<String, String> passwordData = new HashMap<>();
+        passwordData.put("currentPassword", "oldPassword");
+        passwordData.put("newPassword", "newPassword");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            Claim emailClaim = mock(Claim.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            when(decodedJWT.getClaim("email")).thenReturn(emailClaim);
+            when(emailClaim.asString()).thenReturn(null);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            ResponseEntity<String> response = keycloakServiceSpy.changePassword(accessToken, passwordData);
+
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals("Email non trouvé dans le token", response.getBody());
+            verify(restTemplate, never()).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
+        }
+    }
+
+    @Test
+    void testChangePassword_Failure_IncorrectCurrentPassword() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String email = "test@example.com";
+        Map<String, String> passwordData = new HashMap<>();
+        passwordData.put("currentPassword", "wrongPassword");
+        passwordData.put("newPassword", "newPassword");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            Claim emailClaim = mock(Claim.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            when(decodedJWT.getClaim("email")).thenReturn(emailClaim);
+            when(emailClaim.asString()).thenReturn(email);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doThrow(new RuntimeException("Invalid credentials")).when(keycloakServiceSpy).authenticateUser(email, "wrongPassword");
+
+            ResponseEntity<String> response = keycloakServiceSpy.changePassword(accessToken, passwordData);
+
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals("Mot de passe actuel incorrect", response.getBody());
+            verify(restTemplate, never()).exchange(anyString(), any(HttpMethod.class), any(HttpEntity.class), eq(String.class));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void testChangePassword_Failure_Non204Status() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String email = "test@example.com";
+        String adminToken = "fake-admin-token";
+        Map<String, String> passwordData = new HashMap<>();
+        passwordData.put("currentPassword", "oldPassword");
+        passwordData.put("newPassword", "newPassword");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            Claim emailClaim = mock(Claim.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            when(decodedJWT.getClaim("email")).thenReturn(emailClaim);
+            when(emailClaim.asString()).thenReturn(email);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(new TokenDto("access-token", "refresh-token")).when(keycloakServiceSpy).authenticateUser(email, "oldPassword");
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/reset-password"),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenReturn(new ResponseEntity<>("Erreur", HttpStatus.BAD_REQUEST));
+
+            ResponseEntity<String> response = keycloakServiceSpy.changePassword(accessToken, passwordData);
+
+            assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+            assertEquals("Échec du changement de mot de passe", response.getBody());
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/reset-password"),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void testChangePassword_HttpClientErrorException() {
+        String accessToken = "fake-access-token";
+        String userId = "user-123";
+        String email = "test@example.com";
+        String adminToken = "fake-admin-token";
+        Map<String, String> passwordData = new HashMap<>();
+        passwordData.put("currentPassword", "oldPassword");
+        passwordData.put("newPassword", "newPassword");
+
+        try (MockedStatic<JWT> jwtMock = Mockito.mockStatic(JWT.class)) {
+            DecodedJWT decodedJWT = mock(DecodedJWT.class);
+            Claim emailClaim = mock(Claim.class);
+            when(decodedJWT.getSubject()).thenReturn(userId);
+            when(decodedJWT.getClaim("email")).thenReturn(emailClaim);
+            when(emailClaim.asString()).thenReturn(email);
+            jwtMock.when(() -> JWT.decode(accessToken)).thenReturn(decodedJWT);
+
+            doReturn(new TokenDto("access-token", "refresh-token")).when(keycloakServiceSpy).authenticateUser(email, "oldPassword");
+
+            doReturn(adminToken).when(keycloakServiceSpy).getAdminToken();
+
+            when(restTemplate.exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/reset-password"),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            )).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Erreur Keycloak"));
+
+            RuntimeException exception = assertThrows(
+                    RuntimeException.class,
+                    () -> keycloakServiceSpy.changePassword(accessToken, passwordData),
+                    "Une RuntimeException doit être levée en cas d'erreur HTTP"
+            );
+
+            assertTrue(exception.getMessage().contains("Erreur lors du changement de mot de passe"));
+            verify(restTemplate, times(1)).exchange(
+                    eq("http://keycloak/admin/realms/my-realm/users/" + userId + "/reset-password"),
+                    eq(HttpMethod.PUT),
+                    any(HttpEntity.class),
+                    eq(String.class)
+            );
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void testAuthenticateUser_Success() throws Exception {
+        String email = "test@example.com";
+        String password = "password123";
+        String clientSecret = "secret123";
+        String tokenUrl = "http://keycloak/realms/my-realm/protocol/openid-connect/token";
+        KeycloakTokenResponse tokenResponse = new KeycloakTokenResponse();
+        tokenResponse.setAccessToken("access-token");
+        tokenResponse.setRefreshToken("refresh-token");
+
+        when(vaultService.getClientSecret()).thenReturn(clientSecret);
+
+        when(restTemplate.exchange(
+                eq(tokenUrl),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(KeycloakTokenResponse.class)
+        )).thenReturn(new ResponseEntity<>(tokenResponse, HttpStatus.OK));
+
+        TokenDto result = keycloakService.authenticateUser(email, password);
+
+        assertNotNull(result);
+        assertEquals("access-token", result.getAccessToken());
+        assertEquals("refresh-token", result.getRefreshToken());
+        verify(restTemplate, times(1)).exchange(
+                eq(tokenUrl),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(KeycloakTokenResponse.class)
+        );
+    }
+
+    @Test
+    void testAuthenticateUser_Failure_Non200Status() {
+        String email = "test@example.com";
+        String password = "password123";
+        String clientSecret = "secret123";
+        String tokenUrl = "http://keycloak/realms/my-realm/protocol/openid-connect/token";
+
+        when(vaultService.getClientSecret()).thenReturn(clientSecret);
+
+        when(restTemplate.exchange(
+                eq(tokenUrl),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(KeycloakTokenResponse.class)
+        )).thenReturn(new ResponseEntity<>(null, HttpStatus.BAD_REQUEST));
+
+        Exception exception = assertThrows(
+                Exception.class,
+                () -> keycloakService.authenticateUser(email, password),
+                "Une exception doit être levée si l'authentification échoue"
+        );
+
+        assertEquals("Échec de l'authentification avec Keycloak", exception.getMessage());
+        verify(restTemplate, times(1)).exchange(
+                eq(tokenUrl),
+                eq(HttpMethod.POST),
+                any(HttpEntity.class),
+                eq(KeycloakTokenResponse.class)
+        );
+    }
+
 }
