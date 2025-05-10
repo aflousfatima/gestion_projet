@@ -16,6 +16,7 @@ public class TaskCalendarDTO {
         this.dueDate = endDate;
     }
 
+    public TaskCalendarDTO(){}
     // Getters and Setters
     public Long getId() {
         return id;

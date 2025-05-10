@@ -17,6 +17,7 @@ public class WorkItemHistoryDTO {
         this.timestamp = timestamp;
     }
 
+    public WorkItemHistoryDTO(){}
     public Long getId() {
         return id;
     }

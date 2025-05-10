@@ -59,8 +59,13 @@ public class TaskController {
             @PathVariable Long userStoryId,
             @RequestBody TaskDTO taskDTO,
             @RequestHeader("Authorization") String token) {
-        TaskDTO createdTask = taskService.createTask(projectId ,userStoryId ,taskDTO, token);
-        return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
+        try {
+            TaskDTO createdTask = taskService.createTask(projectId, userStoryId, taskDTO, token);
+            return new ResponseEntity<>(createdTask, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid token for createTask: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @Operation(summary = "Mettre à jour une tâche",
@@ -76,8 +81,16 @@ public class TaskController {
             @PathVariable Long taskId,
             @RequestBody TaskDTO taskDTO,
             @RequestHeader("Authorization") String token) {
-        TaskDTO updatedTask = taskService.updateTask(taskId, taskDTO, token);
-        return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+        try {
+            TaskDTO updatedTask = taskService.updateTask(taskId, taskDTO, token);
+            return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            logger.warn("Task not found for ID: {}", taskId);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid token for updateTask: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
     }
     @Operation(summary = "Supprimer une tâche",
             description = "Cette méthode permet de supprimer une tâche spécifique.")
@@ -87,8 +100,13 @@ public class TaskController {
     })
     @DeleteMapping("/{taskId}/deleteTask")
     public ResponseEntity<Void> deleteTask(@PathVariable Long taskId) {
-        taskService.deleteTask(taskId);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        try {
+            taskService.deleteTask(taskId);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (NoSuchElementException e) {
+            logger.warn("Task not found for ID: {}", taskId);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @Operation(summary = "Récupérer une tâche",
@@ -303,8 +321,16 @@ public class TaskController {
             @PathVariable Long taskId,
             @PathVariable Long dependencyId,
             @RequestHeader("Authorization") String token) {
-        TaskDTO updatedTask = taskService.addDependency(taskId, dependencyId, token);
-        return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+        try {
+            TaskDTO updatedTask = taskService.addDependency(taskId, dependencyId, token);
+            return new ResponseEntity<>(updatedTask, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            logger.warn("Task or dependency not found: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid token for addDependency: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
     }
     @Operation(summary = "Supprimer une dépendance d'une tâche",
             description = "Cette méthode permet de supprimer une dépendance d'une tâche spécifique.")

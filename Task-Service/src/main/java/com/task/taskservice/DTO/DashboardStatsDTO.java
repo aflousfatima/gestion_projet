@@ -27,6 +27,8 @@ public class DashboardStatsDTO {
         this.tasksByPriority = tasksByPriority;
     }
 
+    public DashboardStatsDTO(){}
+
     // Getters and Setters
     public long getCompletedTasks() {
         return completedTasks;

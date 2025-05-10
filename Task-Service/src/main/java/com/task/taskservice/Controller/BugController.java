@@ -23,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api/project/bugs")
@@ -55,8 +56,13 @@ public class BugController {
             @PathVariable Long userStoryId,
             @RequestBody BugDTO bugDTO,
             @RequestHeader("Authorization") String token) {
-        BugDTO createdBug = bugService.createBug(projectId, userStoryId, bugDTO, token);
-        return new ResponseEntity<>(createdBug, HttpStatus.CREATED);
+        try {
+            BugDTO createdBug = bugService.createBug(projectId, userStoryId, bugDTO, token);
+            return new ResponseEntity<>(createdBug, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid token for createBug: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
     }
     @Operation(summary = "Mettre à jour un bug",
             description = "Cette méthode permet de modifier un bug existant.")
@@ -71,8 +77,16 @@ public class BugController {
             @PathVariable Long bugId,
             @RequestBody BugDTO bugDTO,
             @RequestHeader("Authorization") String token) {
-        BugDTO updatedBug = bugService.updateBug(bugId, bugDTO, token);
-        return new ResponseEntity<>(updatedBug, HttpStatus.OK);
+        try {
+            BugDTO updatedBug = bugService.updateBug(bugId, bugDTO, token);
+            return new ResponseEntity<>(updatedBug, HttpStatus.OK);
+        } catch (NoSuchElementException e) {
+            logger.warn("Bug not found for ID: {}", bugId);
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
+        } catch (IllegalArgumentException e) {
+            logger.warn("Invalid token for updateBug: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
     }
     @Operation(summary = "Supprimer un bug",
             description = "Cette méthode permet de supprimer un bug spécifique.")
@@ -82,8 +96,13 @@ public class BugController {
     })
     @DeleteMapping("/{bugId}/deleteBug")
     public ResponseEntity<Void> deleteBug(@PathVariable Long bugId) {
-        bugService.deleteBug(bugId);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        try {
+            bugService.deleteBug(bugId);
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } catch (NoSuchElementException e) {
+            logger.warn("Bug not found for ID: {}", bugId);
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
     @Operation(summary = "Récupérer un bug",
             description = "Cette méthode permet de récupérer les détails d'un bug spécifique dans une user story et un projet.")
