@@ -35,6 +35,8 @@ public class UserStoryDTO {
                 : null; // Ou Collections.emptyList() si vous préférez une liste vide
     }
 
+    public UserStoryDTO() {};
+
     public Long getId() {
         return id;
     }
