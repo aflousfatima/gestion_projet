@@ -5,7 +5,7 @@ import com.auth.authentification_service.Controller.AuthController;
 import com.auth.authentification_service.DTO.*;
 import com.auth.authentification_service.Service.KeycloakService;
 import com.auth.authentification_service.Service.LoginService;
-import com.auth.authentification_service.TestSecurityConfig;
+import com.auth.authentification_service.unit.config.TestSecurityConfig;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +22,6 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.util.*;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

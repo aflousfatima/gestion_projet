@@ -53,7 +53,7 @@ public class KeycloakService {
     }
 
     public String getAdminToken() {
-        String clientSecret = vaultService.getClientSecret();
+        String clientSecret = vaultService.getTestClientSecret();
         System.out.println("Client Secret utilisé : " + clientSecret);
         String tokenUrl = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/token";
 

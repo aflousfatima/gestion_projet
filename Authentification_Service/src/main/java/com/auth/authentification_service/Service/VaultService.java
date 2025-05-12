@@ -25,4 +25,14 @@ public class VaultService {
         }
         return "Aucun secret trouvé dans Vault.";
     }
+
+    public String getTestClientSecret() {
+        // Lire un secret spécifique depuis Vault à l'emplacement "secret/keycloak"
+        VaultResponse response = vaultTemplate.read("secret/keycloak");
+        if (response != null && response.getData() != null) {
+            String secret = (String) response.getData().get("credentials.secret.test");
+            return  secret;
+        }
+        return "Aucun secret trouvé dans Vault.";
+    }
 }
