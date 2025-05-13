@@ -1,5 +1,7 @@
+@SignUp
 Feature: User Signup
 
+  @SuccessfulSignUp
   Scenario: Successful signup with valid information
     Given I am on the signup page
     When I fill the form with valid information
@@ -7,6 +9,7 @@ Feature: User Signup
     Then I see a signup confirmation message
     And a user is created in Keycloak
 
+  @FailedSignUp
   Scenario: Failed signup with an already used email
     Given I am on the signup page
     When I fill the form with an already used email

@@ -39,7 +39,7 @@ public class LoginService {
 
     public TokenDto authenticateUser(String email, String password) throws Exception {
         System.out.println("Récupération du client secret depuis Vault...");
-        String keycloakClientSecret = vaultService.getClientSecret();
+        String keycloakClientSecret = vaultService.getTestClientSecret();
         System.out.println("Client Secret from Vault: " + keycloakClientSecret);
         String tokenUrl = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/token";
         System.out.println("URL de token : " + tokenUrl);
