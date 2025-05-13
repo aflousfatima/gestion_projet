@@ -43,6 +43,7 @@ export default function SignupPage() {
     null
   );
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   // Vérifier le jeton au chargement de la page
   useEffect(() => {
     const verifyToken = async () => {
@@ -97,41 +98,49 @@ export default function SignupPage() {
       console.log("Réponse du serveur:", response);
 
       if (response.status === 201) {
-        alert("Inscription réussie! Vérifiez votre email pour confirmer.");
-        router.replace("/authentification/signin"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
+        setSuccessMessage(
+          "Registration successful! Please check your email to confirm ."
+              );
+        setTimeout(() => {
+          router.replace("/authentification/signin");
+        }, 1000); // Redirection après 2 secondes
       } else {
-        alert(`Erreur : ${response.data.message}`);
+        setError(response.data.message);
       }
     } catch (err: unknown) {
-      // Utiliser "unknown" au lieu de "AxiosError"
-      // Vérifier si l'erreur est une instance de AxiosError
-      if (err instanceof AxiosError) {
+      if (err instanceof AxiosError && err.response && err.response.data) {
         console.error("❌ Erreur lors de l'inscription :", err);
-        if (err.response && err.response.data) {
-          setError(err.response.data as string); // Typage explicite du message d'erreur
-        } else {
-          setError(
-            "Une erreur est survenue lors de l'inscription. Veuillez réessayer."
-          );
-        }
+        setError(err.response.data as string);
       } else {
-        // Gérer les autres types d'erreurs (non-Axios)
         console.error("❌ Erreur inattendue :", err);
         setError("Une erreur inattendue est survenue. Veuillez réessayer.");
       }
     }
   };
-  if (error) {
+
+if (error) {
     return (
-      <div className="container1">
-        <div className="form-box1">
-          <h3 className="title1up">Erreur</h3>
-          <p>{error}</p>
-          <Link href="/authentification/signin">Retour à la connexion</Link>
+        <div className="feedback-container">
+            <div className="feedback-box">
+                <h3 className="feedback-title error-title">Error</h3>
+                <p className="feedback-message error-message">Registration failed! Email Already Exist , please Try with another email .</p>
+                <Link href="/authentification/signup" className="feedback-link">Go Back To SignUp</Link>
+            </div>
         </div>
-      </div>
     );
-  }
+}
+
+if (successMessage) {
+    return (
+        <div className="feedback-container">
+            <div className="feedback-box">
+                <h3 className="feedback-title success-title">Success</h3>
+          <p className="success-message">{successMessage}</p>
+      <p className="feedback-info">Redirect to signin...</p>
+            </div>
+        </div>
+    );
+}
   return (
     <div className="container1">
       <div className=" form-box1">

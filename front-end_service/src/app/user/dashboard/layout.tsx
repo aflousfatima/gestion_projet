@@ -257,7 +257,8 @@ export default function DashboardLayout({
         {},
         { withCredentials: true }
       );
-      router.push("/authentification/signin");
+      if (isLoading) return <div><img src="/loading.svg" alt="Loading" className="loading-img" /></div>;
+      if (!accessToken) router.push("/authentification/signin");
       console.log("Déconnexion réussie");
     } catch (error) {
       console.error("Erreur lors de la déconnexion :", error);

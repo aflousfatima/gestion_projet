@@ -18,7 +18,10 @@ export default function SigninPage() {
   });
   const router = useRouter(); // Initialisation de useRouter pour la redirection
   const { login } = useAuth(); // Utilisation du contexte Auth pour accéder à la fonction login
-
+const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({
+    text: "",
+    type: null,
+  });
   useEffect(() => {
     router.prefetch("/company-registration"); // Précharge la page en cache
   }, []);
@@ -30,47 +33,50 @@ export default function SigninPage() {
     }));
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+ const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setMessage({ text: "", type: null });
 
     try {
-      // Log des données envoyées pour l'inscription
       console.log("Données envoyées pour l'inscription:", formData);
-      console.log(process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL);
+      console.log("API URL:", process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL);
 
-      // Envoi de la requête POST au backend Spring Boot
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/login`,
         formData,
         { withCredentials: true }
       );
 
-      // Log de la réponse du serveur
       console.log("Réponse du serveur:", response);
 
       if (response.status === 200) {
-        alert("Login réussie!");
-        // Récupération du access_token dans la réponse et stockage dans le contexte
+        setMessage({ text: "Login Successful!", type: "success" });
         const accessToken = response.data.access_token;
         console.log("Access Token récupéré:", accessToken);
-        login(accessToken); // Appeler la fonction `login` du contexte pour stocker le token
-
-        // Redirection vers la page de création d'entreprise après une connexion réussie
-        router.replace("/company/company-choice"); // Remplacez "/entreprise/creation" par l'URL de votre page entreprise
+        login(accessToken);
+        // Ajouter un délai pour s'assurer que le message est visible avant la redirection
+        setTimeout(() => {
+          router.replace("/company/company-choice");
+        }, 1000);
       } else {
-        alert(`Erreur : ${response.data.message}`);
+        setMessage({ text: response.data.message || "Erreur inconnue", type: "error" });
       }
     } catch (error) {
-      console.error("Erreur lors de l'inscription :", error);
-      alert("Erreur dans l'inscription. Veuillez réessayer.");
+      console.error("Erreur lors de la connexion:", error);
+      setMessage({ text: "Error trying to connect. Please Retry.", type: "error" });
     }
   };
 
   return (
     <div className="container2">
       <div className=" form-box">
-      <h3 className="title1">Welcome Back to AGILIA</h3>
-      <h2 className="title2">Sign in to access your workspace</h2>
+        <h3 className="title1">Welcome Back to AGILIA</h3>
+        <h2 className="title2">Sign in to access your workspace</h2>
+        {message.text && (
+          <div className={`message ${message.type === "success" ? "success-message" : "error-message"}`}>
+            {message.text}
+          </div>
+        )}
         {/* Horizontal Signup Sections */}
         <div className="signin-sections">
           {/* Social Sign Up Section (Left) */}
@@ -79,7 +85,11 @@ export default function SigninPage() {
             <a href="#" className="social-iconin" title="Continuer avec Google">
               <img src="/google.png" alt="Google" className="social-img" />
             </a>
-            <a href="#" className="social-iconin" title="Continuer avec Facebook">
+            <a
+              href="#"
+              className="social-iconin"
+              title="Continuer avec Facebook"
+            >
               <img src="/facebook.png" alt="Facebook" className="social-img" />
             </a>
             <a
@@ -107,8 +117,7 @@ export default function SigninPage() {
           {/* Personal Info Sign Up Section (Right) */}
           <div className="personal-signin">
             <form onSubmit={handleSubmit}>
-              
-             <div className="input-group">
+              <div className="input-group">
                 <i className="fas fa-envelope input-icon"></i>
                 <input
                   type="email"
@@ -158,8 +167,8 @@ export default function SigninPage() {
               </p>
             </form>
           </div>
+        </div>
       </div>
-    </div>
       <div className="signin-image-container">
         <img
           src="/signin.png"
@@ -168,6 +177,6 @@ export default function SigninPage() {
           className="signin-image"
         />
       </div>
-      </div>     
+    </div>
   );
 }
