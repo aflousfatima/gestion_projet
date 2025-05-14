@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.List;
 
-@FeignClient(name = "task-service", url = "http://localhost:8086")  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
+@FeignClient(name = "task-service", url = "http://localhost:8086",fallback = TaskClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface TaskClient {
 
     @GetMapping("/api/project/tasks/{projectId}/{userStoryId}")
