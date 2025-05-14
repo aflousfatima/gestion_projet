@@ -1,3 +1,6 @@
+fastapi
+uvicorn
+pydantic
 pandas
 numpy
 optuna
@@ -9,3 +12,6 @@ scipy
 matplotlib 
 seaborn
 joblib
+python-dotenv
+pytest
+httpx
