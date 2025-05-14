@@ -9,6 +9,36 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+def calculate_temporal_features(task_df: pd.DataFrame) -> pd.DataFrame:
+    """Calcule les features temporelles à partir des dates."""
+    task_df = task_df.copy()
+    task_df['creationDate'] = pd.to_datetime(task_df['creationDate'])
+    task_df['startDate'] = pd.to_datetime(task_df['startDate'], errors='coerce')
+    task_df['dueDate'] = pd.to_datetime(task_df['dueDate'], errors='coerce')
+    task_df['days_to_start'] = (task_df['startDate'] - task_df['creationDate']).dt.days.fillna(0)
+    task_df['days_to_due'] = (task_df['dueDate'] - task_df['creationDate']).dt.days.fillna(30)
+    task_df['days_to_complete'] = -1
+    task_df['planned_duration'] = (task_df['days_to_due'] - task_df['days_to_start']).clip(lower=1)
+    return task_df
+
+def calculate_num_assigned_users(assigned_user_ids: str) -> int:
+    """Calcule le nombre d'utilisateurs assignés à partir de assignedUserIds."""
+    if assigned_user_ids and isinstance(assigned_user_ids, str):
+        return len(assigned_user_ids.split(','))
+    return 0
+
+def calculate_derived_features(task_df: pd.DataFrame) -> pd.DataFrame:
+    """Calcule les features dérivées comme time_per_user, complexity_score, etc."""
+    task_df = task_df.copy()
+    task_df['num_assigned_users'] = task_df['assignedUserIds'].apply(calculate_num_assigned_users)
+    task_df['time_per_user'] = task_df['estimationTime'] / task_df['num_assigned_users'].clip(lower=1)
+    task_df['complexity_score'] = task_df['itemtags'].apply(
+        lambda x: len(x.split(',')) if x and isinstance(x, str) else 0)
+    task_df['is_urgent'] = task_df['itemtags'].apply(lambda x: 1 if 'urgent' in x else 0)
+    task_df['low_progress'] = task_df['progress'].apply(lambda x: 1 if x < 50 else 0)
+    task_df['is_short_task'] = task_df['estimationTime'].apply(lambda x: 1 if x < 200 else 0)
+    return task_df
+
 def preprocess_task(task: dict, encoder: OneHotEncoder, tfidf: TfidfVectorizer, 
                    scaler: StandardScaler, all_tags: set, features: list, 
                    expected_features: list) -> Tuple[pd.DataFrame, int, str]:
@@ -23,26 +53,13 @@ def preprocess_task(task: dict, encoder: OneHotEncoder, tfidf: TfidfVectorizer,
     task_df['assignedUserIds'] = task_df['assignedUserIds'].fillna('')
     
     # Features temporelles
-    task_df['creationDate'] = pd.to_datetime(task_df['creationDate'])
-    task_df['startDate'] = pd.to_datetime(task_df['startDate'], errors='coerce')
-    task_df['dueDate'] = pd.to_datetime(task_df['dueDate'], errors='coerce')
-    task_df['days_to_start'] = (task_df['startDate'] - task_df['creationDate']).dt.days.fillna(0)
-    task_df['days_to_due'] = (task_df['dueDate'] - task_df['creationDate']).dt.days.fillna(30)
-    task_df['days_to_complete'] = -1
-    task_df['planned_duration'] = (task_df['days_to_due'] - task_df['days_to_start']).clip(lower=1)
+    task_df = calculate_temporal_features(task_df)
     task_df['description_length'] = task_df['description'].apply(len)
     
-    # Nombre d'utilisateurs assignés
-    task_df['num_assigned_users'] = task_df['assignedUserIds'].apply(
-        lambda x: len(x.split(',')) if x and isinstance(x, str) else 0)
+    # Calcul des features dérivées
+    task_df = calculate_derived_features(task_df)
     
-    # Nouvelles features
-    task_df['time_per_user'] = task_df['estimationTime'] / task_df['num_assigned_users'].clip(lower=1)
-    task_df['complexity_score'] = task_df['itemtags'].apply(
-        lambda x: len(x.split(',')) if x and isinstance(x, str) else 0)
-    task_df['is_urgent'] = task_df['itemtags'].apply(lambda x: 1 if 'urgent' in x else 0)
-    task_df['low_progress'] = task_df['progress'].apply(lambda x: 1 if x < 50 else 0)
-    task_df['is_short_task'] = task_df['estimationTime'].apply(lambda x: 1 if x < 200 else 0)
+    # Autres features
     task_df['time_progress_interaction'] = task_df['estimationTime'] * (task_df['progress'] / 100)
     task_df['log_estimationTime'] = np.log(task_df['estimationTime'] + 1)
     task_df['task_length_category'] = pd.cut(

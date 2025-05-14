@@ -5,15 +5,23 @@ from app.preprocessing.preprocessor import preprocess_task
 from app.core.config import settings
 import joblib
 
+from pathlib import Path
+
 router = APIRouter()
+
+# Définir le répertoire de base (racine du projet)
+BASE_DIR = Path(__file__).resolve().parent.parent.parent  # Remonte à C:\Gestion_Projet\AI_Service
 
 # Charger les préprocesseurs et le modèle au démarrage
 predictor = TaskPredictor(settings.MODEL_PATH)
 encoder = joblib.load(settings.ENCODER_PATH)
 tfidf = joblib.load(settings.TFIDF_PATH)
 scaler = joblib.load(settings.SCALER_PATH)
-all_tags = joblib.load(settings.TAGS_PATH)
-features = joblib.load(settings.FEATURES_PATH)
+all_tags = joblib.load("app/models/all_tags.pkl")  # Chemin explicite
+#all_tags = joblib.load(settings.TAGS_PATH)
+#features = joblib.load(settings.FEATURES_PATH)
+features = joblib.load("app/models/features.pkl")  # Chemin explicite
+
 
 # Charger les features attendues
 model = joblib.load(settings.MODEL_PATH)
