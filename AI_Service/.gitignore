@@ -1,0 +1,6 @@
+# Ignore le dossier de l'environnement virtuel
+ai-service/
+venv/
+.env/
+__pycache__/
+*.pyc
