@@ -8,6 +8,9 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,9 @@ public class LoginService {
         this.keycloakService= keycloakService;
     }
 
+    @RateLimiter(name = "AuthServiceLimiter", fallbackMethod = "rateLimiterFallback")
+    @Bulkhead(name = "AuthServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "bulkheadFallback")
+    @Retry(name = "AuthServiceRetry", fallbackMethod = "retryFallback")
     public TokenDto authenticateUser(String email, String password) throws Exception {
         System.out.println("Récupération du client secret depuis Vault...");
         String keycloakClientSecret = vaultService.getClientSecret();
@@ -70,6 +76,23 @@ public class LoginService {
         }
     }
 
+    public TokenDto rateLimiterFallback(String email, String password, Throwable t) {
+        System.out.println("RateLimiter fallback triggered : " + t.getMessage());
+        return new TokenDto("","");
+    }
+
+    public TokenDto bulkheadFallback(String email, String password, Throwable t) {
+        System.out.println("Bulkhead fallback triggered : " + t.getMessage());
+        return new TokenDto("","");
+    }
+    public TokenDto retryFallback(String email, String password, Throwable t) {
+        System.out.println("Retry fallback triggered: " + t.getMessage());
+        return new TokenDto("", "");
+    }
+
+    @RateLimiter(name = "AuthServiceLimiter", fallbackMethod = "refreshRateLimiterFallback")
+    @Bulkhead(name = "AuthServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "refreshBulkheadFallback")
+    @Retry(name = "AuthServiceRetry", fallbackMethod = "refreshRetryFallback")
     public TokenDto refreshToken(String refreshToken) throws Exception {
         System.out.println("Tentative de rafraîchissement du token...");
 
@@ -98,6 +121,21 @@ public class LoginService {
             System.out.println("Échec du rafraîchissement du token !");
             throw new Exception("Échec du rafraîchissement du token");
         }
+    }
+
+    public TokenDto refreshRateLimiterFallback(String refreshToken, Throwable t) {
+        System.out.println("RateLimiter fallback for refresh: " + t.getMessage());
+        return new TokenDto("", "");
+    }
+
+    public TokenDto refreshBulkheadFallback(String refreshToken, Throwable t) {
+        System.out.println("Bulkhead fallback for refresh: " + t.getMessage());
+        return new TokenDto("", "");
+    }
+
+    public TokenDto refreshRetryFallback(String refreshToken, Throwable t) {
+        System.out.println("Retry fallback for refresh: " + t.getMessage());
+        return new TokenDto("", "");
     }
 
     public String decodeToken(String token) {
@@ -140,7 +178,9 @@ public class LoginService {
 
 
 
-
+    @RateLimiter(name = "AuthServiceLimiter", fallbackMethod = "assignManagerRoleRateLimiterFallback")
+    @Bulkhead(name = "AuthServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "assignManagerRoleBulkheadFallback")
+    @Retry(name = "AuthServiceRetry", fallbackMethod = "assignManagerRoleRetryFallback")
     public void assignManagerRoleToUser(String userId) throws Exception {
         System.out.println("🔄 Attribution du rôle MANAGER à l'utilisateur : " + userId);
 
@@ -188,6 +228,18 @@ public class LoginService {
         }
     }
 
+
+    public void assignManagerRoleRateLimiterFallback(String userId, Throwable t) {
+        System.out.println("RateLimiter fallback for assignManagerRole: " + t.getMessage());
+    }
+
+    public void assignManagerRoleBulkheadFallback(String userId, Throwable t) {
+        System.out.println("Bulkhead fallback for assignManagerRole: " + t.getMessage());
+    }
+
+    public void assignManagerRoleRetryFallback(String userId, Throwable t) {
+        System.out.println("Retry fallback for assignManagerRole: " + t.getMessage());
+    }
     // Fonction pour extraire dynamiquement l'ID du rôle MANAGER
     public  String extractRoleIdFromResponse(String jsonResponse, String roleName) {
         try {
@@ -207,7 +259,9 @@ public class LoginService {
     }
 
 
-    //logout
+    @RateLimiter(name = "AuthServiceLimiter", fallbackMethod = "logoutRateLimiterFallback")
+    @Bulkhead(name = "AuthServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "logoutBulkheadFallback")
+    @Retry(name = "AuthServiceRetry", fallbackMethod = "logoutRetryFallback")
     public void logout(String refreshToken) throws Exception {
         String logoutUrl = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/logout";
 
@@ -230,5 +284,17 @@ public class LoginService {
         } else {
             throw new Exception("Échec de la déconnexion auprès de Keycloak");
         }
+    }
+
+    public void logoutRateLimiterFallback(String refreshToken, Throwable t) {
+        System.out.println("RateLimiter fallback for logout: " + t.getMessage());
+    }
+
+    public void logoutBulkheadFallback(String refreshToken, Throwable t) {
+        System.out.println("Bulkhead fallback for logout: " + t.getMessage());
+    }
+
+    public void logoutRetryFallback(String refreshToken, Throwable t) {
+        System.out.println("Retry fallback for logout: " + t.getMessage());
     }
 }

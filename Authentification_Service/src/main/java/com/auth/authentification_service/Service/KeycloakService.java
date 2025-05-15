@@ -12,6 +12,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -52,6 +55,9 @@ public class KeycloakService {
         this.projectMemberRepository = projectMemberRepository;
     }
 
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getAdminTokenRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getAdminTokenBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getAdminTokenRetryFallback")
     public String getAdminToken() {
         String clientSecret = vaultService.getClientSecret();
         System.out.println("Client Secret utilisé : " + clientSecret);
@@ -87,6 +93,25 @@ public class KeycloakService {
         throw new RuntimeException("Impossible de récupérer le token d'admin Keycloak");
     }
 
+    public String getAdminTokenRateLimiterFallback(Throwable t) {
+        System.out.println("RateLimiter fallback for getAdminToken: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for admin token retrieval");
+    }
+
+    public String getAdminTokenBulkheadFallback(Throwable t) {
+        System.out.println("Bulkhead fallback for getAdminToken: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent admin token requests");
+    }
+
+    public String getAdminTokenRetryFallback(Throwable t) {
+        System.out.println("Retry fallback for getAdminToken: " + t.getMessage());
+        throw new RuntimeException("Failed to retrieve admin token after retries");
+    }
+
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "createUserRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createUserBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "createUserRetryFallback")
     public ResponseEntity<String> createUser(UserDto userDto) {
         System.out.println("Début de la création de l'utilisateur : " + userDto.getUsername());
 
@@ -199,6 +224,25 @@ public class KeycloakService {
         }
     }
 
+
+    public ResponseEntity<String> createUserRateLimiterFallback(UserDto userDto, Throwable t) {
+        System.out.println("RateLimiter fallback for createUser: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Rate limit exceeded for user creation");
+    }
+
+    public ResponseEntity<String> createUserBulkheadFallback(UserDto userDto, Throwable t) {
+        System.out.println("Bulkhead fallback for createUser: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Too many concurrent user creation requests");
+    }
+
+    public ResponseEntity<String> createUserRetryFallback(UserDto userDto, Throwable t) {
+        System.out.println("Retry fallback for createUser: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to create user after retries");
+    }
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "assignRoleToUserRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "assignRoleToUserBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "assignRoleToUserRetryFallback")
     private void assignRoleToUser(String userId, String roleName, String accessToken) {
         System.out.println("Attribution du rôle " + roleName + " à l'utilisateur : " + userId);
 
@@ -255,6 +299,20 @@ public class KeycloakService {
             throw new RuntimeException("Erreur lors de la récupération des rôles.");
         }
     }
+    public void assignRoleToUserRateLimiterFallback(String userId, String roleName, String accessToken, Throwable t) {
+        System.out.println("RateLimiter fallback for assignRoleToUser: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for role assignment");
+    }
+
+    public void assignRoleToUserBulkheadFallback(String userId, String roleName, String accessToken, Throwable t) {
+        System.out.println("Bulkhead fallback for assignRoleToUser: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent role assignment requests");
+    }
+
+    public void assignRoleToUserRetryFallback(String userId, String roleName, String accessToken, Throwable t) {
+        System.out.println("Retry fallback for assignRoleToUser: " + t.getMessage());
+        throw new RuntimeException("Failed to assign role after retries");
+    }
 
     public String extractRoleIdFromResponse(String responseBody, String roleName) {
         try {
@@ -272,7 +330,9 @@ public class KeycloakService {
         }
     }
 
-
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getTeamMembersRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTeamMembersBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getTeamMembersRetryFallback")
     public List<Map<String, Object>> getTeamMembers(String accessToken) {
         // Décoder le token pour obtenir l'ID de l'utilisateur connecté
         DecodedJWT decodedJWT = JWT.decode(accessToken);
@@ -371,6 +431,26 @@ public class KeycloakService {
         return teamMembers;
     }
 
+
+    public List<Map<String, Object>> getTeamMembersRateLimiterFallback(String accessToken, Throwable t) {
+        System.out.println("RateLimiter fallback for getTeamMembers: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<Map<String, Object>> getTeamMembersBulkheadFallback(String accessToken, Throwable t) {
+        System.out.println("Bulkhead fallback for getTeamMembers: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<Map<String, Object>> getTeamMembersRetryFallback(String accessToken, Throwable t) {
+        System.out.println("Retry fallback for getTeamMembers: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getTeamMembersByProjectRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTeamMembersByProjectBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getTeamMembersByProjectRetryFallback")
+
     public List<Map<String, Object>> getTeamMembersbyProject(String accessToken, String projectId) {
         // Décoder le token pour obtenir l'ID de l'utilisateur connecté
         DecodedJWT decodedJWT = JWT.decode(accessToken);
@@ -460,6 +540,25 @@ public class KeycloakService {
         return teamMembers;
     }
     // In AuthenticationService (Authentication Microservice)
+
+    public List<Map<String, Object>> getTeamMembersByProjectRateLimiterFallback(String accessToken, String projectId, Throwable t) {
+        System.out.println("RateLimiter fallback for getTeamMembersbyProject: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<Map<String, Object>> getTeamMembersByProjectBulkheadFallback(String accessToken, String projectId, Throwable t) {
+        System.out.println("Bulkhead fallback for getTeamMembersbyProject: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<Map<String, Object>> getTeamMembersByProjectRetryFallback(String accessToken, String projectId, Throwable t) {
+        System.out.println("Retry fallback for getTeamMembersbyProject: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getUserDetailsByAuthIdRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getUserDetailsByAuthIdBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getUserDetailsByAuthIdRetryFallback")
     public Map<String, Object> getUserDetailsByAuthId(String authId, String userToken) {
         String adminToken = getAdminToken(); // Remplace le token utilisateur par un token admin
         String userUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + authId;
@@ -501,7 +600,20 @@ public class KeycloakService {
         }
     }
 
+    public Map<String, Object> getUserDetailsByAuthIdRateLimiterFallback(String authId, String userToken, Throwable t) {
+        System.out.println("RateLimiter fallback for getUserDetailsByAuthId: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for user details retrieval");
+    }
 
+    public Map<String, Object> getUserDetailsByAuthIdBulkheadFallback(String authId, String userToken, Throwable t) {
+        System.out.println("Bulkhead fallback for getUserDetailsByAuthId: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user details requests");
+    }
+
+    public Map<String, Object> getUserDetailsByAuthIdRetryFallback(String authId, String userToken, Throwable t) {
+        System.out.println("Retry fallback for getUserDetailsByAuthId: " + t.getMessage());
+        throw new RuntimeException("Failed to retrieve user details after retries");
+    }
 
     public List<ProjectMemberDTO> getProjectMembersByUserId(String userId) {
         List<ProjectMember> projectMembers = projectMemberRepository.findByIdUserId(userId);
@@ -513,7 +625,9 @@ public class KeycloakService {
                 .collect(Collectors.toList());
     }
 
-
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getUsersByIdsRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getUsersByIdsBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getUsersByIdsRetryFallback")
     public List<UserDto> getUsersByIds(List<String> userIds) {
         String adminToken = getAdminToken();
         List<UserDto> users = new ArrayList<>();
@@ -564,7 +678,24 @@ public class KeycloakService {
 
         return users;
     }
+    public List<UserDto> getUsersByIdsRateLimiterFallback(List<String> userIds, Throwable t) {
+        System.out.println("RateLimiter fallback for getUsersByIds: " + t.getMessage());
+        return new ArrayList<>();
+    }
 
+    public List<UserDto> getUsersByIdsBulkheadFallback(List<String> userIds, Throwable t) {
+        System.out.println("Bulkhead fallback for getUsersByIds: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<UserDto> getUsersByIdsRetryFallback(List<String> userIds, Throwable t) {
+        System.out.println("Retry fallback for getUsersByIds: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "updateUserRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateUserBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "updateUserRetryFallback")
     public ResponseEntity<String> updateUser(String accessToken, Map<String, Object> userData) {
         System.out.println("🔄 Mise à jour de l'utilisateur avec les données : " + userData);
 
@@ -606,7 +737,24 @@ public class KeycloakService {
         }
     }
 
+    public ResponseEntity<String> updateUserRateLimiterFallback(String accessToken, Map<String, Object> userData, Throwable t) {
+        System.out.println("RateLimiter fallback for updateUser: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Rate limit exceeded for user update");
+    }
 
+    public ResponseEntity<String> updateUserBulkheadFallback(String accessToken, Map<String, Object> userData, Throwable t) {
+        System.out.println("Bulkhead fallback for updateUser: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Too many concurrent user update requests");
+    }
+
+    public ResponseEntity<String> updateUserRetryFallback(String accessToken, Map<String, Object> userData, Throwable t) {
+        System.out.println("Retry fallback for updateUser: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update user after retries");
+    }
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "changePasswordRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "changePasswordBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "changePasswordRetryFallback")
     public ResponseEntity<String> changePassword(String accessToken, Map<String, String> passwordData) {
         System.out.println("🔄 Changement de mot de passe pour l'utilisateur");
 
@@ -662,8 +810,24 @@ public class KeycloakService {
             throw new RuntimeException("Erreur lors du changement de mot de passe : " + e.getMessage());
         }
     }
+    public ResponseEntity<String> changePasswordRateLimiterFallback(String accessToken, Map<String, String> passwordData, Throwable t) {
+        System.out.println("RateLimiter fallback for changePassword: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body("Rate limit exceeded for password change");
+    }
 
+    public ResponseEntity<String> changePasswordBulkheadFallback(String accessToken, Map<String, String> passwordData, Throwable t) {
+        System.out.println("Bulkhead fallback for changePassword: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Too many concurrent password change requests");
+    }
 
+    public ResponseEntity<String> changePasswordRetryFallback(String accessToken, Map<String, String> passwordData, Throwable t) {
+        System.out.println("Retry fallback for changePassword: " + t.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to change password after retries");
+    }
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "authenticateUserRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "authenticateUserBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "authenticateUserRetryFallback")
     public TokenDto authenticateUser(String email, String password) throws Exception {
         System.out.println("Récupération du client secret depuis Vault...");
         String keycloakClientSecret = vaultService.getClientSecret();
@@ -697,5 +861,19 @@ public class KeycloakService {
         }
     }
 
+    public TokenDto authenticateUserRateLimiterFallback(String email, String password, Throwable t) {
+        System.out.println("RateLimiter fallback for authenticateUser: " + t.getMessage());
+        return new TokenDto("", "");
+    }
+
+    public TokenDto authenticateUserBulkheadFallback(String email, String password, Throwable t) {
+        System.out.println("Bulkhead fallback for authenticateUser: " + t.getMessage());
+        return new TokenDto("", "");
+    }
+
+    public TokenDto authenticateUserRetryFallback(String email, String password, Throwable t) {
+        System.out.println("Retry fallback for authenticateUser: " + t.getMessage());
+        return new TokenDto("", "");
+    }
 
 }
