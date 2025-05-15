@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 
 import java.util.List;
 
-@Component
+
 public class TaskClientFallback implements TaskClient{
 
  @Override

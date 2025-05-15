@@ -13,6 +13,9 @@ import com.project.project_service.Repository.ClientRepository;
 import com.project.project_service.Repository.GitHubLinkRepository;
 import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.config.AuthClient;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
-
+import org.slf4j.LoggerFactory;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -45,6 +48,9 @@ public class ProjectService {
     private RestTemplate restTemplate;
 
     @Transactional
+    @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "createProjectRateLimiterFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createProjectBulkheadFallback")
+    @Retry(name = "ProjectServiceRetry", fallbackMethod = "createProjectRetryFallback")
     public void createProject(String authId, String name, String description,
                               LocalDate startDate, LocalDate deadline,
                               String status, String phase, String priority) {
@@ -79,6 +85,30 @@ public class ProjectService {
     }
 
 
+    public void createProjectRateLimiterFallback(String authId, String name, String description,
+                                                 LocalDate startDate, LocalDate deadline,
+                                                 String status, String phase, String priority, Throwable t) {
+        System.out.println("RateLimiter fallback for createProject: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for project creation");
+    }
+
+    public void createProjectBulkheadFallback(String authId, String name, String description,
+                                              LocalDate startDate, LocalDate deadline,
+                                              String status, String phase, String priority, Throwable t) {
+        System.out.println("Bulkhead fallback for createProject: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent project creation requests");
+    }
+
+    public void createProjectRetryFallback(String authId, String name, String description,
+                                           LocalDate startDate, LocalDate deadline,
+                                           String status, String phase, String priority, Throwable t) {
+        System.out.println("Retry fallback for createProject: " + t.getMessage());
+        throw new RuntimeException("Failed to create project after retries");
+    }
+
+    @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "updateProjectRateLimiterFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateProjectBulkheadFallback")
+    @Retry(name = "ProjectServiceRetry", fallbackMethod = "updateProjectRetryFallback")
     @Transactional
     public void updateProject(String authId, String oldName, String newName,
                               String description, LocalDate startDate,
@@ -118,7 +148,33 @@ public class ProjectService {
 
         System.out.println("Projet modifié avec succès : " + project.getName());
     }
+    public void updateProjectRateLimiterFallback(String authId, String oldName, String newName,
+                                                 String description, LocalDate startDate,
+                                                 LocalDate deadline, String status,
+                                                 String phase, String priority, Throwable t) {
+        System.out.println("RateLimiter fallback for updateProject: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for project update");
+    }
 
+    public void updateProjectBulkheadFallback(String authId, String oldName, String newName,
+                                              String description, LocalDate startDate,
+                                              LocalDate deadline, String status,
+                                              String phase, String priority, Throwable t) {
+        System.out.println("Bulkhead fallback for updateProject: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent project update requests");
+    }
+
+    public void updateProjectRetryFallback(String authId, String oldName, String newName,
+                                           String description, LocalDate startDate,
+                                           LocalDate deadline, String status,
+                                           String phase, String priority, Throwable t) {
+        System.out.println("Retry fallback for updateProject: " + t.getMessage());
+        throw new RuntimeException("Failed to update project after retries");
+    }
+
+    @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "deleteProjectRateLimiterFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteProjectBulkheadFallback")
+    @Retry(name = "ProjectServiceRetry", fallbackMethod = "deleteProjectRetryFallback")
     @Transactional
     public void deleteProject(String authId, String name) {
         // Récupérer le manager à partir de l'authId
@@ -144,14 +200,47 @@ public class ProjectService {
 
         System.out.println("Projet supprimé avec succès : " + name);
     }
+    public void deleteProjectRateLimiterFallback(String authId, String name, Throwable t) {
+        System.out.println("RateLimiter fallback for deleteProject: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for project deletion");
+    }
 
+    public void deleteProjectBulkheadFallback(String authId, String name, Throwable t) {
+        System.out.println("Bulkhead fallback for deleteProject: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent project deletion requests");
+    }
+
+    public void deleteProjectRetryFallback(String authId, String name, Throwable t) {
+        System.out.println("Retry fallback for deleteProject: " + t.getMessage());
+        throw new RuntimeException("Failed to delete project after retries");
+    }
+
+    @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "getProjectByIdRateLimiterFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getProjectByIdBulkheadFallback")
+    @Retry(name = "ProjectServiceRetry", fallbackMethod = "getProjectByIdRetryFallback")
     // Nouvelle méthode pour récupérer un projet par ID
     public Projet getProjectById(Long projectId) {
         return projectRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID : " + projectId));
     }
+    public Projet getProjectByIdRateLimiterFallback(Long projectId, Throwable t) {
+        System.out.println("RateLimiter fallback for getProjectById: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for fetching project");
+    }
 
-    // In ProjectService (Project Microservice)
+    public Projet getProjectByIdBulkheadFallback(Long projectId, Throwable t) {
+        System.out.println("Bulkhead fallback for getProjectById: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent project fetch requests");
+    }
+
+    public Projet getProjectByIdRetryFallback(Long projectId, Throwable t) {
+        System.out.println("Retry fallback for getProjectById: " + t.getMessage());
+        throw new RuntimeException("Failed to fetch project after retries");
+    }
+
+    @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "getManagerByProjectRateLimiterFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getManagerByProjectBulkheadFallback")
+    @Retry(name = "ProjectServiceRetry", fallbackMethod = "getManagerByProjectRetryFallback")
     public Map<String, Object> getManagerByProject(String accessToken, Long projectId) {
         // Récupérer le projet pour obtenir le manager_id
         Projet project = projectRepository.findById(projectId)
@@ -199,6 +288,20 @@ public class ProjectService {
                     managerAuthId + " depuis le microservice Authentication : " + e.getMessage());
             return null;
         }
+    }
+    public Map<String, Object> getManagerByProjectRateLimiterFallback(String accessToken, Long projectId, Throwable t) {
+        System.out.println("RateLimiter fallback for getManagerByProject: " + t.getMessage());
+        return null;
+    }
+
+    public Map<String, Object> getManagerByProjectBulkheadFallback(String accessToken, Long projectId, Throwable t) {
+        System.out.println("Bulkhead fallback for getManagerByProject: " + t.getMessage());
+        return null;
+    }
+
+    public Map<String, Object> getManagerByProjectRetryFallback(String accessToken, Long projectId, Throwable t) {
+        System.out.println("Retry fallback for getManagerByProject: " + t.getMessage());
+        return null;
     }
 
     public ProjectDTO getProjectDetails(Long projectId, String accessToken) {
@@ -310,6 +413,7 @@ public class ProjectService {
         }
     }
 
+
     @Transactional
     public void linkGitHubRepositoryToProject(Long projectId, String repositoryUrl, String authorization) {
         LOGGER.info("Tentative de liaison du dépôt GitHub pour le projet ID: " + projectId + ", URL: " + repositoryUrl);
@@ -371,11 +475,28 @@ public class ProjectService {
         }
     }
 
+
+    @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "getGitHubRepositoryUrlRateLimiterFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getGitHubRepositoryUrlBulkheadFallback")
+    @Retry(name = "ProjectServiceRetry", fallbackMethod = "getGitHubRepositoryUrlRetryFallback")
     public String getGitHubRepositoryUrl(Long projectId) {
         GitHubLink link = gitHubLinkRepository.findByProjetId(projectId);
         return (link != null) ? link.getRepositoryUrl() : null;
     }
+    public String getGitHubRepositoryUrlRateLimiterFallback(Long projectId, Throwable t) {
+        System.out.println("RateLimiter fallback for getGitHubRepositoryUrl: " + t.getMessage());
+        return null;
+    }
 
+    public String getGitHubRepositoryUrlBulkheadFallback(Long projectId, Throwable t) {
+        System.out.println("Bulkhead fallback for getGitHubRepositoryUrl: " + t.getMessage());
+        return null;
+    }
+
+    public String getGitHubRepositoryUrlRetryFallback(Long projectId, Throwable t) {
+        System.out.println("Retry fallback for getGitHubRepositoryUrl: " + t.getMessage());
+        return null;
+    }
     private boolean isValidGitHubRepositoryUrl(String url) {
         String regex = "^https://github\\.com/([a-zA-Z0-9-]+)/([a-zA-Z0-9-_]+)$";
         Pattern pattern = Pattern.compile(regex);

@@ -10,11 +10,15 @@ import com.project.project_service.Repository.ProjetRepository;
 import com.project.project_service.Repository.SprintRepository;
 import com.project.project_service.Repository.UserStoryRepository;
 import com.project.project_service.config.AuthClient;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.persistence.OptimisticLockException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,6 +38,9 @@ public class SprintService {
 
     @Autowired
     private HistoryService historyService;
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "createSprintRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createSprintBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "createSprintRetryFallback")
     public SprintDTO createSprint(Long projectId, SprintDTO request, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -66,13 +73,48 @@ public class SprintService {
         return new SprintDTO(savedSprint);
     }
 
+    public SprintDTO createSprintRateLimiterFallback(Long projectId, SprintDTO request, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for createSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for sprint creation");
+    }
+
+    public SprintDTO createSprintBulkheadFallback(Long projectId, SprintDTO request, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for createSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint creation requests");
+    }
+
+    public SprintDTO createSprintRetryFallback(Long projectId, SprintDTO request, String token, Throwable t) {
+        System.out.println("Retry fallback for createSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to create sprint after retries");
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "getSprintsByProjectIdRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getSprintsByProjectIdBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "getSprintsByProjectIdRetryFallback")
     public List<SprintDTO> getSprintsByProjectId(Long projectId) {
         Projet projet = projetRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
         List<Sprint> sprints = sprintRepository.findByProject(projet);
         return sprints.stream().map(SprintDTO::new).collect(Collectors.toList());
     }
+    public List<SprintDTO> getSprintsByProjectIdRateLimiterFallback(Long projectId, Throwable t) {
+        System.out.println("RateLimiter fallback for getSprintsByProjectId: " + t.getMessage());
+        return new ArrayList<>();
+    }
 
+    public List<SprintDTO> getSprintsByProjectIdBulkheadFallback(Long projectId, Throwable t) {
+        System.out.println("Bulkhead fallback for getSprintsByProjectId: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<SprintDTO> getSprintsByProjectIdRetryFallback(Long projectId, Throwable t) {
+        System.out.println("Retry fallback for getSprintsByProjectId: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "updateSprintRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateSprintBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "updateSprintRetryFallback")
     public SprintDTO updateSprint(Long projectId, Long sprintId, SprintDTO request, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -113,6 +155,24 @@ public class SprintService {
         }
     }
 
+    public SprintDTO updateSprintRateLimiterFallback(Long projectId, Long sprintId, SprintDTO request, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for updateSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for sprint update");
+    }
+
+    public SprintDTO updateSprintBulkheadFallback(Long projectId, Long sprintId, SprintDTO request, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for updateSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint update requests");
+    }
+
+    public SprintDTO updateSprintRetryFallback(Long projectId, Long sprintId, SprintDTO request, String token, Throwable t) {
+        System.out.println("Retry fallback for updateSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to update sprint after retries");
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "deleteSprintRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteSprintBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "deleteSprintRetryFallback")
     public void deleteSprint(Long projectId, Long sprintId) {
         Projet projet = projetRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
@@ -135,6 +195,24 @@ public class SprintService {
         );
     }
 
+    public void deleteSprintRateLimiterFallback(Long projectId, Long sprintId, Throwable t) {
+        System.out.println("RateLimiter fallback for deleteSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for sprint deletion");
+    }
+
+    public void deleteSprintBulkheadFallback(Long projectId, Long sprintId, Throwable t) {
+        System.out.println("Bulkhead fallback for deleteSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint deletion requests");
+    }
+
+    public void deleteSprintRetryFallback(Long projectId, Long sprintId, Throwable t) {
+        System.out.println("Retry fallback for deleteSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to delete sprint after retries");
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "updateSprintStatusRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateSprintStatusBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "updateSprintStatusRetryFallback")
     public SprintDTO updateSprintStatus(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -168,7 +246,24 @@ public class SprintService {
         }
         return new SprintDTO(sprint); // Toujours renvoyer le sprint, même sans changement
     }
+    public SprintDTO updateSprintStatusRateLimiterFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for updateSprintStatus: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for updating sprint status");
+    }
 
+    public SprintDTO updateSprintStatusBulkheadFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for updateSprintStatus: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint status update requests");
+    }
+
+    public SprintDTO updateSprintStatusRetryFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Retry fallback for updateSprintStatus: " + t.getMessage());
+        throw new RuntimeException("Failed to update sprint status after retries");
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "cancelSprintRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "cancelSprintBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "cancelSprintRetryFallback")
     public SprintDTO cancelSprint(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -200,7 +295,24 @@ public class SprintService {
         }
         throw new RuntimeException("Impossible d'annuler un sprint déjà terminé ou archivé");
     }
+    public SprintDTO cancelSprintRateLimiterFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for cancelSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for canceling sprint");
+    }
 
+    public SprintDTO cancelSprintBulkheadFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for cancelSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint cancellation requests");
+    }
+
+    public SprintDTO cancelSprintRetryFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Retry fallback for cancelSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to cancel sprint after retries");
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "archiveSprintRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "archiveSprintBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "archiveSprintRetryFallback")
     public SprintDTO archiveSprint(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -229,6 +341,24 @@ public class SprintService {
         throw new RuntimeException("Seuls les sprints terminés ou annulés peuvent être archivés");
     }
 
+    public SprintDTO archiveSprintRateLimiterFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for archiveSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for archiving sprint");
+    }
+
+    public SprintDTO archiveSprintBulkheadFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for archiveSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint archive requests");
+    }
+
+    public SprintDTO archiveSprintRetryFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Retry fallback for archiveSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to archive sprint after retries");
+    }
+
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "activateSprintRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "activateSprintBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "activateSprintRetryFallback")
     public SprintDTO activateSprint(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -270,6 +400,22 @@ public class SprintService {
         );
         return new SprintDTO(updatedSprint);
     }
+
+    public SprintDTO activateSprintRateLimiterFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for activateSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for activating sprint");
+    }
+
+    public SprintDTO activateSprintBulkheadFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for activateSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint activation requests");
+    }
+
+    public SprintDTO activateSprintRetryFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Retry fallback for activateSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to activate sprint after retries");
+    }
+
     public void updateStatusBasedOnDependencies(UserStory userStory) {
         if (userStory.getDependsOn().isEmpty()) {
             if (userStory.getSprint() != null) {
@@ -314,6 +460,9 @@ public class SprintService {
     }
 
 
+    @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "checkAndUpdateSprintStatusRateLimiterFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "checkAndUpdateSprintStatusBulkheadFallback")
+    @Retry(name = "SprintServiceRetry", fallbackMethod = "checkAndUpdateSprintStatusRetryFallback")
     public SprintDTO checkAndUpdateSprintStatus(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -345,5 +494,21 @@ public class SprintService {
         }
 
         return new SprintDTO(sprint);
+    }
+
+
+    public SprintDTO checkAndUpdateSprintStatusRateLimiterFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for checkAndUpdateSprintStatus: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for checking sprint status");
+    }
+
+    public SprintDTO checkAndUpdateSprintStatusBulkheadFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for checkAndUpdateSprintStatus: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent sprint status check requests");
+    }
+
+    public SprintDTO checkAndUpdateSprintStatusRetryFallback(Long projectId, Long sprintId, String token, Throwable t) {
+        System.out.println("Retry fallback for checkAndUpdateSprintStatus: " + t.getMessage());
+        throw new RuntimeException("Failed to check sprint status after retries");
     }
 }

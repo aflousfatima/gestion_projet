@@ -17,6 +17,9 @@ import com.project.project_service.Repository.TagRepository;
 import com.project.project_service.Repository.UserStoryRepository;
 import com.project.project_service.config.AuthClient;
 import com.project.project_service.config.TaskClient;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.apache.catalina.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -63,6 +66,9 @@ public class UserStoryService {
         return new UserStoryDTO(userStory);
     }
 
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "createUserStoryRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createUserStoryBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "createUserStoryRetryFallback")
     public UserStoryDTO createUserStory(Long projectId, UserStoryRequest request, String token) {
         System.out.println("Début de createUserStory pour projectId: " + projectId);
         System.out.println("Données reçues: " + request);
@@ -106,7 +112,24 @@ public class UserStoryService {
         return new UserStoryDTO(savedStory);
     }
 
-    // New method to update a user story
+    public UserStoryDTO createUserStoryRateLimiterFallback(Long projectId, UserStoryRequest request, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for createUserStory: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for creating user story");
+    }
+
+    public UserStoryDTO createUserStoryBulkheadFallback(Long projectId, UserStoryRequest request, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for createUserStory: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user story creation requests");
+    }
+
+    public UserStoryDTO createUserStoryRetryFallback(Long projectId, UserStoryRequest request, String token, Throwable t) {
+        System.out.println("Retry fallback for createUserStory: " + t.getMessage());
+        throw new RuntimeException("Failed to create user story after retries");
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "updateUserStoryRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateUserStoryBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "updateUserStoryRetryFallback")
     public UserStoryDTO updateUserStory(Long projectId, Long userStoryId, UserStoryRequest request, String token) {
 
         String userIdStr = authClient.decodeToken(token);
@@ -166,7 +189,24 @@ public class UserStoryService {
         }
     }
 
-    // New method to fetch all user stories for a project
+    public UserStoryDTO updateUserStoryRateLimiterFallback(Long projectId, Long userStoryId, UserStoryRequest request, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for updateUserStory: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for updating user story");
+    }
+
+    public UserStoryDTO updateUserStoryBulkheadFallback(Long projectId, Long userStoryId, UserStoryRequest request, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for updateUserStory: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user story update requests");
+    }
+
+    public UserStoryDTO updateUserStoryRetryFallback(Long projectId, Long userStoryId, UserStoryRequest request, String token, Throwable t) {
+        System.out.println("Retry fallback for updateUserStory: " + t.getMessage());
+        throw new RuntimeException("Failed to update user story after retries");
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "getUserStoriesByProjectIdRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getUserStoriesByProjectIdBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "getUserStoriesByProjectIdRetryFallback")
     public List<UserStoryDTO> getUserStoriesByProjectId(Long projectId) {
         Projet projet = projetRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
@@ -174,7 +214,25 @@ public class UserStoryService {
         return userStories.stream().map(UserStoryDTO::new).toList();
     }
 
-    // New method to delete a user story
+
+    public List<UserStoryDTO> getUserStoriesByProjectIdRateLimiterFallback(Long projectId, Throwable t) {
+        System.out.println("RateLimiter fallback for getUserStoriesByProjectId: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<UserStoryDTO> getUserStoriesByProjectIdBulkheadFallback(Long projectId, Throwable t) {
+        System.out.println("Bulkhead fallback for getUserStoriesByProjectId: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    public List<UserStoryDTO> getUserStoriesByProjectIdRetryFallback(Long projectId, Throwable t) {
+        System.out.println("Retry fallback for getUserStoriesByProjectId: " + t.getMessage());
+        return new ArrayList<>();
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "deleteUserStoryRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteUserStoryBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "deleteUserStoryRetryFallback")
     public void deleteUserStory(Long projectId, Long userStoryId) {
         Projet projet = projetRepository.findById(projectId)
                 .orElseThrow(() -> new RuntimeException("Projet non trouvé avec l'ID: " + projectId));
@@ -193,7 +251,24 @@ public class UserStoryService {
         );
     }
 
-    // Nouvelle méthode pour assigner une user story à un sprint
+    public void deleteUserStoryRateLimiterFallback(Long projectId, Long userStoryId, Throwable t) {
+        System.out.println("RateLimiter fallback for deleteUserStory: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for deleting user story");
+    }
+
+    public void deleteUserStoryBulkheadFallback(Long projectId, Long userStoryId, Throwable t) {
+        System.out.println("Bulkhead fallback for deleteUserStory: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user story deletion requests");
+    }
+
+    public void deleteUserStoryRetryFallback(Long projectId, Long userStoryId, Throwable t) {
+        System.out.println("Retry fallback for deleteUserStory: " + t.getMessage());
+        throw new RuntimeException("Failed to delete user story after retries");
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "assignUserStoryToSprintRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "assignUserStoryToSprintBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "assignUserStoryToSprintRetryFallback")
     public UserStoryDTO assignUserStoryToSprint(Long projectId, Long userStoryId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -249,7 +324,24 @@ public class UserStoryService {
         return new UserStoryDTO(updatedUserStory);
     }
 
-    // Nouvelle méthode pour retirer une user story d'un sprint
+    public UserStoryDTO assignUserStoryToSprintRateLimiterFallback(Long projectId, Long userStoryId, Long sprintId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for assignUserStoryToSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for assigning user story to sprint");
+    }
+
+    public UserStoryDTO assignUserStoryToSprintBulkheadFallback(Long projectId, Long userStoryId, Long sprintId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for assignUserStoryToSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user story assignment requests");
+    }
+
+    public UserStoryDTO assignUserStoryToSprintRetryFallback(Long projectId, Long userStoryId, Long sprintId, String token, Throwable t) {
+        System.out.println("Retry fallback for assignUserStoryToSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to assign user story to sprint after retries");
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "removeUserStoryFromSprintRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "removeUserStoryFromSprintBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "removeUserStoryFromSprintRetryFallback")
     public UserStoryDTO removeUserStoryFromSprint(Long projectId, Long userStoryId, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -279,7 +371,24 @@ public class UserStoryService {
         );
         return new UserStoryDTO(updatedUserStory);
     }
+    public UserStoryDTO removeUserStoryFromSprintRateLimiterFallback(Long projectId, Long userStoryId, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for removeUserStoryFromSprint: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for removing user story from sprint");
+    }
 
+    public UserStoryDTO removeUserStoryFromSprintBulkheadFallback(Long projectId, Long userStoryId, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for removeUserStoryFromSprint: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user story removal requests");
+    }
+
+    public UserStoryDTO removeUserStoryFromSprintRetryFallback(Long projectId, Long userStoryId, String token, Throwable t) {
+        System.out.println("Retry fallback for removeUserStoryFromSprint: " + t.getMessage());
+        throw new RuntimeException("Failed to remove user story from sprint after retries");
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "updateDependenciesRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateDependenciesBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "updateDependenciesRetryFallback")
     public UserStoryDTO updateDependencies(Long projectId, Long userStoryId, List<Long> newDependsOn, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -312,7 +421,24 @@ public class UserStoryService {
         return new UserStoryDTO(updatedStory);
     }
 
-    // Méthode utilitaire pour recalculer le statut
+    public UserStoryDTO updateDependenciesRateLimiterFallback(Long projectId, Long userStoryId, List<Long> newDependsOn, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for updateDependencies: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for updating dependencies");
+    }
+
+    public UserStoryDTO updateDependenciesBulkheadFallback(Long projectId, Long userStoryId, List<Long> newDependsOn, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for updateDependencies: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent dependency update requests");
+    }
+
+    public UserStoryDTO updateDependenciesRetryFallback(Long projectId, Long userStoryId, List<Long> newDependsOn, String token, Throwable t) {
+        System.out.println("Retry fallback for updateDependencies: " + t.getMessage());
+        throw new RuntimeException("Failed to update dependencies after retries");
+    }
+
+    @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "updateUserStoryStatusRateLimiterFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateUserStoryStatusBulkheadFallback")
+    @Retry(name = "UserStoryServiceRetry", fallbackMethod = "updateUserStoryStatusRetryFallback")
     public UserStoryDTO updateUserStoryStatus(Long projectId, Long userStoryId, String newStatus, String token) {
         String userIdStr = authClient.decodeToken(token);
         if (userIdStr == null) {
@@ -343,6 +469,20 @@ public class UserStoryService {
                 "Modifier Status du User Story : " + userStory.getTitle()
         );
         return new UserStoryDTO(updatedStory);
+    }
+    public UserStoryDTO updateUserStoryStatusRateLimiterFallback(Long projectId, Long userStoryId, String newStatus, String token, Throwable t) {
+        System.out.println("RateLimiter fallback for updateUserStoryStatus: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for updating user story status");
+    }
+
+    public UserStoryDTO updateUserStoryStatusBulkheadFallback(Long projectId, Long userStoryId, String newStatus, String token, Throwable t) {
+        System.out.println("Bulkhead fallback for updateUserStoryStatus: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user story status update requests");
+    }
+
+    public UserStoryDTO updateUserStoryStatusRetryFallback(Long projectId, Long userStoryId, String newStatus, String token, Throwable t) {
+        System.out.println("Retry fallback for updateUserStoryStatus: " + t.getMessage());
+        throw new RuntimeException("Failed to update user story status after retries");
     }
 
     public void updateStatusBasedOnDependencies(UserStory userStory, String token) {
