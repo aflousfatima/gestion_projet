@@ -5,6 +5,9 @@ import com.task.taskservice.Entity.*;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import com.task.taskservice.Repository.ProcessedCommitRepository;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.slf4j.Logger;
@@ -71,6 +74,10 @@ public class TaskService {
         this.processedCommitRepository= processedCommitRepository;
     }
 
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "createTaskRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createTaskBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "createTaskRetryFallback")
     @Transactional
     public TaskDTO createTask(Long projectId, Long userStoryId, TaskDTO taskDTO, String token) {
         // Validate token
@@ -154,7 +161,19 @@ public class TaskService {
         return taskMapper.toDTO(savedTask);
     }
 
+    public TaskDTO createTaskBulkheadFallback(Long projectId, Long userStoryId, TaskDTO taskDTO, String token, Throwable t) {
+        logger.error("Bulkhead fallback for createTask: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent task creation requests");
+    }
 
+    public TaskDTO createTaskRetryFallback(Long projectId, Long userStoryId, TaskDTO taskDTO, String token, Throwable t) {
+        logger.error("Retry fallback for createTask: {}", t.getMessage());
+        throw new RuntimeException("Failed to create task after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "updateTaskRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateTaskBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "updateTaskRetryFallback")
     @Transactional
     public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
         // Validate token
@@ -347,7 +366,24 @@ public class TaskService {
         return responseDTO;
     }
 
+    public TaskDTO updateTaskRateLimiterFallback(Long taskId, TaskDTO taskDTO, String token, Throwable t) {
+        logger.error("RateLimiter fallback for updateTask: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for task update");
+    }
 
+    public TaskDTO updateTaskBulkheadFallback(Long taskId, TaskDTO taskDTO, String token, Throwable t) {
+        logger.error("Bulkhead fallback for updateTask: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent task update requests");
+    }
+
+    public TaskDTO updateTaskRetryFallback(Long taskId, TaskDTO taskDTO, String token, Throwable t) {
+        logger.error("Retry fallback for updateTask: {}", t.getMessage());
+        throw new RuntimeException("Failed to update task after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "updateTaskByCommitRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateTaskByCommitBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "updateTaskByCommitRetryFallback")
     @Transactional
     public TaskDTO updateTask_bycommit(Long taskId, TaskDTO taskDTO) {
         // Validate token
@@ -488,6 +524,25 @@ public class TaskService {
 
         return responseDTO;
     }
+
+    public TaskDTO updateTaskByCommitRateLimiterFallback(Long taskId, TaskDTO taskDTO, Throwable t) {
+        logger.error("RateLimiter fallback for updateTask_bycommit: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for task update by commit");
+    }
+
+    public TaskDTO updateTaskByCommitBulkheadFallback(Long taskId, TaskDTO taskDTO, Throwable t) {
+        logger.error("Bulkhead fallback for updateTask_bycommit: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent task update by commit requests");
+    }
+
+    public TaskDTO updateTaskByCommitRetryFallback(Long taskId, TaskDTO taskDTO, Throwable t) {
+        logger.error("Retry fallback for updateTask_bycommit: {}", t.getMessage());
+        throw new RuntimeException("Failed to update task by commit after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTaskByIdRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTaskByIdBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "getTaskByIdRetryFallback")
     @Transactional(readOnly = true)
     public TaskDTO getTaskById(Long projectId, Long userStoryId, Long taskId, String token) {
         // Validate token
@@ -509,7 +564,24 @@ public class TaskService {
         return taskMapper.toDTO(task);
     }
 
+    public TaskDTO getTaskByIdRateLimiterFallback(Long projectId, Long userStoryId, Long taskId, String token, Throwable t) {
+        logger.error("RateLimiter fallback for getTaskById: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for fetching task");
+    }
 
+    public TaskDTO getTaskByIdBulkheadFallback(Long projectId, Long userStoryId, Long taskId, String token, Throwable t) {
+        logger.error("Bulkhead fallback for getTaskById: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent task fetch requests");
+    }
+
+    public TaskDTO getTaskByIdRetryFallback(Long projectId, Long userStoryId, Long taskId, String token, Throwable t) {
+        logger.error("Retry fallback for getTaskById: {}", t.getMessage());
+        throw new RuntimeException("Failed to fetch task after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTaskByTaskIdRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTaskByTaskIdBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "getTaskByTaskIdRetryFallback")
     @Transactional(readOnly = true)
     public TaskDTO getTaskByTaskId(Long taskId, String token) {
         String userId = authClient.decodeToken(token);
@@ -521,7 +593,24 @@ public class TaskService {
         return taskMapper.toDTO(task);
     }
 
+    public TaskDTO getTaskByTaskIdRateLimiterFallback(Long taskId, String token, Throwable t) {
+        logger.error("RateLimiter fallback for getTaskByTaskId: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for fetching task");
+    }
 
+    public TaskDTO getTaskByTaskIdBulkheadFallback(Long taskId, String token, Throwable t) {
+        logger.error("Bulkhead fallback for getTaskByTaskId: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent task fetch requests");
+    }
+
+    public TaskDTO getTaskByTaskIdRetryFallback(Long taskId, String token, Throwable t) {
+        logger.error("Retry fallback for getTaskByTaskId: {}", t.getMessage());
+        throw new RuntimeException("Failed to fetch task after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "deleteTaskRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteTaskBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "deleteTaskRetryFallback")
     @Transactional
     public void deleteTask(Long taskId) {
         Task task = taskRepository.findById(taskId)
@@ -537,7 +626,24 @@ public class TaskService {
         }
         taskRepository.delete(task);
     }
+    public void deleteTaskRateLimiterFallback(Long taskId, Throwable t) {
+        logger.error("RateLimiter fallback for deleteTask: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for task deletion");
+    }
 
+    public void deleteTaskBulkheadFallback(Long taskId, Throwable t) {
+        logger.error("Bulkhead fallback for deleteTask: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent task deletion requests");
+    }
+
+    public void deleteTaskRetryFallback(Long taskId, Throwable t) {
+        logger.error("Retry fallback for deleteTask: {}", t.getMessage());
+        throw new RuntimeException("Failed to delete task after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTasksByProjectAndUserStoryRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTasksByProjectAndUserStoryBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "getTasksByProjectAndUserStoryRetryFallback")
     @Transactional(readOnly = true)
     public List<TaskDTO> getTasksByProjectAndUserStory(Long projectId, Long userStoryId, String token) {
         // Validate token
@@ -566,6 +672,24 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
+    public List<TaskDTO> getTasksByProjectAndUserStoryRateLimiterFallback(Long projectId, Long userStoryId, String token, Throwable t) {
+        logger.error("RateLimiter fallback for getTasksByProjectAndUserStory: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    public List<TaskDTO> getTasksByProjectAndUserStoryBulkheadFallback(Long projectId, Long userStoryId, String token, Throwable t) {
+        logger.error("Bulkhead fallback for getTasksByProjectAndUserStory: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    public List<TaskDTO> getTasksByProjectAndUserStoryRetryFallback(Long projectId, Long userStoryId, String token, Throwable t) {
+        logger.error("Retry fallback for getTasksByProjectAndUserStory: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTasksByProjectIdRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTasksByProjectIdBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "getTasksByProjectIdRetryFallback")
     @Transactional(readOnly = true)
     public List<TaskDTO> getTasksByProjectId(Long projectId, String token) {
         // Validate token
@@ -583,7 +707,24 @@ public class TaskService {
                 .collect(Collectors.toList());
     }
 
+    public List<TaskDTO> getTasksByProjectIdRateLimiterFallback(Long projectId, String token, Throwable t) {
+        logger.error("RateLimiter fallback for getTasksByProjectId: {}", t.getMessage());
+        return Collections.emptyList();
+    }
 
+    public List<TaskDTO> getTasksByProjectIdBulkheadFallback(Long projectId, String token, Throwable t) {
+        logger.error("Bulkhead fallback for getTasksByProjectId: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    public List<TaskDTO> getTasksByProjectIdRetryFallback(Long projectId, String token, Throwable t) {
+        logger.error("Retry fallback for getTasksByProjectId: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTasksOfActiveSprintRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTasksOfActiveSprintBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "getTasksOfActiveSprintRetryFallback")
     public List<TaskDTO> getTasksOfActiveSprint(Long projectId, String token) {
         // Log initial pour indiquer que la méthode est appelée
         System.out.println("Received request to fetch tasks for active sprint of project ID: " + projectId);
@@ -660,6 +801,25 @@ public class TaskService {
     }
 
 
+    public List<TaskDTO> getTasksOfActiveSprintRateLimiterFallback(Long projectId, String token, Throwable t) {
+        logger.error("RateLimiter fallback for getTasksOfActiveSprint: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    public List<TaskDTO> getTasksOfActiveSprintBulkheadFallback(Long projectId, String token, Throwable t) {
+        logger.error("Bulkhead fallback for getTasksOfActiveSprint: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+    public List<TaskDTO> getTasksOfActiveSprintRetryFallback(Long projectId, String token, Throwable t) {
+        logger.error("Retry fallback for getTasksOfActiveSprint: {}", t.getMessage());
+        return Collections.emptyList();
+    }
+
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "attachFileToTaskRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "attachFileToTaskBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "attachFileToTaskRetryFallback")
     @Transactional
     public Task attachFileToTask(Long taskId, MultipartFile file, String token) throws IOException {
         logger.info("Attaching file to task ID: {}, file: {}", taskId, file.getOriginalFilename());
@@ -707,7 +867,24 @@ public class TaskService {
 
         return task;
     }
+    public Task attachFileToTaskRateLimiterFallback(Long taskId, MultipartFile file, String token, Throwable t) throws IOException {
+        logger.error("RateLimiter fallback for attachFileToTask: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for file attachment");
+    }
 
+    public Task attachFileToTaskBulkheadFallback(Long taskId, MultipartFile file, String token, Throwable t) throws IOException {
+        logger.error("Bulkhead fallback for attachFileToTask: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent file attachment requests");
+    }
+
+    public Task attachFileToTaskRetryFallback(Long taskId, MultipartFile file, String token, Throwable t) throws IOException {
+        logger.error("Retry fallback for attachFileToTask: {}", t.getMessage());
+        throw new RuntimeException("Failed to attach file after retries");
+    }
+
+    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "deleteFileFromTaskRateLimiterFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteFileFromTaskBulkheadFallback")
+    @Retry(name = "TaskServiceRetry", fallbackMethod = "deleteFileFromTaskRetryFallback")
     @Transactional
     public void deleteFileFromTask(String publicId, String token) throws IOException {
         logger.info("Deleting file with publicId: {}", publicId);
@@ -784,6 +961,20 @@ public class TaskService {
     }
 
 
+    public void deleteFileFromTaskRateLimiterFallback(String publicId, String token, Throwable t) throws IOException {
+        logger.error("RateLimiter fallback for deleteFileFromTask: {}", t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for file deletion");
+    }
+
+    public void deleteFileFromTaskBulkheadFallback(String publicId, String token, Throwable t) throws IOException {
+        logger.error("Bulkhead fallback for deleteFileFromTask: {}", t.getMessage());
+        throw new RuntimeException("Too many concurrent file deletion requests");
+    }
+
+    public void deleteFileFromTaskRetryFallback(String publicId, String token, Throwable t) throws IOException {
+        logger.error("Retry fallback for deleteFileFromTask: {}", t.getMessage());
+        throw new RuntimeException("Failed to delete file after retries");
+    }
 
     @Transactional(readOnly = true)
     public List<TaskCalendarDTO> getTasksForCalendar(Long projectId, String token) {

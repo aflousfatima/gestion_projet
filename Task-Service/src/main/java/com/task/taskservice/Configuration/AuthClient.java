@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "auth-service", url = "http://localhost:8083")  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
+@FeignClient(name = "auth-service", url = "http://localhost:8083",fallback = AuthClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface AuthClient {
     @GetMapping("/api/auth/decode-token")
     String decodeToken(@RequestHeader("Authorization") String authorization);

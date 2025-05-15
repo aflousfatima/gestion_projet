@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "project-service", url = "http://localhost:8085")
+@FeignClient(name = "project-service", url = "http://localhost:8085",fallback = ProjectClientFallback.class)
 public interface ProjectClient {
 
     @GetMapping("/api/projects/by-user")

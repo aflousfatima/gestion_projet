@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Map;
 
-@FeignClient(name = "github-integration-service", url = "http://localhost:8087")
+@FeignClient(name = "github-integration-service", url = "http://localhost:8087",fallback = GitHubIntegrationClientFallback.class)
 public interface GitHubIntegrationClient {
     @GetMapping("/fetch_data/repos/{owner}/{repo}/commits-by-user")
     ResponseEntity<Object> getCommitsByUserId(
