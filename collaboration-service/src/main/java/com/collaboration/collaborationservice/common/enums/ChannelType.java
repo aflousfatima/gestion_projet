@@ -1,4 +1,9 @@
 package com.collaboration.collaborationservice.common.enums;
 
-public class ChannelType {
+public enum ChannelType {
+    PROJECT,
+    TASK,
+    PRIVATE,
+    PUBLIC,
+    GROUP
 }

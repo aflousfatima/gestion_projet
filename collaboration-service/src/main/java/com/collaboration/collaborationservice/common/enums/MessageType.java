@@ -1,4 +1,10 @@
 package com.collaboration.collaborationservice.common.enums;
 
-public class MessageType {
+public enum MessageType {
+    TEXT,
+    IMAGE,
+    VIDEO,
+    FILE,
+    SYSTEM,
+    AUDIO,          // audio (ex : vocal)
 }

@@ -1,4 +1,11 @@
 package com.collaboration.collaborationservice.common.enums;
 
-public class CallStatus {
+public enum CallStatus {
+    INITIATED,
+    ACTIVE,
+    ENDED,
+    FAILED ,
+    MISSED,
+    REJECTED,
+    CANCELLED
 }
