@@ -3,9 +3,12 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMicrophone, faHashtag } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
 import "../../../../styles/Collaboration.css";
-import { AUTH_SERVICE_URL , COLLABORATION_SERVICE_URL } from "../../../../config/useApi";
+import { AUTH_SERVICE_URL, COLLABORATION_SERVICE_URL } from "../../../../config/useApi";
 import useAxios from "../../../../hooks/useAxios";
+import { useSearchParams, useRouter } from "next/navigation";
+
 interface Channel {
   id: string;
   name: string;
@@ -27,15 +30,16 @@ interface Role {
 }
 
 const CollaborationPage: React.FC = () => {
-  const { accessToken, isLoading } = useAuth();
+  const { accessToken } = useAuth();
   const axiosInstance = useAxios();
-  const [channels, setChannels] = useState<Channel[]>([]);
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
-  const [roles, setRoles] = useState<Role[]>([
+  const [roles] = useState<Role[]>([
     { id: "role1", name: "Admin" },
     { id: "role2", name: "Member" },
   ]);
-  const [showCreateModal, setShowCreateModal] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [newChannel, setNewChannel] = useState({
     name: "",
     type: "TEXT" as "TEXT" | "VOICE",
@@ -52,10 +56,16 @@ const CollaborationPage: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // Récupérer l'utilisateur courant depuis le microservice d'authentification
+  // Handle modal visibility based on URL query
+  useEffect(() => {
+    const shouldShowModal = searchParams.get("create") === "true";
+    setShowCreateModal(shouldShowModal);
+  }, [searchParams]);
+
+  // Fetch current user
   useEffect(() => {
     const fetchCurrentUser = async () => {
-      if (accessToken) {
+      if (accessToken && !currentUser) {
         try {
           const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -67,39 +77,15 @@ const CollaborationPage: React.FC = () => {
             email: response.data.email,
           });
         } catch (err: any) {
+          console.error("Failed to fetch current user:", err);
           setError(err.response?.data?.message || "Erreur lors de la récupération de l'utilisateur");
         }
       }
     };
     fetchCurrentUser();
-  }, [accessToken, axiosInstance]);
+  }, [accessToken, axiosInstance,currentUser]);
 
-  // Récupérer les canaux accessibles
-  useEffect(() => {
-    const fetchChannels = async () => {
-      if (accessToken) {
-        try {
-          const response = await axiosInstance.get(`${COLLABORATION_SERVICE_URL}/api/channels/public`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          setChannels(
-            response.data.map((channel: any) => ({
-              id: channel.id.toString(),
-              name: channel.name,
-              type: channel.type,
-              isPrivate: channel.isPrivate,
-              members: channel.participants?.map((p: any) => p.id.toString()) || [],
-            }))
-          );
-        } catch (err: any) {
-          setError(err.response?.data?.message || "Erreur lors de la récupération des canaux");
-        }
-      }
-    };
-    fetchChannels();
-  }, [accessToken, axiosInstance]);
-
-  // Récupérer les utilisateurs
+  // Fetch users
   useEffect(() => {
     const fetchUsers = async () => {
       try {
@@ -121,7 +107,7 @@ const CollaborationPage: React.FC = () => {
     fetchUsers();
   }, [axiosInstance, accessToken]);
 
-  // Filtrer les utilisateurs pour la recherche
+  // Filter users for search
   useEffect(() => {
     const filtered = users.filter((user) =>
       `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchQuery.toLowerCase())
@@ -149,7 +135,34 @@ const CollaborationPage: React.FC = () => {
       }));
     }
     setSearchQuery("");
-  }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+
+    const payload = {
+      name: newChannel.name,
+      type: newChannel.type,
+      isPrivate: newChannel.isPrivate,
+      projectId: newChannel.projectId,
+      participantIds: newChannel.members.map((id) => parseInt(id)),
+    };
+
+    try {
+      await axiosInstance.post(`${COLLABORATION_SERVICE_URL}/api/channels/createChannel`, payload, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setSuccessMessage("Canal créé avec succès !");
+      setShowCreateModal(false);
+      router.replace("/user/dashboard/collaboration", { scroll: false });
+      setNewChannel({ name: "", type: "TEXT", isPrivate: false, members: [], roles: [], projectId: null });
+      setStep(1);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Erreur lors de la création du canal");
+    }
+  };
 
   const nextStep = () => {
     if (newChannel.name && newChannel.type) {
@@ -165,67 +178,73 @@ const CollaborationPage: React.FC = () => {
     setError(null);
   };
 
-  if (isLoading || !currentUser) {
-    return (
-      <div className="loading-container">
-        <img src="/loading.svg" alt="Loading" className="loading-img" />
-      </div>
-    );
-  }
-
-const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccessMessage(null);
-
-    // Préparer la charge utile pour le backend
-    const payload = {
-      name: newChannel.name,
-      type: newChannel.type,
-      isPrivate: newChannel.isPrivate,
-      projectId: newChannel.projectId, // null si aucun projet sélectionné
-      participantIds: newChannel.members.map((id) => parseInt(id)), // Convertir les IDs en nombres
-    };
-
-    try {
-      const response = await axiosInstance.post(`${COLLABORATION_SERVICE_URL}/api/channels/createChanel`, payload, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      const createdChannel = response.data;
-      // Mettre à jour l'état local des channels
-      setChannels((prev) => [
-        ...prev,
-        {
-          id: createdChannel.id.toString(),
-          name: createdChannel.name,
-          type: createdChannel.type,
-          isPrivate: createdChannel.isPrivate,
-          members: createdChannel.participants?.map((p: any) => p.id.toString()) || [],
-        },
-      ]);
-      setSuccessMessage("Canal créé avec succès !");
-      setShowCreateModal(false);
-      setNewChannel({ name: "", type: "TEXT", isPrivate: false, members: [], roles: [], projectId: null });
-      setStep(1);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Erreur lors de la création du canal");
-    }
+  const closeModal = () => {
+    setShowCreateModal(false);
+    router.replace("/user/dashboard/collaboration", { scroll: false });
   };
 
+  // Render nothing if currentUser is not loaded yet
+  if (!currentUser) {
+    return null;
+  }
 
-return (
+  return (
     <div className="collaboration-container">
       {error && <div className="error-message">{error}</div>}
       {successMessage && <div className="success-message">{successMessage}</div>}
+
+    {!showCreateModal && (
+  <div className="welcome-section">
+    <div className="wave-bg"></div>
+    <div className="content-wrapper">
+      <div className="content-left">
+        <h2 className="dashboard-title">Unite Your Team</h2>
+        <p className="dashboard-subtitle">Create channels to collaborate, communicate, and achieve greatness.</p>
+        <ul className="feature-list">
+          
+          
+          <li className="feature-item3">
+            <svg className="feature-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="#ffffff" strokeWidth="2" />
+              <path d="M2 17L12 22L22 17" stroke="#ffffff" strokeWidth="2" />
+              <path d="M2 12L12 17L22 12" stroke="#ffffff" strokeWidth="2" />
+            </svg>
+            <div>
+              <h3 className="feature-title">Team Projects</h3>
+              <p className="feature-desc">Streamline tasks and shared objectives.</p>
+            </div>
+          </li>
+          <li className="feature-item1">
+            <FontAwesomeIcon icon={faHashtag} className="feature-icon" />
+            <div>
+              <h3 className="feature-title">Text Channels</h3>
+              <p className="feature-desc">Instant messaging for seamless team chats.</p>
+            </div>
+          </li>
+          <li className="feature-item2">
+            <FontAwesomeIcon icon={faMicrophone} className="feature-icon" />
+            <div>
+              <h3 className="feature-title">Voice Channels</h3>
+              <p className="feature-desc">Clear voice calls for lively discussions.</p>
+            </div>
+          </li>
+        </ul>
+        <Link href="/user/dashboard/collaboration?create=true" aria-label="Create a new collaboration channel">
+          <button className="dashboard-cta">Launch a Channel</button>
+        </Link>
+      </div>
+      <div className="content-right">
+        <img src="/collab-pic.png" alt="Team collaboration illustration" className="collab-illustration" />
+      </div>
+    </div>
+  </div>
+)}
 
       {showCreateModal && (
         <div className="modal-overlay">
           <div className="modal-content">
             <h2>Create New Channel</h2>
-            <button className="close-btn" onClick={() => setShowCreateModal(false)}>
+            <button className="close-btn" onClick={closeModal}>
               ×
             </button>
             <div className="step-indicator">
@@ -307,11 +326,7 @@ return (
                   </span>
                 </div>
                 <div className="form-actions-collab">
-                  <button
-                    type="button"
-                    className="cancel-btn"
-                    onClick={() => setShowCreateModal(false)}
-                  >
+                  <button type="button" className="cancel-btn" onClick={closeModal}>
                     Cancel
                   </button>
                   <button type="button" className="next-btn" onClick={nextStep}>

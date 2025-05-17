@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import useAxios from "../../../hooks/useAxios";
-import { PROJECT_SERVICE_URL } from "../../../config/useApi";
+import { PROJECT_SERVICE_URL , COLLABORATION_SERVICE_URL} from "../../../config/useApi";
 import { useProjects, Project } from "../../../hooks/useProjects";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -16,7 +16,8 @@ import {
   faHashtag,
   faVolumeUp,
   faCaretDown,
-  faCaretUp
+  faCaretUp,
+  faComments
 } from "@fortawesome/free-solid-svg-icons";
 
 
@@ -26,13 +27,6 @@ interface Channel {
   type: "TEXT" | "VOICE";
   isPrivate: boolean;
   members: string[]; // Liste des IDs des membres autorisés
-}
-
-interface User {
-  id: string; // Ajoute le champ id
-  firstName: string;
-  lastName: string;
-  email: string;
 }
 export default function DashboardLayout({
   children,
@@ -73,15 +67,35 @@ export default function DashboardLayout({
   const [message, setMessage] = useState("");
   const [showProjectsList, setShowProjectsList] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [isTextChannelOpen, setIsTextChannelOpen] = useState(true);
   const [isVocalChannelOpen, setIsVocalChannelOpen] = useState(true);
-  const [channels, setChannels] = useState<Channel[]>([
-    // Données simulées pour l'instant
-    { id: "1", name: "annoncements", type: "TEXT", isPrivate: false, members: [] },
-    { id: "2", name: "tech global", type: "TEXT", isPrivate: false, members: [] },
-    { id: "3", name: "vocal general", type: "VOICE", isPrivate: false, members: [] },
-    { id: "4", name: "private meeting", type: "VOICE", isPrivate: true, members: [""] },
-  ]);
+  const [ setError] = useState<string | null>(null);
+
+  // Récupérer les canaux publics
+  useEffect(() => {
+    const fetchChannels = async () => {
+      if (accessToken) {
+        try {
+          const response = await axiosInstance.get(`${COLLABORATION_SERVICE_URL}/api/channels/public`, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          setChannels(
+            response.data.map((channel: any) => ({
+              id: channel.id.toString(),
+              name: channel.name,
+              type: channel.type,
+              isPrivate: channel.isPrivate,
+              members: channel.participants?.map((p: any) => p.id.toString()) || [],
+            }))
+          );
+        } catch (err: any) {
+          setError(err.response?.data?.message || "Erreur lors de la récupération des canaux");
+        }
+      }
+    };
+    fetchChannels();
+  }, [accessToken, axiosInstance , setError]);
   const [projectData, setProjectData] = useState<Project>({
     id: 0, // Champ requis par l'interface, mais sera généralement défini par l'API
     name: "",
@@ -303,16 +317,6 @@ export default function DashboardLayout({
   };
 
 
-    // Récupérer les channels du projet
-  // Simuler la récupération des channels (à remplacer par API plus tard)
-  /* Exemple : const response = await axiosInstance.get("/api/channels", { headers: { Authorization: `Bearer ${accessToken}` } });
- useEffect(() => {
-  // Filtrer les salons privés pour n'afficher que ceux où l'utilisateur est membre
-  setChannels((prev) =>
-    prev.filter((channel) => channel.isPrivate))
-  );
-}, [user.id]);
-*/
   // États supplémentaires
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -1159,7 +1163,7 @@ export default function DashboardLayout({
               
              <li className="section-collab-title">
   <span className="section-title-style">Collaboration</span>
-  <Link href="/user/dashboard/collaboration">
+  <Link href="/user/dashboard/collaboration?create=true">
     <button className="add-btn">+</button>
   </Link>
 </li>
@@ -1200,7 +1204,7 @@ export default function DashboardLayout({
     />
   </span>
 </li>
-{isVocalChannelOpen && channels.filter((channel) => channel.type === "VOICE").length > 0 ? (
+{isVocalChannelOpen && channels.some((channel) => channel.type === "VOICE") && (
   <div className="channels-list">
     {channels
       .filter((channel) => channel.type === "VOICE")
@@ -1208,17 +1212,16 @@ export default function DashboardLayout({
         <li key={channel.id} className="channel-name">
           <FontAwesomeIcon icon={faVolumeUp} className="channel-icon" />
           <Link href={`/user/dashboard/collaboration/channels/${channel.id}`}>
-              {channel.name}
-              {channel.isPrivate && (
+            {channel.name}
+            {channel.isPrivate && (
               <FontAwesomeIcon icon={faLock} className="private-icon" />
             )}
           </Link>
         </li>
       ))}
   </div>
-) : isVocalChannelOpen ? (
-  <p className="no-channels">Aucun salon vocal disponible.</p>
-) : null}
+)}
+
               </ul>
             </nav>
           </div>
