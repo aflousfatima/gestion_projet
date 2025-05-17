@@ -1,12 +1,13 @@
 package com.collaboration.collaborationservice.channel.entity;
+
 import com.collaboration.collaborationservice.attachment.entity.Attachment;
+import com.collaboration.collaborationservice.call.entity.Call;
 import com.collaboration.collaborationservice.common.enums.ChannelType;
 import com.collaboration.collaborationservice.message.entity.Message;
 import com.collaboration.collaborationservice.participant.entity.Participant;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import org.aspectj.weaver.ast.Call;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -27,10 +28,18 @@ public class Channel {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ChannelType type; // Ex: PUBLIC, PRIVATE, GROUP
+    private ChannelType type; // TEXT ou VOCAL
+
+    @Column(name = "created_by", nullable = false) // Champ pour l'ID de l'utilisateur créateur
+    private String createdBy;
+    @Column(nullable = false)
+    private boolean isPrivate; // true pour privé, false pour public
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "project_id") // Champ pour stocker l'ID du projet (optionnel)
+    private Long projectId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -38,7 +47,7 @@ public class Channel {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Relations
+    // Relations existantes
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Message> messages = new ArrayList<>();
 

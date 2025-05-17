@@ -30,11 +30,7 @@ public class Attachment {
 
     @Embedded
     private AttachmentInfo info; // Contient ex. nom du fichier, taille, type MIME
-    private String filename;
-
     private String fileType;
-
-    private long fileSize;
 
     private String url;
     private String uploaderId; // ID de l'utilisateur
