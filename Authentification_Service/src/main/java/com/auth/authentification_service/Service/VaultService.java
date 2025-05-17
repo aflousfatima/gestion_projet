@@ -19,7 +19,7 @@ public class VaultService {
         this.vaultTemplate = vaultTemplate;
     }
     @RateLimiter(name = "VaultServiceLimiter", fallbackMethod = "clientSecretRateLimiterFallback")
-    @Bulkhead(name = "VaultServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "clientSecretBulkheadFallback")
+    @Bulkhead(name = "VaultServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "clientSecretBulkheadFallback")
     @Retry(name = "VaultServiceRetry", fallbackMethod = "clientSecretRetryFallback")
     public String getClientSecret() {
         // Lire un secret spécifique depuis Vault à l'emplacement "secret/keycloak"
@@ -46,7 +46,7 @@ public class VaultService {
     }
 
     @RateLimiter(name = "VaultServiceLimiter", fallbackMethod = "testClientSecretRateLimiterFallback")
-    @Bulkhead(name = "VaultServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "testClientSecretBulkheadFallback")
+    @Bulkhead(name = "VaultServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "testClientSecretBulkheadFallback")
     @Retry(name = "VaultServiceRetry", fallbackMethod = "testClientSecretRetryFallback")
     public String getTestClientSecret() {
         // Lire un secret spécifique depuis Vault à l'emplacement "secret/keycloak"

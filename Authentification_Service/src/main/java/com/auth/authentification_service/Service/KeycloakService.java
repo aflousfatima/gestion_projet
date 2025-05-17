@@ -56,7 +56,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getAdminTokenRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getAdminTokenBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getAdminTokenBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getAdminTokenRetryFallback")
     public String getAdminToken() {
         String clientSecret = vaultService.getClientSecret();
@@ -110,7 +110,7 @@ public class KeycloakService {
 
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "createUserRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createUserBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "createUserBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "createUserRetryFallback")
     public ResponseEntity<String> createUser(UserDto userDto) {
         System.out.println("Début de la création de l'utilisateur : " + userDto.getUsername());
@@ -241,7 +241,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "assignRoleToUserRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "assignRoleToUserBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "assignRoleToUserBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "assignRoleToUserRetryFallback")
     private void assignRoleToUser(String userId, String roleName, String accessToken) {
         System.out.println("Attribution du rôle " + roleName + " à l'utilisateur : " + userId);
@@ -331,7 +331,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getTeamMembersRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTeamMembersBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTeamMembersBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getTeamMembersRetryFallback")
     public List<Map<String, Object>> getTeamMembers(String accessToken) {
         // Décoder le token pour obtenir l'ID de l'utilisateur connecté
@@ -448,7 +448,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getTeamMembersByProjectRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTeamMembersByProjectBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTeamMembersByProjectBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getTeamMembersByProjectRetryFallback")
 
     public List<Map<String, Object>> getTeamMembersbyProject(String accessToken, String projectId) {
@@ -557,7 +557,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getUserDetailsByAuthIdRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getUserDetailsByAuthIdBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getUserDetailsByAuthIdBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getUserDetailsByAuthIdRetryFallback")
     public Map<String, Object> getUserDetailsByAuthId(String authId, String userToken) {
         String adminToken = getAdminToken(); // Remplace le token utilisateur par un token admin
@@ -626,7 +626,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "getUsersByIdsRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getUsersByIdsBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getUsersByIdsBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "getUsersByIdsRetryFallback")
     public List<UserDto> getUsersByIds(List<String> userIds) {
         String adminToken = getAdminToken();
@@ -694,7 +694,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "updateUserRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateUserBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateUserBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "updateUserRetryFallback")
     public ResponseEntity<String> updateUser(String accessToken, Map<String, Object> userData) {
         System.out.println("🔄 Mise à jour de l'utilisateur avec les données : " + userData);
@@ -753,7 +753,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "changePasswordRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "changePasswordBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "changePasswordBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "changePasswordRetryFallback")
     public ResponseEntity<String> changePassword(String accessToken, Map<String, String> passwordData) {
         System.out.println("🔄 Changement de mot de passe pour l'utilisateur");
@@ -826,7 +826,7 @@ public class KeycloakService {
     }
 
     @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "authenticateUserRateLimiterFallback")
-    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "authenticateUserBulkheadFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "authenticateUserBulkheadFallback")
     @Retry(name = "KeycloakServiceRetry", fallbackMethod = "authenticateUserRetryFallback")
     public TokenDto authenticateUser(String email, String password) throws Exception {
         System.out.println("Récupération du client secret depuis Vault...");
