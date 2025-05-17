@@ -49,7 +49,7 @@ public class ProjectService {
 
     @Transactional
     @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "createProjectRateLimiterFallback")
-    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createProjectBulkheadFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "createProjectBulkheadFallback")
     @Retry(name = "ProjectServiceRetry", fallbackMethod = "createProjectRetryFallback")
     public void createProject(String authId, String name, String description,
                               LocalDate startDate, LocalDate deadline,
@@ -107,7 +107,7 @@ public class ProjectService {
     }
 
     @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "updateProjectRateLimiterFallback")
-    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateProjectBulkheadFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateProjectBulkheadFallback")
     @Retry(name = "ProjectServiceRetry", fallbackMethod = "updateProjectRetryFallback")
     @Transactional
     public void updateProject(String authId, String oldName, String newName,
@@ -173,7 +173,7 @@ public class ProjectService {
     }
 
     @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "deleteProjectRateLimiterFallback")
-    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteProjectBulkheadFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "deleteProjectBulkheadFallback")
     @Retry(name = "ProjectServiceRetry", fallbackMethod = "deleteProjectRetryFallback")
     @Transactional
     public void deleteProject(String authId, String name) {
@@ -216,7 +216,7 @@ public class ProjectService {
     }
 
     @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "getProjectByIdRateLimiterFallback")
-    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getProjectByIdBulkheadFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getProjectByIdBulkheadFallback")
     @Retry(name = "ProjectServiceRetry", fallbackMethod = "getProjectByIdRetryFallback")
     // Nouvelle méthode pour récupérer un projet par ID
     public Projet getProjectById(Long projectId) {
@@ -239,7 +239,7 @@ public class ProjectService {
     }
 
     @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "getManagerByProjectRateLimiterFallback")
-    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getManagerByProjectBulkheadFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getManagerByProjectBulkheadFallback")
     @Retry(name = "ProjectServiceRetry", fallbackMethod = "getManagerByProjectRetryFallback")
     public Map<String, Object> getManagerByProject(String accessToken, Long projectId) {
         // Récupérer le projet pour obtenir le manager_id
@@ -477,7 +477,7 @@ public class ProjectService {
 
 
     @RateLimiter(name = "ProjectServiceLimiter", fallbackMethod = "getGitHubRepositoryUrlRateLimiterFallback")
-    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getGitHubRepositoryUrlBulkheadFallback")
+    @Bulkhead(name = "ProjectServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getGitHubRepositoryUrlBulkheadFallback")
     @Retry(name = "ProjectServiceRetry", fallbackMethod = "getGitHubRepositoryUrlRetryFallback")
     public String getGitHubRepositoryUrl(Long projectId) {
         GitHubLink link = gitHubLinkRepository.findByProjetId(projectId);

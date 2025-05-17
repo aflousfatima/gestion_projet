@@ -67,7 +67,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "createUserStoryRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createUserStoryBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "createUserStoryBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "createUserStoryRetryFallback")
     public UserStoryDTO createUserStory(Long projectId, UserStoryRequest request, String token) {
         System.out.println("Début de createUserStory pour projectId: " + projectId);
@@ -128,7 +128,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "updateUserStoryRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateUserStoryBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateUserStoryBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "updateUserStoryRetryFallback")
     public UserStoryDTO updateUserStory(Long projectId, Long userStoryId, UserStoryRequest request, String token) {
 
@@ -205,7 +205,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "getUserStoriesByProjectIdRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getUserStoriesByProjectIdBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getUserStoriesByProjectIdBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "getUserStoriesByProjectIdRetryFallback")
     public List<UserStoryDTO> getUserStoriesByProjectId(Long projectId) {
         Projet projet = projetRepository.findById(projectId)
@@ -231,7 +231,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "deleteUserStoryRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteUserStoryBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "deleteUserStoryBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "deleteUserStoryRetryFallback")
     public void deleteUserStory(Long projectId, Long userStoryId) {
         Projet projet = projetRepository.findById(projectId)
@@ -267,7 +267,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "assignUserStoryToSprintRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "assignUserStoryToSprintBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "assignUserStoryToSprintBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "assignUserStoryToSprintRetryFallback")
     public UserStoryDTO assignUserStoryToSprint(Long projectId, Long userStoryId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -340,7 +340,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "removeUserStoryFromSprintRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "removeUserStoryFromSprintBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "removeUserStoryFromSprintBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "removeUserStoryFromSprintRetryFallback")
     public UserStoryDTO removeUserStoryFromSprint(Long projectId, Long userStoryId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -387,7 +387,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "updateDependenciesRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateDependenciesBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateDependenciesBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "updateDependenciesRetryFallback")
     public UserStoryDTO updateDependencies(Long projectId, Long userStoryId, List<Long> newDependsOn, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -437,7 +437,7 @@ public class UserStoryService {
     }
 
     @RateLimiter(name = "UserStoryServiceLimiter", fallbackMethod = "updateUserStoryStatusRateLimiterFallback")
-    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateUserStoryStatusBulkheadFallback")
+    @Bulkhead(name = "UserStoryServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateUserStoryStatusBulkheadFallback")
     @Retry(name = "UserStoryServiceRetry", fallbackMethod = "updateUserStoryStatusRetryFallback")
     public UserStoryDTO updateUserStoryStatus(Long projectId, Long userStoryId, String newStatus, String token) {
         String userIdStr = authClient.decodeToken(token);

@@ -39,7 +39,7 @@ public class SprintService {
     @Autowired
     private HistoryService historyService;
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "createSprintRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createSprintBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "createSprintBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "createSprintRetryFallback")
     public SprintDTO createSprint(Long projectId, SprintDTO request, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -89,7 +89,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "getSprintsByProjectIdRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getSprintsByProjectIdBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getSprintsByProjectIdBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "getSprintsByProjectIdRetryFallback")
     public List<SprintDTO> getSprintsByProjectId(Long projectId) {
         Projet projet = projetRepository.findById(projectId)
@@ -113,7 +113,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "updateSprintRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateSprintBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateSprintBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "updateSprintRetryFallback")
     public SprintDTO updateSprint(Long projectId, Long sprintId, SprintDTO request, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -171,7 +171,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "deleteSprintRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteSprintBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "deleteSprintBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "deleteSprintRetryFallback")
     public void deleteSprint(Long projectId, Long sprintId) {
         Projet projet = projetRepository.findById(projectId)
@@ -211,7 +211,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "updateSprintStatusRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateSprintStatusBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateSprintStatusBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "updateSprintStatusRetryFallback")
     public SprintDTO updateSprintStatus(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -262,7 +262,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "cancelSprintRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "cancelSprintBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "cancelSprintBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "cancelSprintRetryFallback")
     public SprintDTO cancelSprint(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -311,7 +311,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "archiveSprintRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "archiveSprintBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "archiveSprintBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "archiveSprintRetryFallback")
     public SprintDTO archiveSprint(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -357,7 +357,7 @@ public class SprintService {
     }
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "activateSprintRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "activateSprintBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "activateSprintBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "activateSprintRetryFallback")
     public SprintDTO activateSprint(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
@@ -461,7 +461,7 @@ public class SprintService {
 
 
     @RateLimiter(name = "SprintServiceLimiter", fallbackMethod = "checkAndUpdateSprintStatusRateLimiterFallback")
-    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "checkAndUpdateSprintStatusBulkheadFallback")
+    @Bulkhead(name = "SprintServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "checkAndUpdateSprintStatusBulkheadFallback")
     @Retry(name = "SprintServiceRetry", fallbackMethod = "checkAndUpdateSprintStatusRetryFallback")
     public SprintDTO checkAndUpdateSprintStatus(Long projectId, Long sprintId, String token) {
         String userIdStr = authClient.decodeToken(token);
