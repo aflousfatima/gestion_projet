@@ -76,7 +76,7 @@ public class TaskService {
 
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "createTaskRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "createTaskBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "createTaskBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "createTaskRetryFallback")
     @Transactional
     public TaskDTO createTask(Long projectId, Long userStoryId, TaskDTO taskDTO, String token) {
@@ -172,7 +172,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "updateTaskRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateTaskBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateTaskBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "updateTaskRetryFallback")
     @Transactional
     public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
@@ -382,7 +382,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "updateTaskByCommitRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "updateTaskByCommitBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateTaskByCommitBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "updateTaskByCommitRetryFallback")
     @Transactional
     public TaskDTO updateTask_bycommit(Long taskId, TaskDTO taskDTO) {
@@ -541,7 +541,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTaskByIdRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTaskByIdBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTaskByIdBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "getTaskByIdRetryFallback")
     @Transactional(readOnly = true)
     public TaskDTO getTaskById(Long projectId, Long userStoryId, Long taskId, String token) {
@@ -580,7 +580,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTaskByTaskIdRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTaskByTaskIdBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTaskByTaskIdBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "getTaskByTaskIdRetryFallback")
     @Transactional(readOnly = true)
     public TaskDTO getTaskByTaskId(Long taskId, String token) {
@@ -609,7 +609,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "deleteTaskRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteTaskBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "deleteTaskBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "deleteTaskRetryFallback")
     @Transactional
     public void deleteTask(Long taskId) {
@@ -642,7 +642,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTasksByProjectAndUserStoryRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTasksByProjectAndUserStoryBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTasksByProjectAndUserStoryBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "getTasksByProjectAndUserStoryRetryFallback")
     @Transactional(readOnly = true)
     public List<TaskDTO> getTasksByProjectAndUserStory(Long projectId, Long userStoryId, String token) {
@@ -688,7 +688,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTasksByProjectIdRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTasksByProjectIdBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTasksByProjectIdBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "getTasksByProjectIdRetryFallback")
     @Transactional(readOnly = true)
     public List<TaskDTO> getTasksByProjectId(Long projectId, String token) {
@@ -723,7 +723,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "getTasksOfActiveSprintRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "getTasksOfActiveSprintBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "getTasksOfActiveSprintBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "getTasksOfActiveSprintRetryFallback")
     public List<TaskDTO> getTasksOfActiveSprint(Long projectId, String token) {
         // Log initial pour indiquer que la méthode est appelée
@@ -818,7 +818,7 @@ public class TaskService {
 
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "attachFileToTaskRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "attachFileToTaskBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "attachFileToTaskBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "attachFileToTaskRetryFallback")
     @Transactional
     public Task attachFileToTask(Long taskId, MultipartFile file, String token) throws IOException {
@@ -883,7 +883,7 @@ public class TaskService {
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "deleteFileFromTaskRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.THREADPOOL, fallbackMethod = "deleteFileFromTaskBulkheadFallback")
+    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "deleteFileFromTaskBulkheadFallback")
     @Retry(name = "TaskServiceRetry", fallbackMethod = "deleteFileFromTaskRetryFallback")
     @Transactional
     public void deleteFileFromTask(String publicId, String token) throws IOException {
