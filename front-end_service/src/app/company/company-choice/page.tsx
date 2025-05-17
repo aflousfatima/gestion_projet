@@ -25,7 +25,7 @@ export default function ChooseCompanyPage() {
             <p className="card-description">
               Build your vision from the ground up and lead with purpose.
             </p>
-            <button className="choice-btn create-btn">Start Now</button>
+            <button className="choice-btn create-company-btn">Start Now</button>
           </div>
         </div>
 

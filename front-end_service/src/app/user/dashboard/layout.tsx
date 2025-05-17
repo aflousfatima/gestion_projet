@@ -10,7 +10,30 @@ import ProtectedRoute from "../../../components/ProtectedRoute";
 import useAxios from "../../../hooks/useAxios";
 import { PROJECT_SERVICE_URL } from "../../../config/useApi";
 import { useProjects, Project } from "../../../hooks/useProjects";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faLock,
+  faHashtag,
+  faVolumeUp,
+  faCaretDown,
+  faCaretUp
+} from "@fortawesome/free-solid-svg-icons";
 
+
+interface Channel {
+  id: string;
+  name: string;
+  type: "TEXT" | "VOICE";
+  isPrivate: boolean;
+  members: string[]; // Liste des IDs des membres autorisés
+}
+
+interface User {
+  id: string; // Ajoute le champ id
+  firstName: string;
+  lastName: string;
+  email: string;
+}
 export default function DashboardLayout({
   children,
 }: {
@@ -38,7 +61,7 @@ export default function DashboardLayout({
   const { projects, setProjects, loading, error } = useProjects();
   const axiosInstance = useAxios();
   const currentPath = usePathname();
-  const [user, setUser] = useState({ firstName: "", lastName: "" , email:""});
+  const [user, setUser] = useState({id: "", firstName: "", lastName: "" , email:""});
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { accessToken, isLoading } = useAuth();
   const router = useRouter();
@@ -50,7 +73,15 @@ export default function DashboardLayout({
   const [message, setMessage] = useState("");
   const [showProjectsList, setShowProjectsList] = useState(false);
   const [editingProject, setEditingProject] = useState<string | null>(null);
-
+  const [isTextChannelOpen, setIsTextChannelOpen] = useState(true);
+  const [isVocalChannelOpen, setIsVocalChannelOpen] = useState(true);
+  const [channels, setChannels] = useState<Channel[]>([
+    // Données simulées pour l'instant
+    { id: "1", name: "annoncements", type: "TEXT", isPrivate: false, members: [] },
+    { id: "2", name: "tech global", type: "TEXT", isPrivate: false, members: [] },
+    { id: "3", name: "vocal general", type: "VOICE", isPrivate: false, members: [] },
+    { id: "4", name: "private meeting", type: "VOICE", isPrivate: true, members: [""] },
+  ]);
   const [projectData, setProjectData] = useState<Project>({
     id: 0, // Champ requis par l'interface, mais sera généralement défini par l'API
     name: "",
@@ -271,6 +302,17 @@ export default function DashboardLayout({
     console.log("isDropdownOpen après :", !isDropdownOpen);
   };
 
+
+    // Récupérer les channels du projet
+  // Simuler la récupération des channels (à remplacer par API plus tard)
+  /* Exemple : const response = await axiosInstance.get("/api/channels", { headers: { Authorization: `Bearer ${accessToken}` } });
+ useEffect(() => {
+  // Filtrer les salons privés pour n'afficher que ceux où l'utilisateur est membre
+  setChannels((prev) =>
+    prev.filter((channel) => channel.isPrivate))
+  );
+}, [user.id]);
+*/
   // États supplémentaires
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -1114,6 +1156,69 @@ export default function DashboardLayout({
                     </div>
                   )}
                 </div>
+              
+             <li className="section-collab-title">
+  <span className="section-title-style">Collaboration</span>
+  <Link href="/user/dashboard/collaboration">
+    <button className="add-btn">+</button>
+  </Link>
+</li>
+<li className="subcategory-title" onClick={() => setIsTextChannelOpen(!isTextChannelOpen)}>
+  <span>
+    Text Channel
+    <FontAwesomeIcon
+      icon={isTextChannelOpen ? faCaretDown : faCaretUp}
+      className="caret-icon"
+    />
+  </span>
+</li>
+{isTextChannelOpen && channels.filter((channel) => channel.type === "TEXT").length > 0 ? (
+  <div className="channels-list">
+    {channels
+      .filter((channel) => channel.type === "TEXT")
+      .map((channel) => (
+        <li key={channel.id} className="channel-name">
+          <FontAwesomeIcon icon={faHashtag} className="channel-icon" />
+          <Link href={`/user/dashboard/collaboration/channels/${channel.id}`}>
+               {channel.name}
+              {channel.isPrivate && (
+              <FontAwesomeIcon icon={faLock} className="private-icon" />
+            )}
+          </Link>
+        </li>
+      ))}
+  </div>
+) : isTextChannelOpen ? (
+  <p className="no-channels">Aucun salon textuel disponible.</p>
+) : null}
+<li className="subcategory-title" onClick={() => setIsVocalChannelOpen(!isVocalChannelOpen)}>
+  <span>
+    Vocal Channel
+    <FontAwesomeIcon
+      icon={isVocalChannelOpen ? faCaretDown : faCaretUp}
+      className="caret-icon"
+    />
+  </span>
+</li>
+{isVocalChannelOpen && channels.filter((channel) => channel.type === "VOICE").length > 0 ? (
+  <div className="channels-list">
+    {channels
+      .filter((channel) => channel.type === "VOICE")
+      .map((channel) => (
+        <li key={channel.id} className="channel-name">
+          <FontAwesomeIcon icon={faVolumeUp} className="channel-icon" />
+          <Link href={`/user/dashboard/collaboration/channels/${channel.id}`}>
+              {channel.name}
+              {channel.isPrivate && (
+              <FontAwesomeIcon icon={faLock} className="private-icon" />
+            )}
+          </Link>
+        </li>
+      ))}
+  </div>
+) : isVocalChannelOpen ? (
+  <p className="no-channels">Aucun salon vocal disponible.</p>
+) : null}
               </ul>
             </nav>
           </div>

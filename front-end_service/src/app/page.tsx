@@ -19,7 +19,7 @@ const Home = () => {
           </p>
           <div className="hero-buttons">
             <a href="#" className="btn btn-primary me-3">
-              <i className="fas fa-play-circle"></i> Try it Free – Get Started
+              <i className="fas fa-play-circle"></i> Try it for Free – Get Started
               Today
             </a>
           </div>

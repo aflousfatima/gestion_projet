@@ -103,7 +103,7 @@ export default function SignupPage() {
               );
         setTimeout(() => {
           router.replace("/authentification/signin");
-        }, 1000); // Redirection après 2 secondes
+        }, 3000); // Redirection après 2 secondes
       } else {
         setError(response.data.message);
       }
