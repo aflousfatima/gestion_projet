@@ -2,8 +2,10 @@ package com.collaboration.collaborationservice.channel.controller;
 
 
 import com.collaboration.collaborationservice.channel.dto.CreateChannelRequest;
+import com.collaboration.collaborationservice.channel.dto.UpdateChannelRequest;
 import com.collaboration.collaborationservice.channel.entity.Channel;
 import com.collaboration.collaborationservice.channel.service.ChannelService;
+import com.collaboration.collaborationservice.common.enums.ChannelType;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -41,5 +43,57 @@ public class ChannelController {
     public ResponseEntity<List<Channel>> getAllPublicChannels() {
         List<Channel> channels = channelService.getAllPublicChannels();
         return ResponseEntity.ok(channels);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Channel> getChannelById(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization) throws IllegalAccessException {
+        Channel channel = channelService.getChannelById(id, authorization);
+        return ResponseEntity.ok(channel);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Channel> updateChannel(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateChannelRequest request,
+            @RequestHeader("Authorization") String authorization) throws IllegalAccessException {
+        Channel updatedChannel = channelService.updateChannel(id, request, authorization);
+        return ResponseEntity.ok(updatedChannel);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteChannel(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authorization) throws IllegalAccessException {
+        channelService.deleteChannel(id, authorization);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/project/{projectId}")
+    public ResponseEntity<List<Channel>> getChannelsByProjectId(@PathVariable Long projectId) {
+        List<Channel> channels = channelService.getChannelsByProjectId(projectId);
+        return ResponseEntity.ok(channels);
+    }
+
+    @GetMapping("/type/{type}")
+    public ResponseEntity<List<Channel>> getChannelsByType(@PathVariable ChannelType type) {
+        List<Channel> channels = channelService.getChannelsByType(type);
+        return ResponseEntity.ok(channels);
+    }
+
+    @GetMapping("/created-by/{userId}")
+    public ResponseEntity<List<Channel>> getChannelsCreatedByUser(@PathVariable String userId) {
+        List<Channel> channels = channelService.getChannelsCreatedByUser(userId);
+        return ResponseEntity.ok(channels);
+    }
+
+    @PatchMapping("/{id}/visibility")
+    public ResponseEntity<Channel> updateChannelVisibility(
+            @PathVariable Long id,
+            @RequestParam("private") boolean isPrivate,
+            @RequestHeader("Authorization") String authorization) throws IllegalAccessException {
+        Channel updatedChannel = channelService.updateChannelVisibility(id, isPrivate, authorization);
+        return ResponseEntity.ok(updatedChannel);
     }
 }

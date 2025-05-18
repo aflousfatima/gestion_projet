@@ -1,31 +1,71 @@
 package com.collaboration.collaborationservice.channel.dto;
 
 import com.collaboration.collaborationservice.common.enums.ChannelType;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import lombok.Getter;
-import lombok.Setter;
-
 import java.util.List;
 
-@Getter
-@Setter
 public class CreateChannelRequest {
-
-    @NotBlank(message = "Le nom du canal est requis")
     private String name;
-
-    @NotNull(message = "Le type de canal est requis")
-    private ChannelType type; // TEXT ou VOCAL
-
-    @NotNull(message = "Le statut public/privé est requis")
-    private Boolean isPrivate;
-
+    private ChannelType type;
+    private boolean isPrivate;
     private String description;
+    private Long projectId;
+    private List<String> participantIds;
+    private List<String> roles; // Nouvelle liste pour les rôles
 
-    private Long projectId; // Optionnel, ID du projet
+    // Getters et Setters
+    public String getName() {
+        return name;
+    }
 
-    private List<Long> participantIds; // Optionnel, liste des IDs des participants
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    private String createdBy; // Ajouté pour stocker l'ID de l'utilisateur créateur
+    public ChannelType getType() {
+        return type;
+    }
+
+    public void setType(ChannelType type) {
+        this.type = type;
+    }
+
+    public boolean getIsPrivate() {
+        return isPrivate;
+    }
+
+    public void setPrivate(boolean isPrivate) {
+        this.isPrivate = isPrivate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Long getProjectId() {
+        return projectId;
+    }
+
+    public void setProjectId(Long projectId) {
+        this.projectId = projectId;
+    }
+
+    public List<String> getParticipantIds() {
+        return participantIds;
+    }
+
+    public void setParticipantIds(List<String> participantIds) {
+        this.participantIds = participantIds;
+    }
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
+    }
 }

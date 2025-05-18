@@ -23,14 +23,12 @@ public class Participant {
     private Channel channel;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId; // Ou une entité User
+    private String userId; // Ou une entité User
 
     @Enumerated(EnumType.STRING)
     private Role role; // Ex: ADMIN, MEMBER
 
-
     private boolean isHost;
-
     private boolean isMuted;
 
     private boolean isVideoEnabled;
