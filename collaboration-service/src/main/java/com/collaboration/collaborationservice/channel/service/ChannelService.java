@@ -1,9 +1,11 @@
 package com.collaboration.collaborationservice.channel.service;
 
 import com.collaboration.collaborationservice.channel.config.AuthClient;
+import com.collaboration.collaborationservice.channel.dto.ChannelDTO;
 import com.collaboration.collaborationservice.channel.dto.CreateChannelRequest;
 import com.collaboration.collaborationservice.channel.dto.UpdateChannelRequest;
 import com.collaboration.collaborationservice.channel.entity.Channel;
+import com.collaboration.collaborationservice.channel.mapper.ChannelMapper;
 import com.collaboration.collaborationservice.channel.repository.ChannelRepository;
 import com.collaboration.collaborationservice.common.enums.ChannelType;
 import com.collaboration.collaborationservice.common.enums.Role;
@@ -11,6 +13,9 @@ import com.collaboration.collaborationservice.participant.entity.Participant;
 import com.collaboration.collaborationservice.participant.repository.ParticipantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -24,23 +29,31 @@ public class ChannelService {
     private final ChannelRepository channelRepository;
     private final ParticipantRepository participantRepository;
     private final AuthClient authClient;
+    private final ChannelMapper channelMapper;
 
     @Autowired
     public ChannelService(
             ChannelRepository channelRepository,
             ParticipantRepository participantRepository,
-            AuthClient authClient) {
+            AuthClient authClient,
+            ChannelMapper channelMapper) {
         this.channelRepository = channelRepository;
         this.participantRepository = participantRepository;
         this.authClient = authClient;
+        this.channelMapper = channelMapper;
     }
+
 
     @Transactional
     public Channel createChannel(CreateChannelRequest request, String authorizationHeader) {
+        Logger log = LoggerFactory.getLogger(ChannelService.class);
+
         String userId = authClient.decodeToken(authorizationHeader);
         if (userId == null) {
+            log.error("Échec du décodage du token: userId est null");
             throw new IllegalArgumentException("Impossible de récupérer l'ID de l'utilisateur à partir du token");
         }
+        log.info("Création du canal par l'utilisateur: {}", userId);
 
         // Créer le canal
         Channel channel = new Channel();
@@ -52,7 +65,13 @@ public class ChannelService {
         channel.setCreatedBy(userId);
 
         // Sauvegarder le canal
-        channel = channelRepository.save(channel);
+        try {
+            channel = channelRepository.save(channel);
+            log.info("Canal sauvegardé avec ID: {}", channel.getId());
+        } catch (Exception e) {
+            log.error("Erreur lors de la sauvegarde du canal: {}", e.getMessage(), e);
+            throw new RuntimeException("Échec de la sauvegarde du canal", e);
+        }
 
         List<Participant> participants = new ArrayList<>();
 
@@ -61,23 +80,30 @@ public class ChannelService {
         creatorParticipant.setUserId(userId);
         creatorParticipant.setRole(Role.ADMIN);
         creatorParticipant.setChannel(channel);
-        participants.add(participantRepository.save(creatorParticipant));
+        try {
+            participants.add(participantRepository.save(creatorParticipant));
+            log.info("Créateur {} ajouté comme participant avec le rôle ADMIN", userId);
+        } catch (Exception e) {
+            log.error("Erreur lors de la sauvegarde du créateur comme participant: {}", e.getMessage(), e);
+            throw new RuntimeException("Échec de la sauvegarde du créateur comme participant", e);
+        }
 
         // Ajouter les autres participants depuis la requête
         if (request.getParticipantIds() != null && !request.getParticipantIds().isEmpty()) {
-            // Vérifier que la liste des rôles correspond à la liste des participants
             List<String> roles = request.getRoles();
             if (roles == null || roles.size() != request.getParticipantIds().size()) {
+                log.error("La liste des rôles ({}) ne correspond pas à la liste des participants ({})",
+                        roles == null ? 0 : roles.size(), request.getParticipantIds().size());
                 throw new IllegalArgumentException("La liste des rôles doit correspondre à la liste des participants");
             }
 
-            // Pour chaque userId, créer un nouveau Participant
             for (int i = 0; i < request.getParticipantIds().size(); i++) {
                 String participantUserId = request.getParticipantIds().get(i);
                 String roleStr = roles.get(i);
 
                 // Ignorer si le participant est le créateur (déjà ajouté)
                 if (participantUserId.equals(userId)) {
+                    log.info("Participant {} est le créateur, ignoré car déjà ajouté", participantUserId);
                     continue;
                 }
 
@@ -86,6 +112,7 @@ public class ChannelService {
                 try {
                     role = Role.valueOf(roleStr.toUpperCase());
                 } catch (IllegalArgumentException e) {
+                    log.error("Rôle invalide: {}", roleStr);
                     throw new IllegalArgumentException("Rôle invalide : " + roleStr);
                 }
 
@@ -96,7 +123,13 @@ public class ChannelService {
                 participant.setChannel(channel);
 
                 // Sauvegarder le participant
-                participants.add(participantRepository.save(participant));
+                try {
+                    participants.add(participantRepository.save(participant));
+                    log.info("Participant {} ajouté avec le rôle {}", participantUserId, role);
+                } catch (Exception e) {
+                    log.error("Erreur lors de la sauvegarde du participant {}: {}", participantUserId, e.getMessage(), e);
+                    throw new RuntimeException("Échec de la sauvegarde du participant: " + participantUserId, e);
+                }
             }
         }
 
@@ -104,7 +137,15 @@ public class ChannelService {
         channel.setParticipants(participants);
 
         // Sauvegarder le canal avec les participants
-        return channelRepository.save(channel);
+        try {
+            channel = channelRepository.save(channel);
+            log.info("Canal final sauvegardé avec {} participants", participants.size());
+        } catch (Exception e) {
+            log.error("Erreur lors de la sauvegarde finale du canal: {}", e.getMessage(), e);
+            throw new RuntimeException("Échec de la sauvegarde finale du canal", e);
+        }
+
+        return channel;
     }
     @Transactional(readOnly = true)
     public List<Channel> getAccessibleChannels(String authorizationHeader) {
@@ -119,14 +160,14 @@ public class ChannelService {
     }
 
     @Transactional(readOnly = true)
-    public List<Channel> getAllPublicChannels() {
-        // Récupérer tous les canaux publics
-        return channelRepository.findAllPublicChannels();
+    public List<ChannelDTO> getAllPublicChannels() {
+        List<Channel> channels = channelRepository.findAllPublicChannels();
+        return channelMapper.toDTOList(channels);
     }
 
 
     @Transactional(readOnly = true)
-    public Channel getChannelById(Long id, String authorizationHeader) throws IllegalAccessException {
+    public ChannelDTO getChannelById(Long id, String authorizationHeader) throws IllegalAccessException {
         String userId = authClient.decodeToken(authorizationHeader);
         if (userId == null) {
             throw new IllegalArgumentException("Impossible de récupérer l'ID de l'utilisateur à partir du token");
@@ -139,13 +180,12 @@ public class ChannelService {
         Channel channel = channelOpt.get();
 
         // Vérifier si l'utilisateur a accès (public ou participant)
-        if (channel.isPrivate() && !channel.getParticipants().stream().anyMatch(p -> p.getId().toString().equals(userId))) {
+        if (channel.isPrivate() && !channel.getParticipants().stream().anyMatch(p -> p.getUserId().equals(userId))) {
             throw new IllegalAccessException("Accès non autorisé à ce canal");
         }
 
-        return channel;
+        return channelMapper.toDTO(channel);
     }
-
     @Transactional
     public Channel updateChannel(Long id, UpdateChannelRequest request, String authorizationHeader) throws IllegalAccessException {
         String userId = authClient.decodeToken(authorizationHeader);

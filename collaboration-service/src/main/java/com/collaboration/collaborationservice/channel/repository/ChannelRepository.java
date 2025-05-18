@@ -19,6 +19,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     List<Channel> findAccessibleChannelsByUserId(@Param("userId") String userId);
 
     Optional<Channel> findById(Long id);
+    List<Channel> findByIsPrivateFalse();
 
     List<Channel> findByProjectId(Long projectId);
 

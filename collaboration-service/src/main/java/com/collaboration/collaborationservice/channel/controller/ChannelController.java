@@ -1,6 +1,7 @@
 package com.collaboration.collaborationservice.channel.controller;
 
 
+import com.collaboration.collaborationservice.channel.dto.ChannelDTO;
 import com.collaboration.collaborationservice.channel.dto.CreateChannelRequest;
 import com.collaboration.collaborationservice.channel.dto.UpdateChannelRequest;
 import com.collaboration.collaborationservice.channel.entity.Channel;
@@ -40,16 +41,15 @@ public class ChannelController {
     }
 
     @GetMapping("/public")
-    public ResponseEntity<List<Channel>> getAllPublicChannels() {
-        List<Channel> channels = channelService.getAllPublicChannels();
-        return ResponseEntity.ok(channels);
+    public ResponseEntity<List<ChannelDTO>> getPublicChannels() {
+        return ResponseEntity.ok(channelService.getAllPublicChannels());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Channel> getChannelById(
+    public ResponseEntity<ChannelDTO> getChannelById(
             @PathVariable Long id,
             @RequestHeader("Authorization") String authorization) throws IllegalAccessException {
-        Channel channel = channelService.getChannelById(id, authorization);
+        ChannelDTO channel = channelService.getChannelById(id, authorization);
         return ResponseEntity.ok(channel);
     }
 
