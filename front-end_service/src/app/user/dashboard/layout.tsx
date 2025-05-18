@@ -16,15 +16,14 @@ import {
   faHashtag,
   faVolumeUp,
   faCaretDown,
-  faCaretUp,
-  faComments
+  faCaretUp
 } from "@fortawesome/free-solid-svg-icons";
 
 
 interface Channel {
   id: string;
   name: string;
-  type: "TEXT" | "VOICE";
+  type: "TEXT" | "VOCAL";
   isPrivate: boolean;
   members: string[]; // Liste des IDs des membres autorisés
 }
@@ -1204,10 +1203,10 @@ export default function DashboardLayout({
     />
   </span>
 </li>
-{isVocalChannelOpen && channels.some((channel) => channel.type === "VOICE") && (
+{isVocalChannelOpen && channels.some((channel) => channel.type === "VOCAL") && (
   <div className="channels-list">
     {channels
-      .filter((channel) => channel.type === "VOICE")
+      .filter((channel) => channel.type === "VOCAL")
       .map((channel) => (
         <li key={channel.id} className="channel-name">
           <FontAwesomeIcon icon={faVolumeUp} className="channel-icon" />
