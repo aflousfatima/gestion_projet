@@ -19,7 +19,6 @@ import {
   faCaretUp
 } from "@fortawesome/free-solid-svg-icons";
 
-
 interface Channel {
   id: string;
   name: string;
@@ -51,12 +50,13 @@ export default function DashboardLayout({
       );
     }
   };
-  const { projects, setProjects, loading, error } = useProjects();
+  const { projects, setProjects, loading } = useProjects();
+  const [error, setError] = useState<string | null>(null);
   const axiosInstance = useAxios();
   const currentPath = usePathname();
   const [user, setUser] = useState({id: "", firstName: "", lastName: "" , email:""});
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const { accessToken, isLoading } = useAuth();
+  const { accessToken, isLoading , logout } = useAuth();
   const router = useRouter();
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
@@ -69,32 +69,33 @@ export default function DashboardLayout({
   const [channels, setChannels] = useState<Channel[]>([]);
   const [isTextChannelOpen, setIsTextChannelOpen] = useState(true);
   const [isVocalChannelOpen, setIsVocalChannelOpen] = useState(true);
-  const [ setError] = useState<string | null>(null);
+
 
   // Récupérer les canaux publics
-  useEffect(() => {
-    const fetchChannels = async () => {
-      if (accessToken) {
-        try {
-          const response = await axiosInstance.get(`${COLLABORATION_SERVICE_URL}/api/channels/public`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          setChannels(
-            response.data.map((channel: any) => ({
-              id: channel.id.toString(),
-              name: channel.name,
-              type: channel.type,
-              isPrivate: channel.isPrivate,
-              members: channel.participants?.map((p: any) => p.id.toString()) || [],
-            }))
-          );
-        } catch (err: any) {
-          setError(err.response?.data?.message || "Erreur lors de la récupération des canaux");
-        }
+// Récupérer les canaux publics
+useEffect(() => {
+  const fetchChannels = async () => {
+    if (accessToken) {
+      try {
+        const response = await axiosInstance.get(`${COLLABORATION_SERVICE_URL}/api/channels/public`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        setChannels(
+          response.data.map((channel: any) => ({
+            id: channel.id.toString(),
+            name: channel.name,
+            type: channel.type,
+            isPrivate: channel.isPrivate,
+            members: channel.participantIds || [],
+          }))
+        );
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Erreur lors de la récupération des canaux");
       }
-    };
-    fetchChannels();
-  }, [accessToken, axiosInstance , setError]);
+    }
+  };
+  fetchChannels();
+}, [accessToken, axiosInstance, setError]);
   const [projectData, setProjectData] = useState<Project>({
     id: 0, // Champ requis par l'interface, mais sera généralement défini par l'API
     name: "",
@@ -294,21 +295,15 @@ export default function DashboardLayout({
     };
   }, [isAddMenuOpen, isDropdownOpen]);
 
-  const handleLogout = async () => {
-    try {
-      await axios.post(
-        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/logout`,
-        {},
-        { withCredentials: true }
-      );
-      if (isLoading) return <div><img src="/loading.svg" alt="Loading" className="loading-img" /></div>;
-      if (!accessToken) router.push("/authentification/signin");
-      console.log("Déconnexion réussie");
-    } catch (error) {
-      console.error("Erreur lors de la déconnexion :", error);
-    }
-  };
-
+const handleLogout = async () => {
+  try {
+    await logout(); // Appeler la fonction logout du contexte
+    console.log("Déconnexion réussie");
+    router.push("/authentification/signin"); // Rediriger après déconnexion
+  } catch (error) {
+    console.error("Erreur lors de la déconnexion :", error);
+  }
+};
   const toggleDropdown = () => {
     console.log("Clic détecté, isDropdownOpen avant :", isDropdownOpen);
     setIsDropdownOpen(!isDropdownOpen);

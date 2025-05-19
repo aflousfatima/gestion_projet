@@ -22,6 +22,7 @@ interface User {
   firstName: string;
   lastName: string;
   avatar?: string;
+  email: string
 }
 
 interface Project {

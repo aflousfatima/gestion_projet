@@ -1,10 +1,11 @@
 .channel-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 104vh;
   background-color: #f5f7fa;
   color: #333;
   font-family: 'Arial', sans-serif;
+  margin-top:-10px;
 }
 
 .error-message {
@@ -132,6 +133,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color:red;
 }
 
 
@@ -154,36 +156,6 @@
 
 }
 
-.message {
-  margin-bottom: 15px;
-  padding: 10px 15px;
-  background-color: #f1f3f5;
-  border-radius: 8px;
-  max-width: 70%;
-  align-self: flex-start; /* Messages alignés à gauche par défaut */
-}
-
-.message-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 5px;
-}
-
-.sender {
-  font-weight: 600;
-  color: #007bff;
-}
-
-.timestamp {
-  font-size: 12px;
-  color: #888;
-}
-
-.message-content {
-  font-size: 14px;
-  line-height: 1.5;
-}
 
 .no-messages {
   text-align: center;
@@ -205,11 +177,50 @@
 .message-input-container {
   display: flex;
   align-items: center;
-  background-color: #2E2E30;
+  background-color: #ebebee;
   border-radius: 20px;
   padding: 5px 10px;
+
 }
 
+.message-group {
+  margin-bottom: 16px;
+}
+.date-separator {
+  text-align: center;
+  margin: 16px 0;
+}
+
+.date-separator span {
+  display: inline-block;
+  background-color: #e5e7eb;
+  color: #4b5563;
+  padding: 4px 16px;
+  border-radius: 9999px;
+  font-size: 14px;
+  position: relative;
+}
+
+.date-separator span::before,
+.date-separator span::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 400px; /* Longueur des lignes */
+  height: 1px; /* Épaisseur des lignes */
+  background-color: #babbbc; /* Couleur des lignes */
+}
+
+.date-separator span::before {
+  left: -410px; /* Décalage : 600px (longueur ligne) + 15px (espace) */
+}
+
+.date-separator span::after {
+  right: -410px; /* Décalage : 600px (longueur ligne) + 15px (espace) */
+}
+.message:hover {
+  background-color: #e5e7eb;
+}
 .message-input {
   flex: 1;
   border: none;
@@ -217,7 +228,7 @@
   outline: none;
   font-size: 14px;
   padding: 8px;
-  color: #ffffff;
+  color: #3b3939;
   
 }
 
@@ -231,7 +242,7 @@
   background: none;
   border: none;
   font-size: 16px;
-  color: #ffffff;
+  color: #666;
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -241,7 +252,7 @@
 }
 
 .input-action-btn.disabled {
-  color: #666;
+  color: #d1cdcd;
   cursor: not-allowed;
 }
 
@@ -249,7 +260,7 @@
   background: none;
   border: none;
   font-size: 16px;
-  color: #ffffff;
+  color: #ff6148;
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -259,7 +270,7 @@
 }
 
 .send-btn.disabled {
-  color: #666;
+  color: #d1cdcd;
   cursor: not-allowed;
 }
 
@@ -348,4 +359,271 @@ width:350px;
 
 .join-call-btn:hover {
   background-color: #ff6148;
+}
+/* Dans styles/Collaboration-Channel.css (ajoutez ou modifiez ces styles) */
+.message {
+  display: flex;
+  align-items: flex-start;
+  margin: 10px 15px;
+  position: relative;
+}
+
+.message-own {
+  flex-direction: row-reverse; /* Aligne le message à droite */
+  justify-content: flex-end;
+}
+
+.message-other {
+  flex-direction: row; /* Aligne le message à gauche */
+  justify-content: flex-start;
+}
+
+.message-body {
+  max-width: 60%;
+  padding: 5px 13px;
+  border-radius: 10px;
+  position: relative;
+
+}
+
+.message-own .message-body {
+  background-color: rgb(219, 247, 225); /* Bleu pour les messages de l'utilisateur */
+  color: rgb(87, 86, 86);
+  border-bottom-right-radius: 2px; /* Style WhatsApp */
+  margin-left:700px;
+}
+
+.message-other .message-body {
+  background-color: #464648; /* Gris clair pour les autres */
+  color: rgb(250, 247, 247);
+  border-bottom-left-radius: 1px; /* Style WhatsApp */
+  margin-left:10px;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  gap:15px;
+}
+
+.sender {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.message-own .timestamp {
+  font-size: 12px;
+  color: rgb(6, 6, 6);
+}
+.message-other .timestamp {
+  font-size: 12px;
+  color: rgb(255, 255, 255);
+}
+.message-content {
+  word-break: break-word;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
+
+.message-own .avatar {
+  display: none; /* Pas d'avatar pour les messages de l'utilisateur */
+}
+
+.message-actions {
+  position: absolute;
+  top: -30px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+  background: transparent;
+  padding: 0;
+  z-index: 10;
+}
+
+.message-own .message-actions {
+  left: 100px; /* Ajuste pour les messages à droite */
+  right: auto;
+}
+.modified {
+  font-size: 12px;
+  color: #6b7280;
+  margin-left: 5px;
+}
+.message-actions .action-btn {
+  background: #e5e7eb; /* Fond gris clair pour chaque bouton */
+  border-radius: 50%; /* Boutons ronds */
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px; /* Taille d'icône réduite */
+  color: #4b5563; /* Couleur neutre */
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.message-actions .action-btn:hover {
+  background: #ff6148; /* Couleur au survol */
+  color: #fff; /* Icône blanche au survol */
+}
+
+
+
+.reaction-picker {
+  position: absolute;
+  top: -250px;
+  right: 10px;
+  z-index: 10;
+}
+
+.message-own .reaction-picker {
+  left: 10px;
+  right: auto;
+}
+
+.reactions {
+  position: absolute;
+  bottom: -20px; /* Sous le message */
+  left: 10px; /* Aligné à gauche */
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+}
+
+.reaction {
+  background: #e5e7eb;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.reaction:hover {
+  background: #d1d5db;
+}
+
+
+.pinned-messages {
+    background: #f9fafb;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 10px 20px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.pinned-message {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.pinned-message span {
+    flex: 1;
+}
+
+.reply-preview {
+    background: #f3f4f6;
+    border-left: 3px solid #ff6148;
+    padding: 8px;
+    margin-bottom: 8px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.reply-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.reply-header span {
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.reply-content {
+    color: #6b7280;
+    word-break: break-word;
+}
+.pinned-icon {
+  color: #f1c40f; /* Jaune pour se démarquer */
+  font-size: 0.9rem;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+/* Indicateur "edited" */
+.edited-indicator {
+  color: #c10404;
+  font-size: 0.75rem;
+  margin-left: 8px;
+  font-style: italic;
+}
+
+/* Panneau des messages épinglés */
+.pinned-messages-panel {
+  position: absolute;
+  top: 60px;
+  right: 20px;
+  width: 300px;
+  max-height: 400px;
+  background: #2f3136;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.pinned-messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.pinned-messages-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.pinned-message {
+  padding: 10px;
+  border-bottom: 1px solid #444;
+}
+
+.pinned-message-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+  color: #b9bbbe;
+}
+
+.pinned-message-content {
+  color: #dcddde;
+  font-size: 0.95rem;
+  margin-top: 5px;
+}
+
+.no-pinned-messages {
+  color: #b9bbbe;
+  text-align: center;
+  padding: 10px;
 }
