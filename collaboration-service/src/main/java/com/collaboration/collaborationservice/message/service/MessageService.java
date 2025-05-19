@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +42,23 @@ public class MessageService {
 
     @Autowired
     private AuthClient authClient;
+
+    private MessageDTO enrichMessageDTO(MessageDTO messageDTO, String token) {
+        try {
+            Map<String, Object> userDetails = authClient.getUserDetailsByAuthId(
+                    messageDTO.getSenderId(),
+                    token
+            );
+            String firstName = (String) userDetails.get("firstName");
+            String lastName = (String) userDetails.get("lastName");
+            messageDTO.setSenderName(firstName + " " + lastName);
+        } catch (Exception e) {
+            logger.warn("Impossible de récupérer les détails de l'utilisateur pour senderId: {}. Erreur: {}",
+                    messageDTO.getSenderId(), e.getMessage());
+            messageDTO.setSenderName("Utilisateur Inconnu");
+        }
+        return messageDTO;
+    }
 
     @Transactional
     public MessageDTO sendMessage(MessageDTO messageDTO, String token) {
@@ -74,8 +92,9 @@ public class MessageService {
             messageRepository.flush(); // Forcer la persistance immédiate
             logger.info("Message sauvegardé avec id: {}", savedMessage.getId());
 
-            // Convertir en DTO pour diffusion
+            // Convertir en DTO et enrichir avec les détails de l'utilisateur
             MessageDTO savedMessageDTO = messageMapper.toDTO(savedMessage);
+            savedMessageDTO = enrichMessageDTO(savedMessageDTO, token);
 
             // Diffuser le message via WebSocket
             messagingTemplate.convertAndSend("/topic/messages." + messageDTO.getChannelId(), savedMessageDTO);
@@ -108,13 +127,14 @@ public class MessageService {
             participantRepository.findByUserIdAndChannel(userId, channel)
                     .orElseThrow(() -> new IllegalArgumentException("Utilisateur non autorisé dans ce canal"));
 
-            // Récupérer les messages
+            // Récupérer les messages (tri décroissant pour avoir les nouveaux en haut)
             List<Message> messages = messageRepository.findByChannelIdOrderByCreatedAtAsc(channelId);
             logger.info("Récupéré {} messages pour channelId: {}", messages.size(), channelId);
 
-            // Convertir en DTO
+            // Convertir en DTO et enrichir avec les détails de l'utilisateur
             return messages.stream()
                     .map(messageMapper::toDTO)
+                    .map(dto -> enrichMessageDTO(dto, token))
                     .collect(Collectors.toList());
         } catch (Exception e) {
             logger.error("Échec de la récupération des messages: {}", e.getMessage(), e);
@@ -160,7 +180,6 @@ public class MessageService {
 
             // Mettre à jour le message
             message.getContent().setText(messageDTO.getText());
-            // Conserver les autres champs (fileUrl, mimeType) sauf si fournis
             if (messageDTO.getFileUrl() != null) {
                 message.getContent().setFileUrl(messageDTO.getFileUrl());
             }
@@ -172,8 +191,9 @@ public class MessageService {
             messageRepository.flush();
             logger.info("Message {} mis à jour avec succès", messageId);
 
-            // Convertir en DTO
+            // Convertir en DTO et enrichir avec les détails de l'utilisateur
             MessageDTO updatedMessageDTO = messageMapper.toDTO(updatedMessage);
+            updatedMessageDTO = enrichMessageDTO(updatedMessageDTO, token);
 
             // Diffuser la mise à jour via WebSocket
             messagingTemplate.convertAndSend("/topic/messages." + channelId, updatedMessageDTO);
@@ -221,7 +241,7 @@ public class MessageService {
             messageRepository.flush();
             logger.info("Message {} supprimé avec succès", messageId);
 
-            // Notifier les clients via WebSocket (envoyer un message de suppression)
+            // Notifier les clients via WebSocket
             MessageDTO deletedMessageDTO = new MessageDTO();
             deletedMessageDTO.setId(messageId);
             deletedMessageDTO.setChannelId(channelId);
