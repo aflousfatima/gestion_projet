@@ -35,7 +35,7 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/api/project/task/comments/createComment",
-                                "/api/project/task/comments/getComment/**"
+                                "**"
                         ).authenticated() // Accessible aux authentifiés
 
                         .anyRequest().authenticated()

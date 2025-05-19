@@ -4,9 +4,12 @@ import com.collaboration.collaborationservice.channel.config.AuthClient;
 import com.collaboration.collaborationservice.channel.entity.Channel;
 import com.collaboration.collaborationservice.channel.repository.ChannelRepository;
 import com.collaboration.collaborationservice.message.dto.MessageDTO;
+import com.collaboration.collaborationservice.message.dto.ReactionDTO;
 import com.collaboration.collaborationservice.message.entity.Message;
+import com.collaboration.collaborationservice.message.entity.Reaction;
 import com.collaboration.collaborationservice.message.mapper.MessageMapper;
 import com.collaboration.collaborationservice.message.repository.MessageRepository;
+import com.collaboration.collaborationservice.message.repository.ReactionRepository;
 import com.collaboration.collaborationservice.participant.entity.Participant;
 import com.collaboration.collaborationservice.participant.repository.ParticipantRepository;
 import org.slf4j.Logger;
@@ -29,6 +32,9 @@ public class MessageService {
     private MessageRepository messageRepository;
 
     @Autowired
+    private ReactionRepository reactionRepository;
+
+    @Autowired
     private ChannelRepository channelRepository;
 
     @Autowired
@@ -46,16 +52,24 @@ public class MessageService {
     private MessageDTO enrichMessageDTO(MessageDTO messageDTO, String token) {
         try {
             Map<String, Object> userDetails = authClient.getUserDetailsByAuthId(
-                    messageDTO.getSenderId(),
-                    token
-            );
+                    messageDTO.getSenderId(), token);
             String firstName = (String) userDetails.get("firstName");
             String lastName = (String) userDetails.get("lastName");
             messageDTO.setSenderName(firstName + " " + lastName);
+
+            if (messageDTO.getReplyToId() != null) {
+                Map<String, Object> replyToUserDetails = authClient.getUserDetailsByAuthId(
+                        messageDTO.getReplyToSenderName(), token);
+                String replyToFirstName = (String) replyToUserDetails.get("firstName");
+                String replyToLastName = (String) replyToUserDetails.get("lastName");
+                messageDTO.setReplyToSenderName(replyToFirstName + " " + replyToLastName);
+            }
         } catch (Exception e) {
-            logger.warn("Impossible de récupérer les détails de l'utilisateur pour senderId: {}. Erreur: {}",
-                    messageDTO.getSenderId(), e.getMessage());
+            logger.warn("Impossible de récupérer les détails de l'utilisateur: {}", e.getMessage());
             messageDTO.setSenderName("Utilisateur Inconnu");
+            if (messageDTO.getReplyToId() != null) {
+                messageDTO.setReplyToSenderName("Utilisateur Inconnu");
+            }
         }
         return messageDTO;
     }
@@ -147,55 +161,36 @@ public class MessageService {
         try {
             logger.info("Mise à jour du message {} pour channelId: {}", messageId, channelId);
 
-            // Récupérer l'utilisateur à partir du token
             String userId = authClient.decodeToken(token);
             if (userId == null) {
-                logger.error("Échec du décodage du token: userId est null");
                 throw new IllegalArgumentException("Utilisateur non authentifié");
             }
 
-            // Récupérer le canal
             Channel channel = channelRepository.findById(channelId)
                     .orElseThrow(() -> new IllegalArgumentException("Canal non trouvé"));
 
-            // Vérifier que l'utilisateur est un participant du canal
             Participant sender = participantRepository.findByUserIdAndChannel(userId, channel)
                     .orElseThrow(() -> new IllegalArgumentException("Utilisateur non autorisé dans ce canal"));
 
-            // Récupérer le message
             Message message = messageRepository.findById(messageId)
                     .orElseThrow(() -> new IllegalArgumentException("Message non trouvé"));
 
-            // Vérifier que l'utilisateur est l'auteur du message
             if (!message.getSender().getUserId().equals(userId)) {
-                logger.error("Utilisateur {} n'est pas autorisé à modifier le message {}", userId, messageId);
                 throw new IllegalArgumentException("Vous n'êtes pas autorisé à modifier ce message");
             }
 
-            // Valider le contenu mis à jour
             if (messageDTO.getText() == null || messageDTO.getText().isEmpty()) {
-                logger.error("Le contenu du message mis à jour est null ou vide");
                 throw new IllegalArgumentException("Le contenu du message ne peut pas être vide");
             }
 
-            // Mettre à jour le message
             message.getContent().setText(messageDTO.getText());
-            if (messageDTO.getFileUrl() != null) {
-                message.getContent().setFileUrl(messageDTO.getFileUrl());
-            }
-            if (messageDTO.getMimeType() != null) {
-                message.getContent().setMimeType(messageDTO.getMimeType());
-            }
-            message.setType(messageDTO.getType() != null ? messageDTO.getType() : message.getType());
+            message.setModified(true); // Ajouter un indicateur de modification
             Message updatedMessage = messageRepository.save(message);
             messageRepository.flush();
-            logger.info("Message {} mis à jour avec succès", messageId);
 
-            // Convertir en DTO et enrichir avec les détails de l'utilisateur
             MessageDTO updatedMessageDTO = messageMapper.toDTO(updatedMessage);
             updatedMessageDTO = enrichMessageDTO(updatedMessageDTO, token);
 
-            // Diffuser la mise à jour via WebSocket
             messagingTemplate.convertAndSend("/topic/messages." + channelId, updatedMessageDTO);
             logger.info("Mise à jour du message diffusée vers /topic/messages.{}", channelId);
 
@@ -205,7 +200,6 @@ public class MessageService {
             throw new RuntimeException("Échec de la mise à jour du message", e);
         }
     }
-
     @Transactional
     public void deleteMessage(Long channelId, Long messageId, String token) {
         try {
@@ -254,4 +248,101 @@ public class MessageService {
             throw new RuntimeException("Échec de la suppression du message", e);
         }
     }
+
+    @Transactional
+    public MessageDTO addReaction(Long channelId, Long messageId, ReactionDTO reactionDTO, String token) {
+        logger.info("Ajout d'une réaction au message {} pour channelId: {}", messageId, channelId);
+
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            throw new IllegalArgumentException("Utilisateur non authentifié");
+        }
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("Canal non trouvé"));
+
+        Participant participant = participantRepository.findByUserIdAndChannel(userId, channel)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non autorisé dans ce canal"));
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message non trouvé"));
+
+        Reaction reaction = new Reaction();
+        reaction.setMessage(message);
+        reaction.setParticipant(participant);
+        reaction.setEmoji(reactionDTO.getEmoji());
+        reactionRepository.save(reaction);
+
+        Message updatedMessage = messageRepository.findById(messageId).get();
+        MessageDTO updatedMessageDTO = messageMapper.toDTO(updatedMessage);
+        updatedMessageDTO = enrichMessageDTO(updatedMessageDTO, token);
+
+        messagingTemplate.convertAndSend("/topic/messages." + channelId, updatedMessageDTO);
+        return updatedMessageDTO;
+    }
+
+    @Transactional
+    public MessageDTO removeReaction(Long channelId, Long messageId, ReactionDTO reactionDTO, String token) {
+        logger.info("Suppression d'une réaction au message {} pour channelId: {}", messageId, channelId);
+
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            throw new IllegalArgumentException("Utilisateur non authentifié");
+        }
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("Canal non trouvé"));
+
+        Participant participant = participantRepository.findByUserIdAndChannel(userId, channel)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non autorisé dans ce canal"));
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message non trouvé"));
+
+        // Trouver et supprimer la réaction
+        Reaction reaction = reactionRepository.findByMessageAndParticipantAndEmoji(
+                message,
+                participant,
+                reactionDTO.getEmoji()
+        ).orElseThrow(() -> new IllegalArgumentException("Réaction non trouvée"));
+
+        reactionRepository.delete(reaction);
+
+        Message updatedMessage = messageRepository.findById(messageId).get();
+        MessageDTO updatedMessageDTO = messageMapper.toDTO(updatedMessage);
+        updatedMessageDTO = enrichMessageDTO(updatedMessageDTO, token);
+
+        messagingTemplate.convertAndSend("/topic/messages." + channelId, updatedMessageDTO);
+        return updatedMessageDTO;
+    }
+    @Transactional
+    public MessageDTO pinMessage(Long channelId, Long messageId, String token) {
+        logger.info("Épinglage du message {} pour channelId: {}", messageId, channelId);
+
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            throw new IllegalArgumentException("Utilisateur non authentifié");
+        }
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("Canal non trouvé"));
+
+        Participant participant = participantRepository.findByUserIdAndChannel(userId, channel)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non autorisé dans ce canal"));
+
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message non trouvé"));
+
+        message.setPinned(!message.isPinned());
+        Message updatedMessage = messageRepository.save(message);
+        messageRepository.flush(); // Forcer la persistance
+
+        MessageDTO updatedMessageDTO = messageMapper.toDTO(updatedMessage);
+        updatedMessageDTO = enrichMessageDTO(updatedMessageDTO, token);
+
+        messagingTemplate.convertAndSend("/topic/messages." + channelId, updatedMessageDTO);
+        logger.info("Message épinglé/désépinglé diffusé vers /topic/messages.{}", channelId);
+        return updatedMessageDTO;
+    }
+
 }

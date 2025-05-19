@@ -1,7 +1,9 @@
 package com.collaboration.collaborationservice.message.controller;
 
 import com.collaboration.collaborationservice.message.dto.MessageDTO;
+import com.collaboration.collaborationservice.message.dto.ReactionDTO;
 import com.collaboration.collaborationservice.message.service.MessageService;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -10,11 +12,14 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/channels/{channelId}/messages")
 public class MessageController {
 
+    private static final Logger logger = LoggerFactory.getLogger(MessageController.class);
     @Autowired
     private MessageService messageService;
 
@@ -49,5 +54,62 @@ public class MessageController {
                                               @RequestHeader("Authorization") String token) {
         messageService.deleteMessage(channelId, messageId, token);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{messageId}/reactions")
+    public ResponseEntity<MessageDTO> addReaction(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestBody ReactionDTO reactionDTO,
+            @RequestHeader("Authorization") String token) {
+        logger.info("Requête pour ajouter une réaction au message {} dans le canal {}", messageId, channelId);
+        try {
+
+            MessageDTO updatedMessage = messageService.addReaction(channelId, messageId, reactionDTO, token);
+            return ResponseEntity.ok(updatedMessage);
+        } catch (IllegalArgumentException e) {
+            logger.error("Erreur lors de l'ajout de la réaction: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            logger.error("Erreur serveur lors de l'ajout de la réaction: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @DeleteMapping("/{messageId}/reactions")
+    public ResponseEntity<MessageDTO> removeReaction(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestBody ReactionDTO reactionDTO,
+            @RequestHeader("Authorization") String token
+    ) {
+        logger.info("Requête pour supprimer une réaction au message {} dans le canal {}", messageId, channelId);
+        try {
+            MessageDTO updatedMessage = messageService.removeReaction(channelId, messageId, reactionDTO, token);
+            return ResponseEntity.ok(updatedMessage);
+        } catch (IllegalArgumentException e) {
+            logger.error("Erreur lors de la suppression de la réaction: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            logger.error("Erreur serveur lors de la suppression de la réaction: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+    @PostMapping("/{messageId}/pin")
+    public ResponseEntity<MessageDTO> pinMessage(
+            @PathVariable Long channelId,
+            @PathVariable Long messageId,
+            @RequestHeader("Authorization") String token) {
+        logger.info("Requête pour épingler/désépingler le message {} dans le canal {}", messageId, channelId);
+        try {
+            MessageDTO updatedMessage = messageService.pinMessage(channelId, messageId , token);
+            return ResponseEntity.ok(updatedMessage);
+        } catch (IllegalArgumentException e) {
+            logger.error("Erreur lors de l'épinglage du message: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        } catch (Exception e) {
+            logger.error("Erreur serveur lors de l'épinglage du message: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        }
     }
 }
