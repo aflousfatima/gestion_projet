@@ -134,4 +134,27 @@ public class MessageController {
             return ResponseEntity.badRequest().body(null);
         }
     }
+
+
+    @PostMapping("/image")
+    public ResponseEntity<MessageDTO> uploadImageMessage(
+            @PathVariable Long channelId,
+            @RequestParam("file") MultipartFile imageFile,
+            @RequestHeader("Authorization") String token,
+            @RequestParam(value = "replyToId", required = false) Long replyToId) throws IOException {
+        logger.info("Téléversement d'une image pour le canal: {}", channelId);
+        MessageDTO messageDTO = messageService.uploadImageMessage(channelId, imageFile, token, replyToId);
+        return ResponseEntity.ok(messageDTO);
+    }
+
+    @PostMapping("/file")
+    public ResponseEntity<MessageDTO> uploadFileMessage(
+            @PathVariable Long channelId,
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader("Authorization") String token,
+            @RequestParam(value = "replyToId", required = false) Long replyToId) throws IOException {
+        logger.info("Téléversement d'un fichier pour le canal: {}", channelId);
+        MessageDTO messageDTO = messageService.uploadFileMessage(channelId, file, token, replyToId);
+        return ResponseEntity.ok(messageDTO);
+    }
 }
