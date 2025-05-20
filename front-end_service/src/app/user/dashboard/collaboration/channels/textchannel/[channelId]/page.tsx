@@ -26,11 +26,12 @@ import {
   faPlay,
   faPause,
   faStop,
+  faFile
 } from "@fortawesome/free-solid-svg-icons";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import "../../../../../../styles/Collaboration-Channel.css";
+import "../../../../../../../styles/Collaboration-Channel.css";
 
 interface Channel {
   id: string;
@@ -55,7 +56,7 @@ interface Message {
   replyToText: string | null;
   replyToSenderName: string | null;
   pinned: boolean;
-  modified?: boolean; // Ajouté
+  modified?: boolean;
   duration?: number;
 }
 
@@ -71,9 +72,10 @@ interface User {
   avatar?: string;
   email: string;
 }
+
 const ChannelPage: React.FC = () => {
   const { channelId } = useParams();
-  const { accessToken } = useAuth(); // Assume user contains userId
+  const { accessToken } = useAuth();
   const axiosInstance = useAxios();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -94,9 +96,7 @@ const ChannelPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
-  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(
-    null
-  );
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -105,6 +105,7 @@ const ChannelPage: React.FC = () => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const AudioPlayer: React.FC<{ src: string; duration?: number }> = ({
     src,
@@ -118,7 +119,6 @@ const ChannelPage: React.FC = () => {
     useEffect(() => {
       const audio = audioRef.current;
       if (audio && !duration) {
-        // Essayer de charger la durée si elle n'est pas fournie
         const handleLoadedMetadata = () => {
           console.log("Durée brute de l'audio:", audio.duration);
           if (isNaN(audio.duration) || !isFinite(audio.duration)) {
@@ -131,7 +131,7 @@ const ChannelPage: React.FC = () => {
 
         const handleError = () => {
           console.error("Erreur lors du chargement de l'audio:", audio.error);
-          setComputedDuration(duration || null); // Utiliser la durée fournie si erreur
+          setComputedDuration(duration || null);
         };
 
         audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -161,9 +161,7 @@ const ChannelPage: React.FC = () => {
         <audio ref={audioRef} controls src={src} className="audio-player">
           Votre navigateur ne prend pas en charge l'élément audio.
         </audio>
-        <span className="audio-duration">
-          {formatDuration(computedDuration)}
-        </span>
+        <span className="audio-duration">{formatDuration(computedDuration)}</span>
       </div>
     );
   };
@@ -192,21 +190,19 @@ const ChannelPage: React.FC = () => {
         try {
           const receivedMessage: Message = {
             ...JSON.parse(message.body),
-            id: JSON.parse(message.body).id.toString(), // Assurer que l'ID est une chaîne
+            id: JSON.parse(message.body).id.toString(),
             replyToId: JSON.parse(message.body).replyToId
               ? JSON.parse(message.body).replyToId.toString()
               : null,
             replyToText: JSON.parse(message.body).replyToText || null,
-            replyToSenderName:
-              JSON.parse(message.body).replyToSenderName || null,
+            replyToSenderName: JSON.parse(message.body).replyToSenderName || null,
             pinned: JSON.parse(message.body).pinned || false,
             reactions: JSON.parse(message.body).reactions || {},
             modified: JSON.parse(message.body).modified || false,
           };
-          console.log("Message reçu via WebSocket, ID:", receivedMessage.id); // Log pour déboguer
+          console.log("Message reçu via WebSocket, ID:", receivedMessage.id);
 
           setMessages((prev) => {
-            // Vérifier si le message existe déjà
             const existingIndex = prev.findIndex(
               (msg) => msg.id === receivedMessage.id
             );
@@ -217,17 +213,15 @@ const ChannelPage: React.FC = () => {
               console.log("Suppression du message ID:", receivedMessage.id);
               return prev.filter((msg) => msg.id !== receivedMessage.id);
             } else if (existingIndex >= 0) {
-              // Mettre à jour le message existant
               console.log("Mise à jour du message ID:", receivedMessage.id);
               const updatedMessages = [...prev];
               updatedMessages[existingIndex] = {
                 ...updatedMessages[existingIndex],
                 ...receivedMessage,
-                reactions: { ...receivedMessage.reactions }, // Fusionner les réactions
+                reactions: { ...receivedMessage.reactions },
               };
               return updatedMessages;
             } else {
-              // Ajouter un nouveau message
               console.log("Ajout d'un nouveau message ID:", receivedMessage.id);
               return [...prev, receivedMessage];
             }
@@ -256,7 +250,7 @@ const ChannelPage: React.FC = () => {
     };
   }, [accessToken, channelId]);
 
-  // Épingler un message (placeholder)
+  // Épingler un message
   const handlePinMessage = async (messageId: string) => {
     try {
       const response = await axiosInstance.post(
@@ -265,7 +259,7 @@ const ChannelPage: React.FC = () => {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       const updatedMessage = response.data;
-      console.log("Réponse API /pin:", updatedMessage); // Log pour déboguer
+      console.log("Réponse API /pin:", updatedMessage);
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === messageId.toString()
@@ -285,6 +279,7 @@ const ChannelPage: React.FC = () => {
       console.error("Erreur épinglage:", err);
     }
   };
+
   // Close menus on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -367,7 +362,7 @@ const ChannelPage: React.FC = () => {
               replyToText: msg.replyToText || null,
               replyToSenderName: msg.replyToSenderName || null,
               pinned: msg.pinned || false,
-              duration: msg.duration || null, // Ajouter la durée
+              duration: msg.duration || null,
             }))
           );
         } catch (err: any) {
@@ -380,6 +375,7 @@ const ChannelPage: React.FC = () => {
     };
     fetchMessages();
   }, [accessToken, axiosInstance, channelId, channel?.type]);
+
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -407,7 +403,7 @@ const ChannelPage: React.FC = () => {
       replyToId: replyingTo ? replyingTo.id : null,
       replyToText: replyingTo ? replyingTo.text : null,
       replyToSenderName: replyingTo ? replyingTo.senderName : null,
-      pinned: false, // Ajouté pour correspondre à l'interface
+      pinned: false,
     };
 
     try {
@@ -464,7 +460,7 @@ const ChannelPage: React.FC = () => {
       );
     }
   };
-  // Fonction pour générer les initiales
+
   const getInitials = (senderName: string) => {
     const [firstName, lastName] = senderName.split(" ");
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
@@ -499,19 +495,18 @@ const ChannelPage: React.FC = () => {
     fetchCurrentUser();
   }, [accessToken, axiosInstance, currentUser]);
 
-  // Fonction pour générer une couleur d'avatar basée sur senderId
   const getAvatarColor = (senderId: string) => {
     const colors = [
-      "#64748b", // Slate
-      "#475569", // Dark Slate
-      "#6b7280", // Gray
-      "#7c3aed", // Soft Violet
-      "#4b5563", // Cool Gray
-      "#5b21b6", // Deep Purple
-      "#0f766e", // Muted Teal
-      "#1e293b", // Charcoal
-      "#334155", // Cool Dark Blue
-      "#3f3f46", // Neutral Gray
+      "#64748b",
+      "#475569",
+      "#6b7280",
+      "#7c3aed",
+      "#4b5563",
+      "#5b21b6",
+      "#0f766e",
+      "#1e293b",
+      "#334155",
+      "#3f3f46",
     ];
     const index =
       Math.abs(senderId.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) %
@@ -519,7 +514,6 @@ const ChannelPage: React.FC = () => {
     return colors[index];
   };
 
-  // Regrouper les messages par date
   const groupMessagesByDate = (messages: Message[]): MessageGroup[] => {
     const groups: { [key: string]: Message[] } = {};
     messages.forEach((msg) => {
@@ -541,7 +535,7 @@ const ChannelPage: React.FC = () => {
           new Date(a.messages[0].createdAt).getTime()
       );
   };
-  // Ajouter une réaction
+
   const handleAddReaction = async (messageId: string, emoji: string) => {
     if (!stompClientRef.current || !currentUser) return;
 
@@ -581,19 +575,17 @@ const ChannelPage: React.FC = () => {
       console.error("Erreur réaction:", err);
     }
   };
-  // Start editing a message
+
   const startEditingMessage = (message: Message) => {
     setEditingMessageId(message.id);
     setEditedMessageText(message.text);
   };
 
-  // Cancel editing
   const cancelEditing = () => {
     setEditingMessageId(null);
     setEditedMessageText("");
   };
 
-  // Update a message
   const handleUpdateMessage = async (messageId: string) => {
     if (!editedMessageText.trim() || !stompClientRef.current) return;
 
@@ -611,7 +603,7 @@ const ChannelPage: React.FC = () => {
       replyToText: null,
       replyToSenderName: null,
       pinned: false,
-      modified: true, // Indiquer que le message est modifié
+      modified: true,
     };
 
     try {
@@ -642,7 +634,7 @@ const ChannelPage: React.FC = () => {
   };
 
   const messageGroups = groupMessagesByDate(messages);
-  // Delete a message
+
   const handleDeleteMessage = async (messageId: string) => {
     if (!confirm("Voulez-vous vraiment supprimer ce message ?")) return;
 
@@ -663,25 +655,84 @@ const ChannelPage: React.FC = () => {
     }
   };
 
-  // Upload file (to be implemented)
-  const handleUploadFile = () => {
-    alert("Fonctionnalité d'upload de fichier à implémenter");
-    setShowOptionsMenu(false);
-  };
+const handleUploadFile = async (type: "IMAGE" | "FILE") => {
+  if (!fileInputRef.current || !channel || !currentUser || !stompClientRef.current) {
+    setError("Conditions non remplies pour l'envoi du fichier.");
+    return;
+  }
 
-  // Add emoji to message
+  fileInputRef.current.accept = type === "IMAGE" ? "image/*" : "*/*";
+  fileInputRef.current.click();
+
+  fileInputRef.current.onchange = async () => {
+    if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
+      const file = fileInputRef.current.files[0];
+      const mimeType = file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
+      const formData = new FormData();
+      formData.append("file", file);
+      if (replyingTo) {
+        formData.append("replyToId", replyingTo.id);
+      }
+
+      try {
+        const tempMessage: Message = {
+          id: `temp-${Date.now()}`,
+          channelId: channelId as string,
+          senderId: currentUser.id,
+          senderName: `${currentUser.firstName} ${currentUser.lastName}`,
+          text: file.name,
+          fileUrl: null,
+          mimeType: mimeType,
+          type,
+          createdAt: new Date().toISOString(),
+          replyToId: replyingTo ? replyingTo.id : null,
+          replyToText: replyingTo ? replyingTo.text : null,
+          replyToSenderName: replyingTo ? replyingTo.senderName : null,
+          pinned: false,
+          modified: false,
+        };
+
+        setMessages((prev) => [...prev, tempMessage]);
+
+        const response = await axiosInstance.post(
+          `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${type.toLowerCase()}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
+        setReplyingTo(null);
+        setSuccessMessage(`${type === "IMAGE" ? "Image" : "Fichier"} envoyé !`);
+        setTimeout(() => setSuccessMessage(null), 3000);
+      } catch (err: any) {
+        setError(
+          err.response?.data?.message || `Erreur lors de l'envoi du ${type.toLowerCase()}`
+        );
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
+        console.error(`Erreur envoi ${type.toLowerCase()}:`, err);
+      } finally {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+  setShowOptionsMenu(false);
+};
+
   const handleEmojiSelect = (emojiData: EmojiClickData) => {
     setNewMessage((prev) => prev + emojiData.emoji);
     setShowEmojiMenu(false);
   };
 
-  // Edit channel
   const handleEditChannel = () => {
     alert("Fonctionnalité de modification du canal à implémenter");
     setShowActionMenu(false);
   };
 
-  // Delete channel
   const handleDeleteChannel = async () => {
     if (!confirm("Voulez-vous vraiment supprimer ce canal ?")) return;
 
@@ -703,6 +754,7 @@ const ChannelPage: React.FC = () => {
     }
     setShowActionMenu(false);
   };
+
   const startRecording = async () => {
     try {
       console.log(
@@ -758,7 +810,7 @@ const ChannelPage: React.FC = () => {
         console.error("Erreur MediaRecorder:", event);
       };
 
-      mediaRecorderRef.current.start(100); // Capturer un chunk toutes les 100ms
+      mediaRecorderRef.current.start(100);
       setIsRecording(true);
       setIsPaused(false);
       setRecordingTime(0);
@@ -797,7 +849,6 @@ const ChannelPage: React.FC = () => {
     }
   };
 
-  // Annuler l'enregistrement
   const cancelRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
@@ -809,7 +860,6 @@ const ChannelPage: React.FC = () => {
     }
   };
 
-  // Envoyer le message audio
   const handleSendAudioMessage = async () => {
     if (!audioBlob || !channel || !currentUser || !stompClientRef.current) {
       console.error(
@@ -855,7 +905,6 @@ const ChannelPage: React.FC = () => {
             resolve(null);
           };
         });
-        // Test manuel de l'audio
         console.log("Ouvrir l'URL pour tester l'audio:", audioUrl);
         URL.revokeObjectURL(audioUrl);
       }
@@ -927,7 +976,7 @@ const ChannelPage: React.FC = () => {
       }
     }
   };
-  // Formater le temps d'enregistrement (mm:ss)
+
   const formatRecordingTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
       .toString()
@@ -1023,7 +1072,7 @@ const ChannelPage: React.FC = () => {
                       {new Date(msg.createdAt).toLocaleTimeString()}
                     </span>
                   </div>
-                  <div className="pinned-message-content">{msg.text}</div>
+             
                   <button
                     className="action-btn"
                     title={msg.pinned ? "Désépingler" : "Épingler"}
@@ -1041,28 +1090,79 @@ const ChannelPage: React.FC = () => {
       <div className="channel-content">
         {channel.type === "TEXT" ? (
           <div className="chat-section">
-            <div className="pinned-messages">
-              {messages.filter((msg) => msg.pinned).length > 0 && (
-                <>
-                  <h3>Messages Épinglés</h3>
-                  {messages
-                    .filter((msg) => msg.pinned)
-                    .map((msg) => (
-                      <div key={msg.id} className="pinned-message">
-                        <span className="pinned-message-text">
-                          {msg.senderName}: {msg.text}
-                        </span>
-                        <button
-                          className="action-btn"
-                          onClick={() => handlePinMessage(msg.id)}
+         <div className="pinned-messages">
+  {messages.filter((msg) => msg.pinned).length > 0 && (
+    <>
+      <h3>Messages Épinglés</h3>
+      {messages
+        .filter((msg) => msg.pinned)
+        .map((msg) => (
+          <div key={msg.id} className="pinned-message">
+            <span className="pinned-message-text">
+              {msg.senderName}:{" "}
+              {msg.type === "IMAGE" && msg.fileUrl ? (
+                <img
+                  src={msg.fileUrl}
+                  alt="Pinned image"
+                  className="message-image"
+                  style={{ maxWidth: "100px", maxHeight: "100px" }}
+                />
+              ) : msg.type === "FILE" && msg.fileUrl ? (
+                <div className="file-preview-container">
+                  {msg.mimeType?.toLowerCase().startsWith("application/pdf") || msg.fileUrl.toLowerCase().endsWith(".pdf") ? (
+                    <div className="pdf-preview">
+                      <object
+                        data={msg.fileUrl}
+                        type="application/pdf"
+                        width="100"
+                        height="100"
+                        title="PDF Preview"
+                        onError={() => console.error("PDF object failed to load:", msg.fileUrl)}
+                      >
+                        <a
+                          href={msg.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pdf-fallback"
                         >
-                          <FontAwesomeIcon icon={faThumbtack} />
-                        </button>
-                      </div>
-                    ))}
-                </>
+                          Prévisualisation non disponible
+                        </a>
+                      </object>
+                    </div>
+                  ) : (
+                    <div className="file-icon">
+                      <FontAwesomeIcon icon={faFile} size="1x" />
+                    </div>
+                  )}
+                  <div className="file-info">
+                    <span className="file-name">
+                      {msg.text || (msg.fileUrl ? decodeURIComponent(msg.fileUrl.split("/").pop() || "Fichier sans nom") : "Fichier sans nom")}
+                    </span>
+                    <a
+                      href={msg.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="file-download-link"
+                    >
+                      Télécharger
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                msg.text
               )}
-            </div>
+            </span>
+            <button
+              className="action-btn"
+              onClick={() => handlePinMessage(msg.id)}
+            >
+              <FontAwesomeIcon icon={faThumbtack} />
+            </button>
+          </div>
+        ))}
+    </>
+  )}
+</div>
             <div className="messages">
               {messageGroups.length > 0 ? (
                 messageGroups.map((group) => (
@@ -1070,7 +1170,6 @@ const ChannelPage: React.FC = () => {
                     <div className="date-separator">
                       <span>{group.date}</span>
                     </div>
-
                     {group.messages.map((msg) => (
                       <div
                         key={msg.id}
@@ -1147,26 +1246,85 @@ const ChannelPage: React.FC = () => {
                               />
                             </div>
                           ) : (
-                            <div className="message-content">
-                              {msg.type === "AUDIO" && msg.fileUrl ? (
-                                <AudioPlayer
-                                  src={msg.fileUrl}
-                                  duration={msg.duration}
-                                />
-                              ) : (
-                                <>
-                                  {msg.text}
-                                  {msg.modified && (
-                                    <span
-                                      className="edited-indicator"
-                                      title="Message modifié"
-                                    >
-                                      (edited)
-                                    </span>
-                                  )}
-                                </>
-                              )}
-                            </div>
+                           <div className="message-content">
+  {(() => {
+    console.log("Message data:", {
+      id: msg.id,
+      type: msg.type,
+      fileUrl: msg.fileUrl,
+      text: msg.text,
+      mimeType: msg.mimeType,
+      raw: msg
+    });
+    if (msg.type === "AUDIO" && msg.fileUrl) {
+      return <AudioPlayer src={msg.fileUrl} duration={msg.duration} />;
+    } else if (msg.type === "IMAGE" && msg.fileUrl) {
+      return (
+        <img
+          src={msg.fileUrl}
+          alt="Uploaded image"
+          className="message-image"
+          style={{ maxWidth: "300px", maxHeight: "300px" }}
+        />
+      );
+    } else if (msg.type === "FILE" && msg.fileUrl) {
+      const fileName = msg.text || (msg.fileUrl ? decodeURIComponent(msg.fileUrl.split("/").pop() || "Fichier sans nom") : "Fichier sans nom");
+      const isPdf = msg.mimeType?.toLowerCase().startsWith("application/pdf") || msg.fileUrl.toLowerCase().endsWith(".pdf");
+      return (
+        <div className="file-preview-container">
+          {isPdf ? (
+            <div className="pdf-preview">
+              <object
+                data={msg.fileUrl}
+                type="application/pdf"
+                width="150"
+                height="200"
+                title="PDF Preview"
+                onError={() => console.error("PDF object failed to load:", msg.fileUrl)}
+              >
+                <a
+                  href={msg.fileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pdf-fallback"
+                >
+                  Prévisualisation non disponible. Cliquez pour ouvrir le PDF.
+                </a>
+              </object>
+            </div>
+          ) : (
+            <div className="file-icon">
+              <FontAwesomeIcon icon={faFile} size="2x" />
+            </div>
+          )}
+          <div className="file-info">
+            <span className="file-name">{fileName}</span>
+            <a
+              href={msg.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="file-download-link"
+              onClick={() => console.log("Downloading file:", msg.fileUrl)}
+            >
+              Télécharger le fichier
+            </a>
+          </div>
+        </div>
+      );
+    } else {
+      return (
+        <>
+          {msg.text || "Message vide"}
+          {msg.modified && (
+            <span className="edited-indicator" title="Message modifié">
+              (edited)
+            </span>
+          )}
+        </>
+      );
+    }
+  })()}
+</div>
                           )}
                           {msg.reactions &&
                             Object.keys(msg.reactions).length > 0 && (
@@ -1332,7 +1490,7 @@ const ChannelPage: React.FC = () => {
                       src={URL.createObjectURL(audioBlob)}
                       className="audio-player"
                     >
-                      Votre navigateur ne prend pas en charge l'élément audio.
+                      Votre navigateur ne prend pas en charge lélément audio.
                     </audio>
                     <button
                       type="button"
@@ -1355,6 +1513,11 @@ const ChannelPage: React.FC = () => {
                     className="message-input"
                   />
                 )}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  style={{ display: "none" }}
+                />
                 <div className="input-actions">
                   <div className="options-menu-container" ref={optionsMenuRef}>
                     <button
@@ -1369,7 +1532,13 @@ const ChannelPage: React.FC = () => {
                       <div className="options-menu">
                         <button
                           className="menu-item"
-                          onClick={handleUploadFile}
+                          onClick={() => handleUploadFile("IMAGE")}
+                        >
+                          Upload Image
+                        </button>
+                        <button
+                          className="menu-item"
+                          onClick={() => handleUploadFile("FILE")}
                         >
                           Upload File
                         </button>

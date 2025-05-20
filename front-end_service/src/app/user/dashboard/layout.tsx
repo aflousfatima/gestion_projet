@@ -1177,7 +1177,7 @@ const handleLogout = async () => {
       .map((channel) => (
         <li key={channel.id} className="channel-name">
           <FontAwesomeIcon icon={faHashtag} className="channel-icon" />
-          <Link href={`/user/dashboard/collaboration/channels/${channel.id}`}>
+          <Link href={`/user/dashboard/collaboration/channels/textchannel/${channel.id}`}>
                {channel.name}
               {channel.isPrivate && (
               <FontAwesomeIcon icon={faLock} className="private-icon" />
@@ -1205,7 +1205,7 @@ const handleLogout = async () => {
       .map((channel) => (
         <li key={channel.id} className="channel-name">
           <FontAwesomeIcon icon={faVolumeUp} className="channel-icon" />
-          <Link href={`/user/dashboard/collaboration/channels/${channel.id}`}>
+          <Link href={`/user/dashboard/collaboration/channels/vocalchannel/${channel.id}`}>
             {channel.name}
             {channel.isPrivate && (
               <FontAwesomeIcon icon={faLock} className="private-icon" />
