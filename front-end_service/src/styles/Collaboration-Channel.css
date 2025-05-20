@@ -627,3 +627,116 @@ width:350px;
   text-align: center;
   padding: 10px;
 }
+
+/* Indicateur d'enregistrement */
+.recording-indicator {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  background: #2f3136;
+  border-radius: 4px;
+  color: #dcddde;
+  font-size: 0.9rem;
+}
+
+.recording-timer {
+  margin-right: 10px;
+  font-weight: bold;
+}
+
+.recording-wave {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+}
+
+.recording-wave span {
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background: #dc3545;
+  margin: 0 2px;
+  animation: wave 1.2s infinite ease-in-out;
+}
+
+.recording-wave span:nth-child(2) { animation-delay: -1.1s; }
+.recording-wave span:nth-child(3) { animation-delay: -1.0s; }
+.recording-wave span:nth-child(4) { animation-delay: -0.9s; }
+.recording-wave span:nth-child(5) { animation-delay: -0.8s; }
+
+@keyframes wave {
+  0%, 40%, 100% { transform: scaleY(0.4); }
+  20% { transform: scaleY(1.0); }
+}
+
+.recording-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.recording-actions button {
+  background: none;
+  border: none;
+  color: #dcddde;
+  cursor: pointer;
+}
+
+.recording-actions button:hover {
+  color: #fff;
+}
+.recording-indicator button {
+  margin-left: 10px;
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Style pour le bouton microphone en cours d'enregistrement */
+.input-action-btn.recording {
+  color: #dc3545; /* Rouge pendant l'enregistrement */
+}
+
+/* Lecteur audio */
+.audio-player {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 5px;
+}
+
+.audio-player-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.audio-player {
+  max-width: 200px;
+}
+
+.audio-duration {
+  color: #dcddde;
+  font-size: 0.8rem;
+}
+
+.audio-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background: #2f3136;
+  border-radius: 4px;
+}
+
+.audio-preview .audio-player {
+  max-width: 200px;
+}
+
+.audio-preview .input-action-btn {
+  color: #dcddde;
+  cursor: pointer;
+}
+
+.audio-preview .input-action-btn:hover {
+  color: #fff;
+}

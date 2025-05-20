@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import useAxios from "@/hooks/useAxios";
-import {AUTH_SERVICE_URL ,  COLLABORATION_SERVICE_URL } from "@/config/useApi";
+import { AUTH_SERVICE_URL, COLLABORATION_SERVICE_URL } from "@/config/useApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faHashtag,
@@ -21,7 +21,11 @@ import {
   faMicrophone,
   faEdit,
   faTrash,
-  faReply
+  faReply,
+  faTrashAlt,
+  faPlay,
+  faPause,
+  faStop,
 } from "@fortawesome/free-solid-svg-icons";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
@@ -52,6 +56,7 @@ interface Message {
   replyToSenderName: string | null;
   pinned: boolean;
   modified?: boolean; // Ajouté
+  duration?: number;
 }
 
 interface MessageGroup {
@@ -64,7 +69,7 @@ interface User {
   firstName: string;
   lastName: string;
   avatar?: string;
-  email: string
+  email: string;
 }
 const ChannelPage: React.FC = () => {
   const { channelId } = useParams();
@@ -89,8 +94,80 @@ const ChannelPage: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
-  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
+  const [showReactionPicker, setShowReactionPicker] = useState<string | null>(
+    null
+  );
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const AudioPlayer: React.FC<{ src: string; duration?: number }> = ({
+    src,
+    duration,
+  }) => {
+    const [computedDuration, setComputedDuration] = useState<number | null>(
+      duration || null
+    );
+    const audioRef = useRef<HTMLAudioElement>(null);
+
+    useEffect(() => {
+      const audio = audioRef.current;
+      if (audio && !duration) {
+        // Essayer de charger la durée si elle n'est pas fournie
+        const handleLoadedMetadata = () => {
+          console.log("Durée brute de l'audio:", audio.duration);
+          if (isNaN(audio.duration) || !isFinite(audio.duration)) {
+            console.warn("Durée invalide détectée:", audio.duration);
+            setComputedDuration(null);
+          } else {
+            setComputedDuration(audio.duration);
+          }
+        };
+
+        const handleError = () => {
+          console.error("Erreur lors du chargement de l'audio:", audio.error);
+          setComputedDuration(duration || null); // Utiliser la durée fournie si erreur
+        };
+
+        audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+        audio.addEventListener("error", handleError);
+        audio.load();
+
+        return () => {
+          audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+          audio.removeEventListener("error", handleError);
+        };
+      }
+    }, [src, duration]);
+
+    const formatDuration = (seconds: number | null) => {
+      if (seconds === null || isNaN(seconds) || !isFinite(seconds)) {
+        return "Durée inconnue";
+      }
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60)
+        .toString()
+        .padStart(2, "0");
+      return `${mins}:${secs}`;
+    };
+
+    return (
+      <div className="audio-player-container">
+        <audio ref={audioRef} controls src={src} className="audio-player">
+          Votre navigateur ne prend pas en charge l'élément audio.
+        </audio>
+        <span className="audio-duration">
+          {formatDuration(computedDuration)}
+        </span>
+      </div>
+    );
+  };
+
   // Initialize WebSocket client
   useEffect(() => {
     if (!accessToken || !channelId) return;
@@ -109,49 +186,60 @@ const ChannelPage: React.FC = () => {
       heartbeatOutgoing: 4000,
     });
 
-client.onConnect = () => {
-  console.log("Connecté au WebSocket");
-  client.subscribe(`/topic/messages.${channelId}`, (message) => {
-    try {
-      const receivedMessage: Message = {
-        ...JSON.parse(message.body),
-        id: JSON.parse(message.body).id.toString(), // Assurer que l'ID est une chaîne
-        replyToId: JSON.parse(message.body).replyToId ? JSON.parse(message.body).replyToId.toString() : null,
-        replyToText: JSON.parse(message.body).replyToText || null,
-        replyToSenderName: JSON.parse(message.body).replyToSenderName || null,
-        pinned: JSON.parse(message.body).pinned || false,
-        reactions: JSON.parse(message.body).reactions || {},
-        modified: JSON.parse(message.body).modified || false,
-      };
-      console.log("Message reçu via WebSocket, ID:", receivedMessage.id); // Log pour déboguer
-
-      setMessages((prev) => {
-        // Vérifier si le message existe déjà
-        const existingIndex = prev.findIndex((msg) => msg.id === receivedMessage.id);
-        if (receivedMessage.type === "SYSTEM" && receivedMessage.text === "Message supprimé") {
-          console.log("Suppression du message ID:", receivedMessage.id);
-          return prev.filter((msg) => msg.id !== receivedMessage.id);
-        } else if (existingIndex >= 0) {
-          // Mettre à jour le message existant
-          console.log("Mise à jour du message ID:", receivedMessage.id);
-          const updatedMessages = [...prev];
-          updatedMessages[existingIndex] = {
-            ...updatedMessages[existingIndex],
-            ...receivedMessage,
-            reactions: { ...receivedMessage.reactions }, // Fusionner les réactions
+    client.onConnect = () => {
+      console.log("Connecté au WebSocket");
+      client.subscribe(`/topic/messages.${channelId}`, (message) => {
+        try {
+          const receivedMessage: Message = {
+            ...JSON.parse(message.body),
+            id: JSON.parse(message.body).id.toString(), // Assurer que l'ID est une chaîne
+            replyToId: JSON.parse(message.body).replyToId
+              ? JSON.parse(message.body).replyToId.toString()
+              : null,
+            replyToText: JSON.parse(message.body).replyToText || null,
+            replyToSenderName:
+              JSON.parse(message.body).replyToSenderName || null,
+            pinned: JSON.parse(message.body).pinned || false,
+            reactions: JSON.parse(message.body).reactions || {},
+            modified: JSON.parse(message.body).modified || false,
           };
-          return updatedMessages;
-        } else {
-          // Ajouter un nouveau message
-          console.log("Ajout d'un nouveau message ID:", receivedMessage.id);
-          return [...prev, receivedMessage];
+          console.log("Message reçu via WebSocket, ID:", receivedMessage.id); // Log pour déboguer
+
+          setMessages((prev) => {
+            // Vérifier si le message existe déjà
+            const existingIndex = prev.findIndex(
+              (msg) => msg.id === receivedMessage.id
+            );
+            if (
+              receivedMessage.type === "SYSTEM" &&
+              receivedMessage.text === "Message supprimé"
+            ) {
+              console.log("Suppression du message ID:", receivedMessage.id);
+              return prev.filter((msg) => msg.id !== receivedMessage.id);
+            } else if (existingIndex >= 0) {
+              // Mettre à jour le message existant
+              console.log("Mise à jour du message ID:", receivedMessage.id);
+              const updatedMessages = [...prev];
+              updatedMessages[existingIndex] = {
+                ...updatedMessages[existingIndex],
+                ...receivedMessage,
+                reactions: { ...receivedMessage.reactions }, // Fusionner les réactions
+              };
+              return updatedMessages;
+            } else {
+              // Ajouter un nouveau message
+              console.log("Ajout d'un nouveau message ID:", receivedMessage.id);
+              return [...prev, receivedMessage];
+            }
+          });
+        } catch (error) {
+          console.error(
+            "Erreur lors du traitement du message WebSocket:",
+            error
+          );
         }
       });
-    } catch (error) {
-      console.error("Erreur lors du traitement du message WebSocket:", error);
-    }
-  });
-};
+    };
     client.onStompError = (frame) => {
       console.error("Erreur STOMP:", frame);
       setError("Erreur de connexion WebSocket");
@@ -168,41 +256,54 @@ client.onConnect = () => {
     };
   }, [accessToken, channelId]);
 
-   // Épingler un message (placeholder)
-const handlePinMessage = async (messageId: string) => {
-  try {
-    const response = await axiosInstance.post(
-      `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}/pin`,
-      {},
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-    const updatedMessage = response.data;
-    console.log("Réponse API /pin:", updatedMessage); // Log pour déboguer
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId.toString()
-          ? { ...msg, pinned: updatedMessage.pinned }
-          : msg
-      )
-    );
-    setHoveredMessageId(null);
-    setSuccessMessage(updatedMessage.pinned ? "Message épinglé !" : "Message désépinglé !");
-    setTimeout(() => setSuccessMessage(null), 3000);
-  } catch (err: any) {
-    setError(err.response?.data?.message || "Erreur lors de l'épinglage du message");
-    console.error("Erreur épinglage:", err);
-  }
-};
+  // Épingler un message (placeholder)
+  const handlePinMessage = async (messageId: string) => {
+    try {
+      const response = await axiosInstance.post(
+        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}/pin`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      const updatedMessage = response.data;
+      console.log("Réponse API /pin:", updatedMessage); // Log pour déboguer
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId.toString()
+            ? { ...msg, pinned: updatedMessage.pinned }
+            : msg
+        )
+      );
+      setHoveredMessageId(null);
+      setSuccessMessage(
+        updatedMessage.pinned ? "Message épinglé !" : "Message désépinglé !"
+      );
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || "Erreur lors de l'épinglage du message"
+      );
+      console.error("Erreur épinglage:", err);
+    }
+  };
   // Close menus on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target as Node)) {
+      if (
+        actionMenuRef.current &&
+        !actionMenuRef.current.contains(event.target as Node)
+      ) {
         setShowActionMenu(false);
       }
-      if (optionsMenuRef.current && !optionsMenuRef.current.contains(event.target as Node)) {
+      if (
+        optionsMenuRef.current &&
+        !optionsMenuRef.current.contains(event.target as Node)
+      ) {
         setShowOptionsMenu(false);
       }
-      if (emojiMenuRef.current && !emojiMenuRef.current.contains(event.target as Node)) {
+      if (
+        emojiMenuRef.current &&
+        !emojiMenuRef.current.contains(event.target as Node)
+      ) {
         setShowEmojiMenu(false);
       }
     };
@@ -229,7 +330,10 @@ const handlePinMessage = async (messageId: string) => {
             members: response.data.participantIds || [],
           });
         } catch (err: any) {
-          setError(err.response?.data?.message || "Erreur lors de la récupération du canal");
+          setError(
+            err.response?.data?.message ||
+              "Erreur lors de la récupération du canal"
+          );
         }
       }
     };
@@ -259,20 +363,23 @@ const handlePinMessage = async (messageId: string) => {
               type: msg.type,
               createdAt: msg.createdAt,
               reactions: msg.reactions || {},
-            replyToId: msg.replyToId ? msg.replyToId.toString() : null,
-            replyToText: msg.replyToText || null,
-            replyToSenderName: msg.replyToSenderName || null,
-            pinned: msg.pinned || false,
+              replyToId: msg.replyToId ? msg.replyToId.toString() : null,
+              replyToText: msg.replyToText || null,
+              replyToSenderName: msg.replyToSenderName || null,
+              pinned: msg.pinned || false,
+              duration: msg.duration || null, // Ajouter la durée
             }))
           );
         } catch (err: any) {
-          setError(err.response?.data?.message || "Erreur lors de la récupération des messages");
+          setError(
+            err.response?.data?.message ||
+              "Erreur lors de la récupération des messages"
+          );
         }
       }
     };
     fetchMessages();
   }, [accessToken, axiosInstance, channelId, channel?.type]);
-
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -281,86 +388,134 @@ const handlePinMessage = async (messageId: string) => {
   }, [messages]);
 
   // Send a new message
-const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !channel || !stompClientRef.current) return;
 
     const messageDTO: Message = {
-        id: "",
-        channelId: channelId as string,
-        senderId: currentUser?.id || "",
-        senderName: currentUser ? `${currentUser.firstName} ${currentUser.lastName}` : "",
-        text: newMessage,
-        fileUrl: null,
-        mimeType: null,
-        type: "TEXT",
-        createdAt: new Date().toISOString(),
-        replyToId: replyingTo ? replyingTo.id : null,
-        replyToText: replyingTo ? replyingTo.text : null,
-        replyToSenderName: replyingTo ? replyingTo.senderName : null,
-        pinned: false, // Ajouté pour correspondre à l'interface
+      id: "",
+      channelId: channelId as string,
+      senderId: currentUser?.id || "",
+      senderName: currentUser
+        ? `${currentUser.firstName} ${currentUser.lastName}`
+        : "",
+      text: newMessage,
+      fileUrl: null,
+      mimeType: null,
+      type: "TEXT",
+      createdAt: new Date().toISOString(),
+      replyToId: replyingTo ? replyingTo.id : null,
+      replyToText: replyingTo ? replyingTo.text : null,
+      replyToSenderName: replyingTo ? replyingTo.senderName : null,
+      pinned: false, // Ajouté pour correspondre à l'interface
     };
 
     try {
-        stompClientRef.current.publish({
-            destination: "/app/send-message",
-            body: JSON.stringify(messageDTO),
-            headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        setNewMessage("");
-        setReplyingTo(null);
-        setSuccessMessage("Message envoyé !");
-        setTimeout(() => setSuccessMessage(null), 3000);
+      stompClientRef.current.publish({
+        destination: "/app/send-message",
+        body: JSON.stringify(messageDTO),
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      setNewMessage("");
+      setReplyingTo(null);
+      setSuccessMessage("Message envoyé !");
+      setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-        setError("Erreur lors de l'envoi du message");
+      setError("Erreur lors de l'envoi du message");
     }
-};
-    // Fonction pour générer les initiales
+  };
+
+  const pauseRecording = () => {
+    if (mediaRecorderRef.current && isRecording && !isPaused) {
+      console.log(
+        "Pause de l'enregistrement, recordingTime actuel:",
+        recordingTime
+      );
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+      clearInterval(timerRef.current!);
+      console.log("Timer mis en pause");
+    } else {
+      console.warn(
+        "Impossible de mettre en pause: enregistrement non actif ou déjà en pause"
+      );
+    }
+  };
+
+  const resumeRecording = () => {
+    if (mediaRecorderRef.current && isRecording && isPaused) {
+      console.log(
+        "Reprise de l'enregistrement, recordingTime actuel:",
+        recordingTime
+      );
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => {
+          const newTime = prev + 1;
+          console.log("Mise à jour recordingTime:", newTime);
+          return newTime;
+        });
+      }, 1000);
+      console.log("Timer repris, Timer ID:", timerRef.current);
+    } else {
+      console.warn(
+        "Impossible de reprendre: enregistrement non actif ou non en pause"
+      );
+    }
+  };
+  // Fonction pour générer les initiales
   const getInitials = (senderName: string) => {
     const [firstName, lastName] = senderName.split(" ");
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
 
-
-    // Fetch current user
-    useEffect(() => {
-      const fetchCurrentUser = async () => {
-        if (accessToken && !currentUser) {
-          try {
-            const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
+  // Fetch current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      if (accessToken && !currentUser) {
+        try {
+          const response = await axiosInstance.get(
+            `${AUTH_SERVICE_URL}/api/me`,
+            {
               headers: { Authorization: `Bearer ${accessToken}` },
-            });
-            setCurrentUser({
-              id: response.data.id.toString(),
-              firstName: response.data.firstName,
-              lastName: response.data.lastName,
-              email: response.data.email,
-            });
-          } catch (err: any) {
-            console.error("Failed to fetch current user:", err);
-            setError(err.response?.data?.message || "Erreur lors de la récupération de l'utilisateur");
-          }
+            }
+          );
+          setCurrentUser({
+            id: response.data.id.toString(),
+            firstName: response.data.firstName,
+            lastName: response.data.lastName,
+            email: response.data.email,
+          });
+        } catch (err: any) {
+          console.error("Failed to fetch current user:", err);
+          setError(
+            err.response?.data?.message ||
+              "Erreur lors de la récupération de l'utilisateur"
+          );
         }
-      };
-      fetchCurrentUser();
-    }, [accessToken, axiosInstance, currentUser]);
-  
+      }
+    };
+    fetchCurrentUser();
+  }, [accessToken, axiosInstance, currentUser]);
 
   // Fonction pour générer une couleur d'avatar basée sur senderId
   const getAvatarColor = (senderId: string) => {
-  const colors = [
-    "#64748b", // Slate
-    "#475569", // Dark Slate
-    "#6b7280", // Gray
-    "#7c3aed", // Soft Violet
-    "#4b5563", // Cool Gray
-    "#5b21b6", // Deep Purple
-    "#0f766e", // Muted Teal
-    "#1e293b", // Charcoal
-    "#334155", // Cool Dark Blue
-    "#3f3f46", // Neutral Gray
-  ];
-    const index = Math.abs(senderId.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % colors.length;
+    const colors = [
+      "#64748b", // Slate
+      "#475569", // Dark Slate
+      "#6b7280", // Gray
+      "#7c3aed", // Soft Violet
+      "#4b5563", // Cool Gray
+      "#5b21b6", // Deep Purple
+      "#0f766e", // Muted Teal
+      "#1e293b", // Charcoal
+      "#334155", // Cool Dark Blue
+      "#3f3f46", // Neutral Gray
+    ];
+    const index =
+      Math.abs(senderId.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) %
+      colors.length;
     return colors[index];
   };
 
@@ -380,48 +535,57 @@ const handleSendMessage = async (e: React.FormEvent) => {
     });
     return Object.entries(groups)
       .map(([date, messages]) => ({ date, messages }))
-      .sort((a, b) => new Date(b.messages[0].createdAt).getTime() - new Date(a.messages[0].createdAt).getTime());
-  };
-    // Ajouter une réaction
-const handleAddReaction = async (messageId: string, emoji: string) => {
-  if (!stompClientRef.current || !currentUser) return;
-
-  const reactionDTO = {
-    messageId,
-    participantId: currentUser.id,
-    emoji,
-  };
-
-  try {
-    const message = messages.find((msg) => msg.id === messageId);
-    const userHasReacted = message?.reactions?.[emoji]?.includes(currentUser.id);
-
-    if (userHasReacted) {
-      await axiosInstance.delete(
-        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}/reactions`,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          data: reactionDTO,
-        }
+      .sort(
+        (a, b) =>
+          new Date(b.messages[0].createdAt).getTime() -
+          new Date(a.messages[0].createdAt).getTime()
       );
-    } else {
-      await axiosInstance.post(
-        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}/reactions`,
-        reactionDTO,
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+  };
+  // Ajouter une réaction
+  const handleAddReaction = async (messageId: string, emoji: string) => {
+    if (!stompClientRef.current || !currentUser) return;
+
+    const reactionDTO = {
+      messageId,
+      participantId: currentUser.id,
+      emoji,
+    };
+
+    try {
+      const message = messages.find((msg) => msg.id === messageId);
+      const userHasReacted = message?.reactions?.[emoji]?.includes(
+        currentUser.id
       );
+
+      if (userHasReacted) {
+        await axiosInstance.delete(
+          `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}/reactions`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            data: reactionDTO,
+          }
+        );
+      } else {
+        await axiosInstance.post(
+          `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}/reactions`,
+          reactionDTO,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+      }
+      setShowReactionPicker(null);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          "Erreur lors de la gestion de la réaction"
+      );
+      console.error("Erreur réaction:", err);
     }
-    setShowReactionPicker(null);
-  } catch (err: any) {
-    setError(err.response?.data?.message || "Erreur lors de la gestion de la réaction");
-    console.error("Erreur réaction:", err);
-  }
-};
+  };
   // Start editing a message
-const startEditingMessage = (message: Message) => {
-  setEditingMessageId(message.id);
-  setEditedMessageText(message.text);
-};
+  const startEditingMessage = (message: Message) => {
+    setEditingMessageId(message.id);
+    setEditedMessageText(message.text);
+  };
 
   // Cancel editing
   const cancelEditing = () => {
@@ -430,47 +594,52 @@ const startEditingMessage = (message: Message) => {
   };
 
   // Update a message
-const handleUpdateMessage = async (messageId: string) => {
-  if (!editedMessageText.trim() || !stompClientRef.current) return;
+  const handleUpdateMessage = async (messageId: string) => {
+    if (!editedMessageText.trim() || !stompClientRef.current) return;
 
-  const messageDTO: Message = {
-    id: messageId,
-    channelId: channelId as string,
-    senderId: "",
-    senderName: "",
-    text: editedMessageText,
-    fileUrl: null,
-    mimeType: null,
-    type: "TEXT",
-    createdAt: new Date().toISOString(),
-    replyToId: null,
-    replyToText: null,
-    replyToSenderName: null,
-    pinned: false,
-    modified: true, // Indiquer que le message est modifié
+    const messageDTO: Message = {
+      id: messageId,
+      channelId: channelId as string,
+      senderId: "",
+      senderName: "",
+      text: editedMessageText,
+      fileUrl: null,
+      mimeType: null,
+      type: "TEXT",
+      createdAt: new Date().toISOString(),
+      replyToId: null,
+      replyToText: null,
+      replyToSenderName: null,
+      pinned: false,
+      modified: true, // Indiquer que le message est modifié
+    };
+
+    try {
+      await axiosInstance.patch(
+        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}`,
+        messageDTO,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === messageId
+            ? { ...msg, text: editedMessageText, modified: true }
+            : msg
+        )
+      );
+      setEditingMessageId(null);
+      setEditedMessageText("");
+      setSuccessMessage("Message modifié !");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          "Erreur lors de la modification du message"
+      );
+    }
   };
-
-  try {
-    await axiosInstance.patch(
-      `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${messageId}`,
-      messageDTO,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.id === messageId ? { ...msg, text: editedMessageText, modified: true } : msg
-      )
-    );
-    setEditingMessageId(null);
-    setEditedMessageText("");
-    setSuccessMessage("Message modifié !");
-    setTimeout(() => setSuccessMessage(null), 3000);
-  } catch (err: any) {
-    setError(err.response?.data?.message || "Erreur lors de la modification du message");
-  }
-};
 
   const messageGroups = groupMessagesByDate(messages);
   // Delete a message
@@ -487,7 +656,10 @@ const handleUpdateMessage = async (messageId: string) => {
       setSuccessMessage("Message supprimé !");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Erreur lors de la suppression du message");
+      setError(
+        err.response?.data?.message ||
+          "Erreur lors de la suppression du message"
+      );
     }
   };
 
@@ -514,17 +686,254 @@ const handleUpdateMessage = async (messageId: string) => {
     if (!confirm("Voulez-vous vraiment supprimer ce canal ?")) return;
 
     try {
-      await axiosInstance.delete(`${COLLABORATION_SERVICE_URL}/api/channels/${channelId}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      await axiosInstance.delete(
+        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
       setSuccessMessage("Canal supprimé avec succès !");
       setTimeout(() => {
         router.push("/user/dashboard/collaboration");
       }, 2000);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Erreur lors de la suppression du canal");
+      setError(
+        err.response?.data?.message || "Erreur lors de la suppression du canal"
+      );
     }
     setShowActionMenu(false);
+  };
+  const startRecording = async () => {
+    try {
+      console.log(
+        "Début de l'enregistrement, initialisation de recordingTime à 0"
+      );
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log("Stream tracks:", stream.getAudioTracks());
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "audio/webm";
+      console.log("MimeType utilisé:", mimeType);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        console.log("Chunk reçu, taille:", event.data.size);
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        } else {
+          console.warn("Chunk vide reçu");
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        console.log(
+          "audioChunks:",
+          audioChunksRef.current.length,
+          "tailles:",
+          audioChunksRef.current.map((chunk) => chunk.size)
+        );
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log(
+          "Audio Blob créé, taille:",
+          audioBlob.size,
+          "recordingTime:",
+          recordingTime
+        );
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach((track) => track.stop());
+        clearInterval(timerRef.current!);
+        console.log(
+          "Enregistrement arrêté, recordingTime final:",
+          recordingTime
+        );
+      };
+
+      mediaRecorderRef.current.onstart = () => {
+        console.log("MediaRecorder démarré");
+      };
+
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error("Erreur MediaRecorder:", event);
+      };
+
+      mediaRecorderRef.current.start(100); // Capturer un chunk toutes les 100ms
+      setIsRecording(true);
+      setIsPaused(false);
+      setRecordingTime(0);
+      console.log("Timer démarré pour recordingTime");
+      if (timerRef.current) {
+        console.warn("Timer précédent non nettoyé, nettoyage");
+        clearInterval(timerRef.current);
+      }
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => {
+          const newTime = prev + 1;
+          console.log("Mise à jour recordingTime:", newTime);
+          return newTime;
+        });
+      }, 1000);
+      console.log("Timer ID:", timerRef.current);
+    } catch (err) {
+      console.error("Erreur lors de l'accès au microphone:", err);
+      setError(
+        "Impossible d'accéder au microphone. Vérifiez les autorisations."
+      );
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      console.log(
+        "Arrêt de l'enregistrement, recordingTime actuel:",
+        recordingTime
+      );
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsPaused(false);
+      clearInterval(timerRef.current!);
+      console.log("Timer arrêté");
+    }
+  };
+
+  // Annuler l'enregistrement
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      setIsPaused(false);
+      setAudioBlob(null);
+      setRecordingTime(0);
+      clearInterval(timerRef.current!);
+    }
+  };
+
+  // Envoyer le message audio
+  const handleSendAudioMessage = async () => {
+    if (!audioBlob || !channel || !currentUser || !stompClientRef.current) {
+      console.error(
+        "Conditions non remplies pour l'envoi: audioBlob, channel, currentUser ou stompClient manquant"
+      );
+      return;
+    }
+
+    let tempMessage: Message | null = null;
+
+    try {
+      console.log("Envoi de l'audio, recordingTime:", recordingTime);
+      console.log("Taille de audioBlob:", audioBlob.size);
+      let calculatedDuration = recordingTime;
+      if (recordingTime <= 0) {
+        console.warn(
+          "recordingTime invalide, calcul de la durée à partir du Blob"
+        );
+        if (audioBlob.size === 0) {
+          console.error("audioBlob vide, enregistrement corrompu");
+          setError("Enregistrement audio vide. Veuillez réessayer.");
+          return;
+        }
+        const audioUrl = URL.createObjectURL(audioBlob);
+        console.log("URL de test pour audioBlob:", audioUrl);
+        const audio = new Audio(audioUrl);
+        await new Promise((resolve) => {
+          audio.onloadedmetadata = () => {
+            console.log("Durée brute audio.duration:", audio.duration);
+            calculatedDuration =
+              isFinite(audio.duration) && audio.duration > 0
+                ? Math.floor(audio.duration)
+                : 0;
+            console.log("Durée calculée à partir du Blob:", calculatedDuration);
+            resolve(null);
+          };
+          audio.onerror = () => {
+            console.error(
+              "Erreur lors du chargement des métadonnées du Blob:",
+              audio.error
+            );
+            calculatedDuration = 0;
+            resolve(null);
+          };
+        });
+        // Test manuel de l'audio
+        console.log("Ouvrir l'URL pour tester l'audio:", audioUrl);
+        URL.revokeObjectURL(audioUrl);
+      }
+
+      if (calculatedDuration <= 0 || !isFinite(calculatedDuration)) {
+        setError("Durée d'enregistrement invalide. Veuillez réessayer.");
+        console.error(
+          "calculatedDuration invalide:",
+          calculatedDuration,
+          "envoi annulé"
+        );
+        return;
+      }
+
+      tempMessage = {
+        id: `temp-${Date.now()}`,
+        channelId: channelId as string,
+        senderId: currentUser.id,
+        senderName: `${currentUser.firstName} ${currentUser.lastName}`,
+        text: "Envoi de l'audio en cours...",
+        fileUrl: null,
+        mimeType: "audio/webm",
+        type: "AUDIO",
+        createdAt: new Date().toISOString(),
+        replyToId: replyingTo ? replyingTo.id : null,
+        replyToText: replyingTo ? replyingTo.text : null,
+        replyToSenderName: replyingTo ? replyingTo.senderName : null,
+        pinned: false,
+        modified: false,
+        duration: calculatedDuration,
+      };
+
+      if (tempMessage) {
+        setMessages((prev) => [...prev, tempMessage as Message]);
+      }
+
+      const formData = new FormData();
+      formData.append("file", audioBlob, `audio-${Date.now()}.webm`);
+      formData.append("duration", calculatedDuration.toString());
+      console.log("formData duration:", calculatedDuration.toString());
+
+      const response = await axiosInstance.post(
+        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/audio`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      console.log("Réponse API, duration:", response.data.duration);
+
+      if (tempMessage) {
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage!.id));
+      }
+      setAudioBlob(null);
+      setReplyingTo(null);
+      setRecordingTime(0);
+      setSuccessMessage("Message audio envoyé !");
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || "Erreur lors de l'envoi du message audio"
+      );
+      console.error("Erreur envoi audio:", err);
+      if (tempMessage) {
+        setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage!.id));
+      }
+    }
+  };
+  // Formater le temps d'enregistrement (mm:ss)
+  const formatRecordingTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, "0");
+    const secs = (seconds % 60).toString().padStart(2, "0");
+    return `${mins}:${secs}`;
   };
 
   if (!channel) {
@@ -539,7 +948,9 @@ const handleUpdateMessage = async (messageId: string) => {
   return (
     <div className="channel-container">
       {error && <div className="error-message">{error}</div>}
-      {successMessage && <div className="success-message">{successMessage}</div>}
+      {successMessage && (
+        <div className="success-message">{successMessage}</div>
+      )}
 
       <div className="channel-header">
         <div className="channel-info">
@@ -553,13 +964,13 @@ const handleUpdateMessage = async (messageId: string) => {
           )}
         </div>
         <div className="channel-actions">
-         <button
-    className="action-btn"
-    title="Voir les messages épinglés"
-    onClick={() => setShowPinnedMessages(!showPinnedMessages)}
-  >
-    <FontAwesomeIcon icon={faThumbtack} />
-  </button>
+          <button
+            className="action-btn"
+            title="Voir les messages épinglés"
+            onClick={() => setShowPinnedMessages(!showPinnedMessages)}
+          >
+            <FontAwesomeIcon icon={faThumbtack} />
+          </button>
           <button className="action-btn" title="Notifications">
             <FontAwesomeIcon icon={faBell} />
           </button>
@@ -579,7 +990,10 @@ const handleUpdateMessage = async (messageId: string) => {
                 <button className="menu-item" onClick={handleEditChannel}>
                   <FontAwesomeIcon icon={faEdit} /> Modifier le canal
                 </button>
-                <button className="menu-item delete" onClick={handleDeleteChannel}>
+                <button
+                  className="menu-item delete"
+                  onClick={handleDeleteChannel}
+                >
                   <FontAwesomeIcon icon={faTrash} /> Supprimer le canal
                 </button>
               </div>
@@ -587,244 +1001,360 @@ const handleUpdateMessage = async (messageId: string) => {
           </div>
         </div>
       </div>
-{showPinnedMessages && (
-  <div className="pinned-messages-panel">
-    <div className="pinned-messages-header">
-      <h3>Messages Épinglés</h3>
-      <button
-        className="action-btn"
-        onClick={() => setShowPinnedMessages(false)}
-      >
-        <FontAwesomeIcon icon={faTimes} />
-      </button>
-    </div>
-    {messages.filter((msg) => msg.pinned).length > 0 ? (
-      messages
-        .filter((msg) => msg.pinned)
-        .map((msg) => (
-          <div key={msg.id} className="pinned-message">
-            <div className="pinned-message-header">
-              <span className="sender">{msg.senderName}</span>
-              <span className="timestamp">
-                {new Date(msg.createdAt).toLocaleTimeString()}
-              </span>
-            </div>
-            <div className="pinned-message-content">{msg.text}</div>
+      {showPinnedMessages && (
+        <div className="pinned-messages-panel">
+          <div className="pinned-messages-header">
+            <h3>Messages Épinglés</h3>
             <button
               className="action-btn"
-              title={msg.pinned ? "Désépingler" : "Épingler"}
-              onClick={() => handlePinMessage(msg.id)}
+              onClick={() => setShowPinnedMessages(false)}
             >
-              <FontAwesomeIcon icon={faThumbtack} />
+              <FontAwesomeIcon icon={faTimes} />
             </button>
           </div>
-        ))
-    ) : (
-      <div className="no-pinned-messages">Aucun message épinglé.</div>
-    )}
-  </div>
-)}
+          {messages.filter((msg) => msg.pinned).length > 0 ? (
+            messages
+              .filter((msg) => msg.pinned)
+              .map((msg) => (
+                <div key={msg.id} className="pinned-message">
+                  <div className="pinned-message-header">
+                    <span className="sender">{msg.senderName}</span>
+                    <span className="timestamp">
+                      {new Date(msg.createdAt).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div className="pinned-message-content">{msg.text}</div>
+                  <button
+                    className="action-btn"
+                    title={msg.pinned ? "Désépingler" : "Épingler"}
+                    onClick={() => handlePinMessage(msg.id)}
+                  >
+                    <FontAwesomeIcon icon={faThumbtack} />
+                  </button>
+                </div>
+              ))
+          ) : (
+            <div className="no-pinned-messages">Aucun message épinglé.</div>
+          )}
+        </div>
+      )}
       <div className="channel-content">
         {channel.type === "TEXT" ? (
           <div className="chat-section">
-          <div className="pinned-messages">
-  {messages.filter(msg => msg.pinned).length > 0 && (
-    <>
-      <h3>Messages Épinglés</h3>
-      {messages
-        .filter(msg => msg.pinned)
-        .map(msg => (
-          <div key={msg.id} className="pinned-message">
-            <span className="pinned-message-text">
-              {msg.senderName}: {msg.text}
-            </span>
-            <button
-              className="action-btn"
-              onClick={() => handlePinMessage(msg.id)}
-            >
-              <FontAwesomeIcon icon={faThumbtack} />
-            </button>
-          </div>
-        ))}
-    </>
-  )}
-</div>
-        <div className="messages">
-  {messageGroups.length > 0 ? (
-    messageGroups.map((group) => (
-      <div key={group.date} className="message-group">
-        <div className="date-separator">
-          <span>{group.date}</span>
-        </div>
-        {group.messages.map((msg) => (
-        <div
-    key={msg.id} // Ensure msg.id is unique
-    className={`message ${msg.senderId === currentUser?.id ? 'message-own' : 'message-other'}`}
-    onMouseEnter={() => setHoveredMessageId(msg.id)}
-    onMouseLeave={(e) => {
-      if (e.relatedTarget instanceof Node && e.currentTarget.contains(e.relatedTarget)) {
-        return;
-      }
-      setHoveredMessageId(null);
-    }}
-  >
-            {msg.senderId !== currentUser?.id && (
-              <div className="avatar" style={{ backgroundColor: getAvatarColor(msg.senderId) }}>
-                {getInitials(msg.senderName)}
-              </div>
-            )}
-            <div className="message-body">
-              {msg.replyToId && (
-            <div className="reply-preview">
-                <div className="reply-header">
-                    <span>Réponse à {msg.replyToSenderName}</span>
-                </div>
-                <div className="reply-content">{msg.replyToText}</div>
+            <div className="pinned-messages">
+              {messages.filter((msg) => msg.pinned).length > 0 && (
+                <>
+                  <h3>Messages Épinglés</h3>
+                  {messages
+                    .filter((msg) => msg.pinned)
+                    .map((msg) => (
+                      <div key={msg.id} className="pinned-message">
+                        <span className="pinned-message-text">
+                          {msg.senderName}: {msg.text}
+                        </span>
+                        <button
+                          className="action-btn"
+                          onClick={() => handlePinMessage(msg.id)}
+                        >
+                          <FontAwesomeIcon icon={faThumbtack} />
+                        </button>
+                      </div>
+                    ))}
+                </>
+              )}
             </div>
-        )}
-              <div className="message-header">
-                <span className="sender">{msg.senderName}</span>
-                <span className="timestamp">
-                  {new Date(msg.createdAt).toLocaleTimeString()}
-                </span>
-                {msg.pinned && (
-          <FontAwesomeIcon
-            icon={faThumbtack}
-            className="pinned-icon"
-            title="Message épinglé"
-          />
-        )}
-              </div>
-          {editingMessageId === msg.id ? (
-    <div className="message-edit">
-      <input
-        type="text"
-        value={editedMessageText}
-        onChange={(e) => setEditedMessageText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && editedMessageText.trim()) {
-            handleUpdateMessage(msg.id);
-          } else if (e.key === "Escape") {
-            cancelEditing();
-          }
-        }}
-        className="message-input"
-        autoFocus
-      />
-    </div>
-  ) : (
-    <div className="message-content">
-          {msg.text}
-          {msg.modified && (
-            <span className="edited-indicator" title="Message modifié">
-              (edited)
-            </span>
-          )}
-        </div>
-  )}
-{msg.reactions && Object.keys(msg.reactions).length > 0 && (
-    <div className="reactions">
-      {Object.entries(msg.reactions).map(([emoji, userIds]) => (
-        <span
-          key={emoji}
-          className="reaction"
-          title={userIds
-            .map((userId) =>
-              userId === currentUser?.id
-                ? "Vous"
-                : messages.find((m) => m.senderId === userId)?.senderName || "Inconnu"
-            )
-            .join(", ")}
-          onClick={() => currentUser?.id && handleAddReaction(msg.id, emoji)}
-        >
-          {emoji} {userIds.length}
-        </span>
-      ))}
-    </div>
-  )}
+            <div className="messages">
+              {messageGroups.length > 0 ? (
+                messageGroups.map((group) => (
+                  <div key={group.date} className="message-group">
+                    <div className="date-separator">
+                      <span>{group.date}</span>
+                    </div>
+
+                    {group.messages.map((msg) => (
+                      <div
+                        key={msg.id}
+                        className={`message ${
+                          msg.senderId === currentUser?.id
+                            ? "message-own"
+                            : "message-other"
+                        }`}
+                        onMouseEnter={() => setHoveredMessageId(msg.id)}
+                        onMouseLeave={(e) => {
+                          if (
+                            e.relatedTarget instanceof Node &&
+                            e.currentTarget.contains(e.relatedTarget)
+                          ) {
+                            return;
+                          }
+                          setHoveredMessageId(null);
+                        }}
+                      >
+                        {msg.senderId !== currentUser?.id && (
+                          <div
+                            className="avatar"
+                            style={{
+                              backgroundColor: getAvatarColor(msg.senderId),
+                            }}
+                          >
+                            {getInitials(msg.senderName)}
+                          </div>
+                        )}
+                        <div className="message-body">
+                          {msg.replyToId && (
+                            <div className="reply-preview">
+                              <div className="reply-header">
+                                <span>Réponse à {msg.replyToSenderName}</span>
+                              </div>
+                              <div className="reply-content">
+                                {msg.replyToText}
+                              </div>
+                            </div>
+                          )}
+                          <div className="message-header">
+                            <span className="sender">{msg.senderName}</span>
+                            <span className="timestamp">
+                              {new Date(msg.createdAt).toLocaleTimeString()}
+                            </span>
+                            {msg.pinned && (
+                              <FontAwesomeIcon
+                                icon={faThumbtack}
+                                className="pinned-icon"
+                                title="Message épinglé"
+                              />
+                            )}
+                          </div>
+                          {editingMessageId === msg.id ? (
+                            <div className="message-edit">
+                              <input
+                                type="text"
+                                value={editedMessageText}
+                                onChange={(e) =>
+                                  setEditedMessageText(e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                  if (
+                                    e.key === "Enter" &&
+                                    editedMessageText.trim()
+                                  ) {
+                                    handleUpdateMessage(msg.id);
+                                  } else if (e.key === "Escape") {
+                                    cancelEditing();
+                                  }
+                                }}
+                                className="message-input"
+                                autoFocus
+                              />
+                            </div>
+                          ) : (
+                            <div className="message-content">
+                              {msg.type === "AUDIO" && msg.fileUrl ? (
+                                <AudioPlayer
+                                  src={msg.fileUrl}
+                                  duration={msg.duration}
+                                />
+                              ) : (
+                                <>
+                                  {msg.text}
+                                  {msg.modified && (
+                                    <span
+                                      className="edited-indicator"
+                                      title="Message modifié"
+                                    >
+                                      (edited)
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+                          {msg.reactions &&
+                            Object.keys(msg.reactions).length > 0 && (
+                              <div className="reactions">
+                                {Object.entries(msg.reactions).map(
+                                  ([emoji, userIds]) => (
+                                    <span
+                                      key={emoji}
+                                      className="reaction"
+                                      title={userIds
+                                        .map((userId) =>
+                                          userId === currentUser?.id
+                                            ? "Vous"
+                                            : messages.find(
+                                                (m) => m.senderId === userId
+                                              )?.senderName || "Inconnu"
+                                        )
+                                        .join(", ")}
+                                      onClick={() =>
+                                        currentUser?.id &&
+                                        handleAddReaction(msg.id, emoji)
+                                      }
+                                    >
+                                      {emoji} {userIds.length}
+                                    </span>
+                                  )
+                                )}
+                              </div>
+                            )}
+                        </div>
+                        {hoveredMessageId === msg.id && (
+                          <div className="message-actions">
+                            <button
+                              className="action-btn"
+                              title="Répondre"
+                              onClick={() => setReplyingTo(msg)}
+                            >
+                              <FontAwesomeIcon icon={faReply} />
+                            </button>
+                            {msg.senderId === currentUser?.id && (
+                              <>
+                                {msg.type !== "AUDIO" && (
+                                  <button
+                                    className="action-btn"
+                                    title="Modifier"
+                                    onClick={() => startEditingMessage(msg)}
+                                  >
+                                    <FontAwesomeIcon icon={faEdit} />
+                                  </button>
+                                )}
+                                <button
+                                  className="action-btn"
+                                  title="Supprimer"
+                                  onClick={() => handleDeleteMessage(msg.id)}
+                                >
+                                  <FontAwesomeIcon icon={faTrash} />
+                                </button>
+                              </>
+                            )}
+                            <button
+                              className="action-btn"
+                              title="Réagir"
+                              onClick={() => setShowReactionPicker(msg.id)}
+                            >
+                              <FontAwesomeIcon icon={faSmile} />
+                            </button>
+                            <button
+                              className="action-btn"
+                              title={msg.pinned ? "Désépingler" : "Épingler"}
+                              onClick={() => handlePinMessage(msg.id)}
+                            >
+                              <FontAwesomeIcon icon={faThumbtack} />
+                            </button>
+                          </div>
+                        )}
+                        {showReactionPicker === msg.id && (
+                          <div className="reaction-picker">
+                            <EmojiPicker
+                              onEmojiClick={(emojiData) =>
+                                handleAddReaction(msg.id, emojiData.emoji)
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="no-messages">Aucun message pour le moment.</div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
-          {hoveredMessageId === msg.id && (
-      <div className="message-actions">
-        <button
-          className="action-btn"
-          title="Répondre"
-          onClick={() => setReplyingTo(msg)}
-        >
-          <FontAwesomeIcon icon={faReply} />
-        </button>
-        {msg.senderId === currentUser?.id && (
-          <>
-            <button
-              className="action-btn"
-              title="Modifier"
-              onClick={() => startEditingMessage(msg)}
+            <form
+              className="message-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (audioBlob) {
+                  handleSendAudioMessage();
+                } else {
+                  handleSendMessage(e);
+                }
+              }}
             >
-              <FontAwesomeIcon icon={faEdit} />
-            </button>
-            <button
-              className="action-btn"
-              title="Supprimer"
-              onClick={() => handleDeleteMessage(msg.id)}
-            >
-              <FontAwesomeIcon icon={faTrash} />
-            </button>
-          </>
-        )}
-        <button
-          className="action-btn"
-          title="Réagir"
-          onClick={() => setShowReactionPicker(msg.id)}
-        >
-          <FontAwesomeIcon icon={faSmile} />
-        </button>
-        <button
-          className="action-btn"
-          title={msg.pinned ? "Désépingler" : "Épingler"}
-          onClick={() => handlePinMessage(msg.id)}
-        >
-          <FontAwesomeIcon icon={faThumbtack} />
-        </button>
-      </div>
-    )}
-            {showReactionPicker === msg.id && (
-              <div className="reaction-picker">
-                <EmojiPicker
-                  onEmojiClick={(emojiData) => handleAddReaction(msg.id, emojiData.emoji)}
-                />
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    ))
-  ) : (
-    <div className="no-messages">Aucun message pour le moment.</div>
-  )}
-  <div ref={messagesEndRef} />
-</div>
-            <form className="message-form" onSubmit={handleSendMessage}>
-               <div className="message-input-container">
-        {replyingTo && (
-            <div className="reply-preview">
-                <div className="reply-header">
-                    <span>Réponse à {replyingTo.senderName}</span>
-                    <button
+              <div className="message-input-container">
+                {replyingTo && (
+                  <div className="reply-preview">
+                    <div className="reply-header">
+                      <span>Réponse à {replyingTo.senderName}</span>
+                      <button
                         className="action-btn"
                         onClick={() => setReplyingTo(null)}
-                    >
+                      >
                         <FontAwesomeIcon icon={faTimes} />
+                      </button>
+                    </div>
+                    <div className="reply-content">{replyingTo.text}</div>
+                  </div>
+                )}
+                {isRecording ? (
+                  <div className="recording-indicator">
+                    <span className="recording-timer">
+                      {formatRecordingTime(recordingTime)}
+                    </span>
+                    <div className="recording-wave">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                    <div className="recording-actions">
+                      <button
+                        type="button"
+                        className="input-action-btn"
+                        title="Supprimer l'enregistrement"
+                        onClick={cancelRecording}
+                      >
+                        <FontAwesomeIcon icon={faTrashAlt} />
+                      </button>
+                      <button
+                        type="button"
+                        className="input-action-btn"
+                        title={isPaused ? "Reprendre" : "Pause"}
+                        onClick={isPaused ? resumeRecording : pauseRecording}
+                      >
+                        <FontAwesomeIcon icon={isPaused ? faPlay : faPause} />
+                      </button>
+                      <button
+                        type="button"
+                        className="input-action-btn"
+                        title="Arrêter l'enregistrement"
+                        onClick={stopRecording}
+                      >
+                        <FontAwesomeIcon icon={faStop} />
+                      </button>
+                    </div>
+                  </div>
+                ) : audioBlob ? (
+                  <div className="audio-preview">
+                    <audio
+                      controls
+                      src={URL.createObjectURL(audioBlob)}
+                      className="audio-player"
+                    >
+                      Votre navigateur ne prend pas en charge l'élément audio.
+                    </audio>
+                    <button
+                      type="button"
+                      className="input-action-btn"
+                      title="Annuler l'audio"
+                      onClick={() => {
+                        setAudioBlob(null);
+                        audioChunksRef.current = [];
+                      }}
+                    >
+                      <FontAwesomeIcon icon={faTrashAlt} />
                     </button>
-                </div>
-                <div className="reply-content">{replyingTo.text}</div>
-            </div>
-        )}
-        <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Send a message ..."
-            className="message-input"
-        />
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Send a message ..."
+                    className="message-input"
+                  />
+                )}
                 <div className="input-actions">
                   <div className="options-menu-container" ref={optionsMenuRef}>
                     <button
@@ -837,7 +1367,10 @@ const handleUpdateMessage = async (messageId: string) => {
                     </button>
                     {showOptionsMenu && (
                       <div className="options-menu">
-                        <button className="menu-item" onClick={handleUploadFile}>
+                        <button
+                          className="menu-item"
+                          onClick={handleUploadFile}
+                        >
                           Upload File
                         </button>
                       </div>
@@ -860,15 +1393,24 @@ const handleUpdateMessage = async (messageId: string) => {
                   </div>
                   <button
                     type="button"
-                    className="input-action-btn disabled"
-                    title="Audio (à venir)"
+                    className={`input-action-btn ${
+                      isRecording ? "recording" : ""
+                    }`}
+                    title={
+                      isRecording
+                        ? "Enregistrement en cours"
+                        : "Enregistrer un audio"
+                    }
+                    onClick={isRecording ? stopRecording : startRecording}
                   >
                     <FontAwesomeIcon icon={faMicrophone} />
                   </button>
                   <button
                     type="submit"
-                    className={`send-btn ${newMessage.trim() ? "" : "disabled"}`}
-                    disabled={!newMessage.trim()}
+                    className={`send-btn ${
+                      newMessage.trim() || audioBlob ? "" : "disabled"
+                    }`}
+                    disabled={!newMessage.trim() && !audioBlob}
                   >
                     <FontAwesomeIcon icon={faPaperPlane} />
                   </button>
