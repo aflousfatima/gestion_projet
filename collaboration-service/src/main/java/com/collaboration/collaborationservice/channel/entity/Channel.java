@@ -1,6 +1,6 @@
 package com.collaboration.collaborationservice.channel.entity;
 
-import com.collaboration.collaborationservice.attachment.entity.Attachment;
+
 import com.collaboration.collaborationservice.call.entity.Call;
 import com.collaboration.collaborationservice.common.enums.ChannelType;
 import com.collaboration.collaborationservice.message.entity.Message;
@@ -56,9 +56,6 @@ public class Channel {
 
     @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Participant> participants = new ArrayList<>();
-
-    @OneToMany(mappedBy = "channel", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Attachment> attachments = new ArrayList<>();
 
     @PreUpdate
     public void preUpdate() {
