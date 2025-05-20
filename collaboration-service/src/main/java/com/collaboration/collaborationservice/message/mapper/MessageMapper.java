@@ -3,13 +3,13 @@ package com.collaboration.collaborationservice.message.mapper;
 import com.collaboration.collaborationservice.message.dto.MessageDTO;
 import com.collaboration.collaborationservice.message.entity.Message;
 import com.collaboration.collaborationservice.message.repository.MessageRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authorization.method.AuthorizeReturnObject;
-import org.springframework.stereotype.Component;
 import com.collaboration.collaborationservice.message.entity.Reaction;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.stream.Collectors;
+
 @Component
 public class MessageMapper {
 
@@ -25,10 +25,11 @@ public class MessageMapper {
         dto.setText(message.getContent().getText());
         dto.setFileUrl(message.getContent().getFileUrl());
         dto.setMimeType(message.getContent().getMimeType());
+        dto.setDuration(message.getContent().getDuration()); // Ajouter la durée
         dto.setModified(message.isModified());
         dto.setType(message.getType());
         dto.setCreatedAt(message.getCreatedAt());
-        dto.setPinned(message.isPinned()); // Ajout explicite du champ pinned
+        dto.setPinned(message.isPinned());
         // Mapper les réactions
         Map<String, String[]> reactions = message.getReactions().stream()
                 .collect(Collectors.groupingBy(
@@ -57,10 +58,11 @@ public class MessageMapper {
         content.setText(dto.getText());
         content.setFileUrl(dto.getFileUrl());
         content.setMimeType(dto.getMimeType());
+        content.setDuration(dto.getDuration()); // Ajouter la durée
         message.setContent(content);
         message.setType(dto.getType());
         message.setCreatedAt(dto.getCreatedAt() != null ? dto.getCreatedAt() : java.time.LocalDateTime.now());
-        message.setPinned(dto.isPinned()); // Ajout pour gérer pinned dans l'entité
+        message.setPinned(dto.isPinned());
         if (dto.getReplyToId() != null) {
             Message replyTo = messageRepository.findById(dto.getReplyToId())
                     .orElseThrow(() -> new IllegalArgumentException("Message cité non trouvé"));

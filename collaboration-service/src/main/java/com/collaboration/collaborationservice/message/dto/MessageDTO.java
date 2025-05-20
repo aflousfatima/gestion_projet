@@ -26,4 +26,6 @@ public class MessageDTO {
     private String replyToSenderName; // Nom de l'expéditeur du message cité
     private boolean pinned;
     private boolean modified;
+
+    private Long duration;
 }

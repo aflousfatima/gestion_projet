@@ -3,6 +3,8 @@ package com.collaboration.collaborationservice.message.service;
 import com.collaboration.collaborationservice.channel.config.AuthClient;
 import com.collaboration.collaborationservice.channel.entity.Channel;
 import com.collaboration.collaborationservice.channel.repository.ChannelRepository;
+import com.collaboration.collaborationservice.common.enums.MessageType;
+import com.collaboration.collaborationservice.common.valueobjects.MessageContent;
 import com.collaboration.collaborationservice.message.dto.MessageDTO;
 import com.collaboration.collaborationservice.message.dto.ReactionDTO;
 import com.collaboration.collaborationservice.message.entity.Message;
@@ -18,9 +20,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,25 +50,40 @@ public class MessageService {
     private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
+    private CloudinaryService cloudinaryService;
+
+    @Autowired
     private MessageMapper messageMapper;
 
     @Autowired
     private AuthClient authClient;
 
+    private final Map<String, String> userNameCache = new ConcurrentHashMap<>();
+
     private MessageDTO enrichMessageDTO(MessageDTO messageDTO, String token) {
         try {
-            Map<String, Object> userDetails = authClient.getUserDetailsByAuthId(
-                    messageDTO.getSenderId(), token);
-            String firstName = (String) userDetails.get("firstName");
-            String lastName = (String) userDetails.get("lastName");
-            messageDTO.setSenderName(firstName + " " + lastName);
+            // Vérifier le cache
+            String senderName = userNameCache.get(messageDTO.getSenderId());
+            if (senderName == null) {
+                Map<String, Object> userDetails = authClient.getUserDetailsByAuthId(messageDTO.getSenderId(), token);
+                String firstName = (String) userDetails.get("firstName");
+                String lastName = (String) userDetails.get("lastName");
+                senderName = firstName + " " + lastName;
+                userNameCache.put(messageDTO.getSenderId(), senderName);
+            }
+            messageDTO.setSenderName(senderName);
 
             if (messageDTO.getReplyToId() != null) {
-                Map<String, Object> replyToUserDetails = authClient.getUserDetailsByAuthId(
-                        messageDTO.getReplyToSenderName(), token);
-                String replyToFirstName = (String) replyToUserDetails.get("firstName");
-                String replyToLastName = (String) replyToUserDetails.get("lastName");
-                messageDTO.setReplyToSenderName(replyToFirstName + " " + replyToLastName);
+                String replyToSenderName = userNameCache.get(messageDTO.getReplyToSenderName());
+                if (replyToSenderName == null) {
+                    Map<String, Object> replyToUserDetails = authClient.getUserDetailsByAuthId(
+                            messageDTO.getReplyToSenderName(), token);
+                    String replyToFirstName = (String) replyToUserDetails.get("firstName");
+                    String replyToLastName = (String) replyToUserDetails.get("lastName");
+                    replyToSenderName = replyToFirstName + " " + replyToLastName;
+                    userNameCache.put(messageDTO.getReplyToSenderName(), replyToSenderName);
+                }
+                messageDTO.setReplyToSenderName(replyToSenderName);
             }
         } catch (Exception e) {
             logger.warn("Impossible de récupérer les détails de l'utilisateur: {}", e.getMessage());
@@ -345,4 +366,62 @@ public class MessageService {
         return updatedMessageDTO;
     }
 
+    @Transactional
+    public MessageDTO uploadAudioMessage(Long channelId, MultipartFile audioFile, String token, Long replyToId, String duration) throws IOException {
+        logger.info("Téléversement d'un message audio pour channelId: {}", channelId);
+        logger.info("Valeur de duration reçue: {}", duration); // Log 1 : Vérifier la durée reçue
+
+        String userId = authClient.decodeToken(token);
+        if (userId == null) {
+            throw new IllegalArgumentException("Utilisateur non authentifié");
+        }
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new IllegalArgumentException("Canal non trouvé"));
+
+        Participant participant = participantRepository.findByUserIdAndChannel(userId, channel)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non autorisé dans ce canal"));
+
+        String fileUrl = null;
+        String publicId = null;
+
+        if (audioFile != null) {
+            Map uploadResult = cloudinaryService.uploadAudio(audioFile);
+            fileUrl = (String) uploadResult.get("secure_url");
+            publicId = (String) uploadResult.get("public_id");
+        }
+
+        Message message = new Message();
+        message.setChannel(channel);
+        message.setSender(participant);
+        MessageContent content = new MessageContent();
+        content.setFileUrl(fileUrl);
+        content.setMimeType(audioFile != null ? audioFile.getContentType() : "audio/webm");
+        content.setDuration(duration != null ? Long.parseLong(duration) : null);
+        logger.info("Durée stockée dans MessageContent: {}", content.getDuration()); // Log 2 : Vérifier la durée stockée
+        message.setContent(content);
+        message.setType(MessageType.AUDIO);
+        message.setCreatedAt(LocalDateTime.now());
+        message.setPinned(false);
+        message.setModified(false);
+
+        if (replyToId != null) {
+            Message replyTo = messageRepository.findById(replyToId)
+                    .orElseThrow(() -> new IllegalArgumentException("Message cité non trouvé"));
+            message.setReplyTo(replyTo);
+        }
+
+        Message savedMessage = messageRepository.save(message);
+        messageRepository.flush();
+
+        MessageDTO messageDTO = messageMapper.toDTO(savedMessage);
+        messageDTO.setDuration(content.getDuration());
+        logger.info("Durée dans MessageDTO: {}", messageDTO.getDuration()); // Log 3 : Vérifier la durée dans le DTO
+        messageDTO = enrichMessageDTO(messageDTO, token);
+
+        messagingTemplate.convertAndSend("/topic/messages." + channelId, messageDTO);
+        logger.info("Message audio diffusé vers /topic/messages.{}", channelId);
+
+        return messageDTO;
+    }
 }

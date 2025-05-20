@@ -11,9 +11,11 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/channels/{channelId}/messages")
@@ -110,6 +112,26 @@ public class MessageController {
         } catch (Exception e) {
             logger.error("Erreur serveur lors de l'épinglage du message: {}", e.getMessage());
             return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @PostMapping("/audio")
+    public ResponseEntity<MessageDTO> uploadAudioMessage(
+            @PathVariable Long channelId,
+            @RequestParam("file") MultipartFile audioFile,
+            @RequestHeader("Authorization") String token,
+            @RequestParam(value = "replyToId", required = false) Long replyToId,
+            @RequestParam(value = "duration", required = false) String duration) {
+        logger.info("Requête pour envoyer un message audio dans le canal {}", channelId);
+        try {
+            MessageDTO messageDTO = messageService.uploadAudioMessage(channelId, audioFile, token, replyToId, duration);
+            return ResponseEntity.ok(messageDTO);
+        } catch (IOException e) {
+            logger.error("Erreur lors du téléversement du fichier audio: {}", e.getMessage());
+            return ResponseEntity.status(500).body(null);
+        } catch (IllegalArgumentException e) {
+            logger.error("Erreur lors de l'envoi du message audio: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         }
     }
 }

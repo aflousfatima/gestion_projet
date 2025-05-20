@@ -13,4 +13,6 @@ public class MessageContent {
     private String text;
     private String fileUrl; // si MessageType = FILE/IMAGE/VIDEO
     private String mimeType;
+    private Long duration; // Champ pour la durée en secondes
+
 }
