@@ -10,6 +10,7 @@ import {
   faHashtag,
   faVolumeUp,
   faTimes,
+  faCircle,
   faLock,
   faPaperPlane,
   faThumbtack,
@@ -26,12 +27,14 @@ import {
   faPlay,
   faPause,
   faStop,
-  faFile
+  faFile,
+  faUser,
+  faUserShield
 } from "@fortawesome/free-solid-svg-icons";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
-import "../../../../../../../styles/Collaboration-Channel.css";
+import "../../../../../../../styles/Collaboration-Text-Channel.css";
 
 interface Channel {
   id: string;
@@ -73,6 +76,17 @@ interface User {
   email: string;
 }
 
+interface Participant {
+  id: string;
+  userId: string;
+  role: "ADMIN" | "MEMBER";
+  channelId: string;
+  joinedAt: string;
+  firstName?: string;
+  lastName?: string;
+  status?: "ONLINE" | "OFFLINE";
+}
+
 const ChannelPage: React.FC = () => {
   const { channelId } = useParams();
   const { accessToken } = useAuth();
@@ -95,6 +109,12 @@ const ChannelPage: React.FC = () => {
   const emojiMenuRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stompClientRef = useRef<Client | null>(null);
+
+  const [showParticipantsPopup, setShowParticipantsPopup] = useState(false);
+const [participants, setParticipants] = useState<Participant[]>([]);
+const [newParticipantEmail, setNewParticipantEmail] = useState("");
+const participantsPopupRef = useRef<HTMLDivElement>(null);
+
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
   const [showReactionPicker, setShowReactionPicker] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -233,7 +253,25 @@ const ChannelPage: React.FC = () => {
           );
         }
       });
+
+      client.subscribe(`/topic/users.status`, (message) => {
+      try {
+        const statusUpdate = JSON.parse(message.body);
+        const { userId, status } = statusUpdate;
+        setParticipants((prev) =>
+          prev.map((p) =>
+            p.userId === userId ? { ...p, status } : p
+          )
+        );
+      } catch (error) {
+        console.error(
+          "Erreur lors du traitement du statut WebSocket:",
+          error
+        );
+      }
+    });
     };
+
     client.onStompError = (frame) => {
       console.error("Erreur STOMP:", frame);
       setError("Erreur de connexion WebSocket");
@@ -334,6 +372,120 @@ const ChannelPage: React.FC = () => {
     };
     fetchChannel();
   }, [accessToken, axiosInstance, channelId]);
+
+
+  // Récupérer les participants
+const fetchParticipants = async () => {
+  if (!accessToken || !channelId) return;
+  try {
+    const response = await axiosInstance.get(
+      `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/participants`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    console.log("Réponse API participants:", response.data); // Affiche la réponse brute
+    const mappedParticipants = response.data.map((p: any) => {
+      console.log(`Participant ${p.userId} - Status: ${p.status || "OFFLINE"}`); // Affiche le statut de chaque participant
+      return {
+        id: p.id.toString(),
+        userId: p.userId,
+        role: p.role,
+        channelId: channelId as string,
+        joinedAt: p.joinedAt,
+        firstName: p.firstName,
+        lastName: p.lastName,
+        status: p.status || "OFFLINE", // Corrigé de "tatus" à "status"
+      };
+    });
+    setParticipants(mappedParticipants);
+  } catch (err: any) {
+    console.error("Erreur lors de la récupération des participants:", err); // Affiche l'erreur complète
+    setError(
+      err.response?.data?.message ||
+        "Erreur lors de la récupération des participants"
+    );
+  }
+};
+
+useEffect(() => {
+  if (showParticipantsPopup && accessToken && channelId) {
+    fetchParticipants();
+  }
+}, [showParticipantsPopup, accessToken, channelId]);
+
+
+// Ajouter un participant
+const addParticipant = async () => {
+  if (!newParticipantEmail.trim()) return;
+  if (!accessToken || !channelId) return;
+
+  try {
+    // Récupérer l'utilisateur par email
+    const userResponse = await axiosInstance.get(
+      `${AUTH_SERVICE_URL}/api/users/email/${newParticipantEmail}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    const user = userResponse.data;
+
+    await axiosInstance.post(
+      `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/participants`,
+      {
+        userId: user.id.toString(),
+        role: "MEMBER",
+      },
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    setNewParticipantEmail("");
+    fetchParticipants(); // Rafraîchir la liste
+    setSuccessMessage("Participant ajouté !");
+    setTimeout(() => setSuccessMessage(null), 3000);
+  } catch (err: any) {
+    setError(
+      err.response?.data?.message || "Erreur lors de l'ajout du participant"
+    );
+  }
+};
+
+// Supprimer un participant
+const removeParticipant = async (userId: string) => {
+  if (!confirm("Voulez-vous vraiment retirer ce participant ?")) return;
+  if (!accessToken || !channelId) return;
+
+  try {
+    await axiosInstance.delete(
+      `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/participants/${userId}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    fetchParticipants(); // Rafraîchir la liste
+    setSuccessMessage("Participant retiré !");
+    setTimeout(() => setSuccessMessage(null), 3000);
+  } catch (err: any) {
+    setError(
+      err.response?.data?.message || "Erreur lors de la suppression du participant"
+    );
+  }
+};
+
+// Gérer le clic en dehors du pop-up
+useEffect(() => {
+  const handleClickOutside = (event: MouseEvent) => {
+    if (
+      participantsPopupRef.current &&
+      !participantsPopupRef.current.contains(event.target as Node)
+    ) {
+      setShowParticipantsPopup(false);
+    }
+  };
+  document.addEventListener("mousedown", handleClickOutside);
+  return () => document.removeEventListener("mousedown", handleClickOutside);
+}, []);
 
   // Fetch initial messages
   useEffect(() => {
@@ -1023,9 +1175,163 @@ const handleUploadFile = async (type: "IMAGE" | "FILE") => {
           <button className="action-btn" title="Notifications">
             <FontAwesomeIcon icon={faBell} />
           </button>
-          <button className="action-btn" title="Participants">
-            <FontAwesomeIcon icon={faUsers} />
+          <button
+  className="action-btn"
+  title="Participants"
+  onClick={() => setShowParticipantsPopup(true)}
+>
+  <FontAwesomeIcon icon={faUsers} />
+</button>
+
+{showParticipantsPopup && (
+  <div className="participants-overlay">
+    <div className="participants-popup" ref={participantsPopupRef}>
+      <div className="participants-header">
+        <h3>Participants</h3>
+        <button
+          className="close-btn"
+          onClick={() => setShowParticipantsPopup(false)}
+        >
+          <FontAwesomeIcon icon={faTimes} />
+        </button>
+      </div>
+      <div className="participants-content">
+        <div className="status-legend">
+          <div className="legend-item">
+            <FontAwesomeIcon icon={faCircle} className="status-icon online" />
+            <span>Online</span>
+          </div>
+          <div className="legend-item">
+            <FontAwesomeIcon icon={faCircle} className="status-icon offline" />
+            <span>Offline</span>
+          </div>
+        </div>
+        <div className="add-participant">
+          <input
+            type="email"
+            value={newParticipantEmail}
+            onChange={(e) => setNewParticipantEmail(e.target.value)}
+            placeholder="Add a participant"
+            className="participant-input"
+          />
+          <button
+            className="add-participant-btn"
+            onClick={addParticipant}
+            disabled={!newParticipantEmail.trim()}
+          >
+            Add
           </button>
+        </div>
+        <div className="participants-sections">
+          <div className="section admins-section">
+            <h4 className="section-title">Administrators</h4>
+            <div className="participants-grid">
+              {participants.filter(p => p.role === 'ADMIN').length > 0 ? (
+                participants.filter(p => p.role === 'ADMIN').map((participant) => (
+                  <div key={participant.userId} className="participant-card">
+                    <div className="participant-info">
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          participant.firstName && participant.lastName
+                            ? `${participant.firstName}+${participant.lastName}`
+                            : participant.userId
+                        )}&background=808080&color=fff&size=40`}
+                        alt="Avatar"
+                        className="participant-avatar"
+                      />
+                      <div className="participant-details">
+                        <div className="participant-name-status">
+                          <span className="participant-name">
+                            {participant.firstName && participant.lastName
+                              ? `${participant.firstName} ${participant.lastName}`
+                              : participant.userId}
+                          </span>
+                          <FontAwesomeIcon
+                            icon={faCircle}
+                            className={`status-icon ${
+                              participant.status === 'ONLINE' ? 'online' : 'offline'
+                            }`}
+                            title={participant.status === 'ONLINE' ? 'En ligne' : 'Hors ligne'}
+                          />
+                        </div>
+                        <span
+                          className={`participant-role ${
+                            participant.status === 'ONLINE' ? 'online' : 'offline'
+                          }`}
+                        >
+                          <FontAwesomeIcon icon={faUserShield} className="role-icon" />
+                          {participant.role}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="no-participants">Aucun administrateur trouvé.</p>
+              )}
+            </div>
+          </div>
+          <div className="section members-section">
+            <h4 className="section-title">Members</h4>
+            <div className="participants-grid">
+              {participants.filter(p => p.role === 'MEMBER').length > 0 ? (
+                participants.filter(p => p.role === 'MEMBER').map((participant) => (
+                  <div key={participant.userId} className="participant-card">
+                    <div className="participant-info">
+                      <img
+                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                          participant.firstName && participant.lastName
+                            ? `${participant.firstName}+${participant.lastName}`
+                            : participant.userId
+                        )}&background=808080&color=fff&size=40`}
+                        alt="Avatar"
+                        className="participant-avatar"
+                      />
+                      <div className="participant-details">
+                        <div className="participant-name-status">
+                          <span className="participant-name">
+                            {participant.firstName && participant.lastName
+                              ? `${participant.firstName} ${participant.lastName}`
+                              : participant.userId}
+                          </span>
+                          <FontAwesomeIcon
+                            icon={faCircle}
+                            className={`status-icon ${
+                              participant.status === 'ONLINE' ? 'online' : 'offline'
+                            }`}
+                            title={participant.status === 'ONLINE' ? 'En ligne' : 'Hors ligne'}
+                          />
+                        </div>
+                        <span
+                          className={`participant-role ${
+                            participant.status === 'ONLINE' ? 'online' : 'offline'
+                          }`}
+                        >
+                          <FontAwesomeIcon icon={faUser} className="role-icon" />
+                          {participant.role}
+                        </span>
+                      </div>
+                    </div>
+                    {participant.role !== "ADMIN" && currentUser?.id !== participant.userId && (
+                      <button
+                        className="remove-btn"
+                        onClick={() => removeParticipant(participant.userId)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="no-participants">Aucun membre trouvé.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
           <div className="action-menu-container" ref={actionMenuRef}>
             <button
               className="action-btn"
@@ -1093,7 +1399,7 @@ const handleUploadFile = async (type: "IMAGE" | "FILE") => {
          <div className="pinned-messages">
   {messages.filter((msg) => msg.pinned).length > 0 && (
     <>
-      <h3>Messages Épinglés</h3>
+      <h5>Messages Épinglés</h5>
       {messages
         .filter((msg) => msg.pinned)
         .map((msg) => (
@@ -1203,7 +1509,7 @@ const handleUploadFile = async (type: "IMAGE" | "FILE") => {
                           {msg.replyToId && (
                             <div className="reply-preview">
                               <div className="reply-header">
-                                <span>Réponse à {msg.replyToSenderName}</span>
+                                <span>Reply to {msg.replyToSenderName}</span>
                               </div>
                               <div className="reply-content">
                                 {msg.replyToText}
@@ -1433,7 +1739,7 @@ const handleUploadFile = async (type: "IMAGE" | "FILE") => {
                 {replyingTo && (
                   <div className="reply-preview">
                     <div className="reply-header">
-                      <span>Réponse à {replyingTo.senderName}</span>
+                      <span>Reply To {replyingTo.senderName}</span>
                       <button
                         className="action-btn"
                         onClick={() => setReplyingTo(null)}

@@ -1187,7 +1187,7 @@ const handleLogout = async () => {
       ))}
   </div>
 ) : isTextChannelOpen ? (
-  <p className="no-channels">Aucun salon textuel disponible.</p>
+  <p className="no-channels"></p>
 ) : null}
 <li className="subcategory-title" onClick={() => setIsVocalChannelOpen(!isVocalChannelOpen)}>
   <span>
