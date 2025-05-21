@@ -54,7 +54,12 @@ public class WebSocketEventListener {
     }
 
     private Long extractChannelId(StompHeaderAccessor headerAccessor) {
+        // First, try to get channelId from headers
         String channelIdStr = headerAccessor.getFirstNativeHeader("channelId");
+        if (channelIdStr == null && headerAccessor.getSessionAttributes() != null) {
+            // Fallback to session attributes
+            channelIdStr = (String) headerAccessor.getSessionAttributes().get("channelId");
+        }
         try {
             return channelIdStr != null ? Long.parseLong(channelIdStr) : null;
         } catch (NumberFormatException e) {

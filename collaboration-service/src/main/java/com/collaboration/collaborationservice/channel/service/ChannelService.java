@@ -1,6 +1,7 @@
 package com.collaboration.collaborationservice.channel.service;
 
 import com.collaboration.collaborationservice.channel.config.AuthClient;
+import com.collaboration.collaborationservice.channel.controller.ChannelController;
 import com.collaboration.collaborationservice.channel.dto.ChannelDTO;
 import com.collaboration.collaborationservice.channel.dto.CreateChannelRequest;
 import com.collaboration.collaborationservice.channel.dto.UpdateChannelRequest;
@@ -9,6 +10,7 @@ import com.collaboration.collaborationservice.channel.mapper.ChannelMapper;
 import com.collaboration.collaborationservice.channel.repository.ChannelRepository;
 import com.collaboration.collaborationservice.common.enums.ChannelType;
 import com.collaboration.collaborationservice.common.enums.Role;
+import com.collaboration.collaborationservice.participant.dto.ParticipantDTO;
 import com.collaboration.collaborationservice.participant.entity.Participant;
 import com.collaboration.collaborationservice.participant.repository.ParticipantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +24,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ChannelService {
+    private static final Logger log = LoggerFactory.getLogger(ChannelController.class);
 
     private final ChannelRepository channelRepository;
+
+
     private final ParticipantRepository participantRepository;
     private final AuthClient authClient;
     private final ChannelMapper channelMapper;
@@ -36,7 +42,8 @@ public class ChannelService {
             ChannelRepository channelRepository,
             ParticipantRepository participantRepository,
             AuthClient authClient,
-            ChannelMapper channelMapper) {
+            ChannelMapper channelMapper
+           ) {
         this.channelRepository = channelRepository;
         this.participantRepository = participantRepository;
         this.authClient = authClient;
@@ -296,4 +303,5 @@ public class ChannelService {
         channel.setPrivate(isPrivate);
         return channelRepository.save(channel);
     }
+
 }

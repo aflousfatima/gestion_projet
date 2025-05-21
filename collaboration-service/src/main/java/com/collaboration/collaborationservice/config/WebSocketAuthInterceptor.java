@@ -1,7 +1,5 @@
 package com.collaboration.collaborationservice.config;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -19,13 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
     @Autowired
     private JwtDecoder jwtDecoder;
-
-    private static final Logger logger = LoggerFactory.getLogger(WebSocketAuthInterceptor.class);
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -33,22 +30,17 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
 
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
             String token = accessor.getFirstNativeHeader("Authorization");
-            String channelId = accessor.getFirstNativeHeader("channelId"); // Ensure channelId is sent
-            if (token != null && token.startsWith("Bearer ") && channelId != null) {
+            if (token != null && token.startsWith("Bearer ")) {
                 try {
                     String jwtToken = token.replace("Bearer ", "");
                     Jwt jwt = jwtDecoder.decode(jwtToken);
-                    String userId = jwt.getSubject(); // Extract userId from JWT subject
-                    logger.debug("WebSocket authenticated: userId={}, channelId={}", userId, channelId);
-                    JwtAuthenticationToken authToken = new JwtAuthenticationToken(jwt, extractAuthorities(jwt), userId);
+                    JwtAuthenticationToken authToken = new JwtAuthenticationToken(jwt, extractAuthorities(jwt));
                     accessor.setUser(authToken);
                 } catch (Exception e) {
-                    logger.error("WebSocket authentication failed: Invalid JWT token", e);
                     throw new IllegalArgumentException("Invalid JWT token", e);
                 }
             } else {
-                logger.warn("WebSocket connection rejected: Missing Authorization or channelId header");
-                throw new IllegalArgumentException("Missing or invalid Authorization/channelId header");
+                throw new IllegalArgumentException("Missing or invalid Authorization header");
             }
         }
         return message;

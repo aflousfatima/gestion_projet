@@ -18,4 +18,7 @@ public interface ParticipantRepository extends JpaRepository<Participant, Long> 
     List<Participant> findByUserIdIn(List<String> userIds);
     @Query("SELECT p FROM Participant p WHERE p.userId = :userId AND p.channel = :channel")
     Optional<Participant> findByUserIdAndChannel(@Param("userId") String userId, @Param("channel") Channel channel);
+
+    List<Participant> findByChannelId(Long channelId);
+    Participant findByChannelIdAndUserId(Long channelId, String userId);
 }
