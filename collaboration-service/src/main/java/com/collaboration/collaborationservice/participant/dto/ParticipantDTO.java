@@ -10,6 +10,7 @@ public class ParticipantDTO {
     private String lastName;
     private String role;
     private LocalDateTime joinedAt;
+    private String status;
 
     // Getters et Setters
     public Long getId() { return id; }
@@ -24,4 +25,6 @@ public class ParticipantDTO {
     public void setRole(String role) { this.role = role; }
     public LocalDateTime getJoinedAt() { return joinedAt; }
     public void setJoinedAt(LocalDateTime joinedAt) { this.joinedAt = joinedAt; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 }

@@ -24,11 +24,12 @@ public class ParticipantService {
     @Autowired
     private AuthClient authClient;
 
-    /** Récupérer la liste des participants d'un channel */
+    @Autowired
+    private UserStatusService userStatusService;
+
     public List<ParticipantDTO> getParticipantsByChannelId(Long channelId, String accessToken) {
         List<Participant> participants = participantRepository.findByChannelId(channelId);
         return participants.stream().map(participant -> {
-            // Appel Feign pour récupérer les détails de l'utilisateur
             Map<String, Object> userDetails = authClient.getUserDetailsByAuthId(
                     participant.getUserId(),
                     "Bearer " + accessToken
@@ -40,9 +41,11 @@ public class ParticipantService {
             dto.setLastName((String) userDetails.get("lastName"));
             dto.setRole(participant.getRole().name());
             dto.setJoinedAt(participant.getJoinedAt());
+            dto.setStatus(userStatusService.getUserStatus(participant.getUserId()));
             return dto;
         }).collect(Collectors.toList());
     }
+
 
     /** Ajouter un participant à un channel */
     public void addParticipant(Long channelId, AddParticipantRequest request, String accessToken) {
