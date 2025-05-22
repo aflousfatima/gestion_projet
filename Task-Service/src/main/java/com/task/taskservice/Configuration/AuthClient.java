@@ -11,15 +11,20 @@ import java.util.Map;
 
 @FeignClient(name = "auth-service", url = "http://localhost:8083",fallback = AuthClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface AuthClient {
-    @GetMapping("/api/auth/decode-token")
-    String decodeToken(@RequestHeader("Authorization") String authorization);
-
 
     @GetMapping("/api/auth/users/{authId}")
     Map<String, Object> getUserDetailsByAuthId(
             @PathVariable("authId") String authId,
             @RequestHeader("Authorization") String authorization
     );
+
+
+    @GetMapping("/api/users/details")
+    Map<String, Map<String, Object>> getUserDetailsByIds(@RequestParam("ids") String ids);
+
+    @GetMapping("/api/auth/decode-token")
+    String decodeToken(@RequestHeader("Authorization") String authorization);
+
 
     @PostMapping("/api/tasks_reponsibles/by-ids")
     List<UserDTO> getUsersByIds(

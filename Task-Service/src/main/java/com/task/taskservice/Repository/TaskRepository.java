@@ -2,6 +2,7 @@ package com.task.taskservice.Repository;
 
 import com.task.taskservice.Entity.FileAttachment;
 import com.task.taskservice.Entity.Task;
+import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -41,4 +42,17 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT t.priority AS priority, COUNT(t) AS count FROM Task t WHERE t.userStory IN :userStoryIds GROUP BY t.priority")
     List<Object[]> countTasksByPriority(List<Long> userStoryIds);
 
+
+    List<Task> findByDueDateBeforeAndStatusNot(LocalDate dueDate, WorkItemStatus status);
+
+    @Query("SELECT t.status AS status, COUNT(t) AS count FROM Task t WHERE t.projectId = :projectId GROUP BY t.status")
+    List<Object[]> countTasksByStatusForProject(Long projectId);
+
+    List<Task> findByPriority(WorkItemPriority priority);
+
+    @Query("SELECT t FROM Task t WHERE EXISTS (SELECT d FROM t.dependencies d WHERE d.status != :status)")
+    List<Task> findBlockedTasksByDependencies(WorkItemStatus status);
+
+    @Query("SELECT t FROM Task t WHERE :userId MEMBER OF t.assignedUserIds")
+    List<Task> findByAssignedUserId(String userId);
 }
