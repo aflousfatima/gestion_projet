@@ -333,5 +333,10 @@ public class ProjectController {
                     .body(Collections.emptyList());
         }
     }
+
+    @GetMapping("/projects/AllProjects")
+    public List<ProjectDTO> getAllProjects() {
+        return projectService.getAllProjects();
+    }
 }
 

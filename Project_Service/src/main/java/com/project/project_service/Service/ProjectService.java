@@ -530,4 +530,14 @@ public class ProjectService {
                 .map(Projet::getId)
                 .collect(Collectors.toList());
     }
+
+
+    public List<ProjectDTO> getAllProjects() {
+        return projectRepository.findAll()
+                .stream()
+                .map(ProjectDTO::new)
+                .collect(Collectors.toList());
+    }
+
+
 }

@@ -1,5 +1,7 @@
 package com.project.project_service.DTO;
 
+import com.project.project_service.Entity.Projet;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -32,6 +34,12 @@ public class ProjectDTO {
         this.priority = priority;
     }
 
+    public ProjectDTO(Projet projet) {
+        this.id = projet.getId();
+        this.name = projet.getName();
+        this.description = projet.getDescription();
+        this.creationDate = projet.getCreationDate();
+    }
     // Getters & Setters
     public Long getId() {
         return id;

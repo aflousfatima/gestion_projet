@@ -12,4 +12,5 @@ public interface SprintRepository extends JpaRepository<Sprint, Long> {
 
     Sprint findByProjectIdAndStatus(Long projectId, SprintStatus status);
 
+
 }
