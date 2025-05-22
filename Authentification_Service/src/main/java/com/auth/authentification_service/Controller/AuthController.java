@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.Cookie;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -201,7 +202,6 @@ public class AuthController {
         }
     }
 
-
     @Operation(summary = "Déconnexion de l'utilisateur",
             description = "Cette méthode permet de déconnecter l'utilisateur en révoquant son refresh token et supprimant le cookie associé.")
     @ApiResponses(value = {
@@ -233,6 +233,8 @@ public class AuthController {
         }
     }
 
+
+    
     @Operation(summary = "recuperation des membres de tous les projets de l'entreprise",
             description = "Cette méthode permet de recuperer lesutilisateur qui sont accompagner et affilier a l'un des projets de l'entreprise.")
     @ApiResponses(value = {
@@ -376,5 +378,11 @@ public class AuthController {
             @RequestBody Map<String, String> passwordData) {
         String accessToken = authorizationHeader.replace("Bearer ", "");
         return keycloakService.changePassword(accessToken, passwordData);
+    }
+
+    @GetMapping("/users/details")
+    public Map<String, Map<String, Object>> getUserDetailsByIds(@RequestParam("ids") String ids) {
+        List<String> idList = Arrays.asList(ids.split(","));
+        return keycloakService.getUserDetailsByIds(idList);
     }
 }

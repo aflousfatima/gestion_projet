@@ -876,4 +876,52 @@ public class KeycloakService {
         return new TokenDto("", "");
     }
 
+
+    private Map<String, Object> fetchUserDetails(String authId, String adminToken) {
+        String userUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users/" + authId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<Map<String, Object>> userResponse = restTemplate.exchange(
+                    userUrl, HttpMethod.GET, request, new ParameterizedTypeReference<Map<String, Object>>() {}
+            );
+            Map<String, Object> userInfo = userResponse.getBody();
+            if (userInfo == null) {
+                throw new RuntimeException("Utilisateur non trouvé dans Keycloak");
+            }
+
+            String firstName = (String) userInfo.getOrDefault("firstName", "Inconnu");
+            String lastName = (String) userInfo.getOrDefault("lastName", "Inconnu");
+
+            Map<String, Object> userDetails = new HashMap<>();
+            userDetails.put("firstName", firstName);
+            userDetails.put("lastName", lastName);
+            userDetails.put("avatar", "https://ui-avatars.com/api/?name=" +
+                    firstName.charAt(0) + "+" + lastName.charAt(0));
+            return userDetails;
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de la récupération de l'utilisateur depuis Keycloak", e);
+        }
+    }
+
+    public Map<String, Map<String, Object>> getUserDetailsByIds(List<String> authIds) {
+        String adminToken = getAdminToken();
+        return authIds.stream()
+                .collect(Collectors.toMap(
+                        id -> id,
+                        id -> {
+                            try {
+                                return fetchUserDetails(id, adminToken);
+                            } catch (Exception e) {
+                                return Map.of(
+                                        "firstName", "Inconnu",
+                                        "lastName", "Inconnu",
+                                        "avatar", ""
+                                );
+                            }
+                        }
+                ));
+    }
 }
