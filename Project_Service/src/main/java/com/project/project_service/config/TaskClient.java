@@ -15,8 +15,9 @@ import java.util.List;
 public interface TaskClient {
 
     @GetMapping("/api/chatbot/tasks/status")
-    List<TaskStatusResponse> getTaskStatusByProject(@RequestParam("projectId") Long projectId);
-
+    List<TaskStatusResponse> getTaskStatusByProject(
+            @RequestParam("title") String title
+    );
     @GetMapping("/api/project/tasks/{projectId}/{userStoryId}")
     List<TaskDTO> getTasksByProjectAndUserStory(
             @PathVariable("projectId") Long projectId,

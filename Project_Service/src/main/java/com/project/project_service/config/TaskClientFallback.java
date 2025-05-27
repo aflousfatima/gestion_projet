@@ -24,7 +24,7 @@ public List<TaskDTO> getTasksByProjectAndUserStoryInternal(Long projectId, Long 
     }
 
     @Override
-    public List<TaskStatusResponse> getTaskStatusByProject(Long projectId){
+    public List<TaskStatusResponse> getTaskStatusByProject(String title){
         return List.of();
     }
 
