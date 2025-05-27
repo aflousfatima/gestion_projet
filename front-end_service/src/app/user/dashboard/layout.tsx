@@ -6,6 +6,7 @@ import "../../../styles/UserDashboard.css";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import Chatbot from "./chatbot/page";
 import ProtectedRoute from "../../../components/ProtectedRoute";
 import useAxios from "../../../hooks/useAxios";
 import { PROJECT_SERVICE_URL , COLLABORATION_SERVICE_URL} from "../../../config/useApi";
@@ -1220,7 +1221,9 @@ const handleLogout = async () => {
             </nav>
           </div>
 
-          <div className="main-content">{children}</div>
+          <div className="main-content">{children}
+            <Chatbot />
+          </div>
         </div>
       </div>
     </ProtectedRoute>
