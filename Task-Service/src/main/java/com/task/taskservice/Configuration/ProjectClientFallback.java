@@ -2,10 +2,13 @@ package com.task.taskservice.Configuration;
 
 
 import com.task.taskservice.DTO.ProjectDTO;
+import com.task.taskservice.DTO.ProjectResponceChatbotDTO;
 import com.task.taskservice.DTO.ProjectResponseWithRoleDTO;
 import com.task.taskservice.DTO.UserStoryDTO;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Collections;
 import java.util.List;
@@ -13,6 +16,11 @@ import java.util.Map;
 
 
 public class ProjectClientFallback implements ProjectClient {
+
+    @Override
+    public ProjectResponceChatbotDTO getProjectByName(String name) {
+        return null; // Retourne null pour déclencher 404 dans le contrôleur
+    }
 
     @Override
     public ProjectResponseWithRoleDTO getProjectsByUser(String authId) {

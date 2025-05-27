@@ -27,6 +27,7 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/chatbot/tasks", "/api/chatbot/tasks/**").permitAll()
                         .requestMatchers(
                                 "/api/project/tasks/active_sprint/**",
                                 "/api/project/tasks/**",

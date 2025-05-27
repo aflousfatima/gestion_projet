@@ -1,13 +1,18 @@
 package com.task.taskservice.Chatbot.DTO;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PredictionResponse {
+    @JsonProperty("task_title")
     private String taskTitle;
+    @JsonProperty("predicted_duration")
     private float predictedDuration;
+    @JsonProperty("expected_duration")
     private float expectedDuration;
+    @JsonProperty("model_name")
     private String modelName;
 
-    // Getters et setters
+    // Getters et setters inchangés
     public String getTaskTitle() { return taskTitle; }
     public void setTaskTitle(String taskTitle) { this.taskTitle = taskTitle; }
     public float getPredictedDuration() { return predictedDuration; }

@@ -14,6 +14,7 @@ public class ProjectDTO {
     private String phase;
     private String priority;
 
+    public ProjectDTO(){};
     // Constructeur complet
     public ProjectDTO(Long id, String name, String description,
                       LocalDate creationDate, LocalDate startDate, LocalDate deadline,

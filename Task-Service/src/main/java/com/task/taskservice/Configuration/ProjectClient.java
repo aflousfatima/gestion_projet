@@ -1,9 +1,6 @@
 package com.task.taskservice.Configuration;
 
-import com.task.taskservice.DTO.ProjectDTO;
-import com.task.taskservice.DTO.ProjectResponseWithRoleDTO;
-import com.task.taskservice.DTO.UserDTO;
-import com.task.taskservice.DTO.UserStoryDTO;
+import com.task.taskservice.DTO.*;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +10,10 @@ import java.util.Map;
 
 @FeignClient(name = "project-service", url = "http://localhost:8085",fallback = ProjectClientFallback.class)
 public interface ProjectClient {
+
+
+    @GetMapping("/api/projects/by-name")
+    ProjectResponceChatbotDTO getProjectByName(@RequestParam("name") String name);
 
     @GetMapping("/api/projects/by-user")
     ProjectResponseWithRoleDTO getProjectsByUser(@RequestParam("authId") String authId);
