@@ -338,5 +338,14 @@ public class ProjectController {
     public List<ProjectDTO> getAllProjects() {
         return projectService.getAllProjects();
     }
+
+    @GetMapping("/projects/by-name")
+    public ResponseEntity<ProjectResponceChatbotDTO> getProjectByName(@RequestParam("name") String name) {
+        Projet project = projectService.getProjectByName(name);
+        if (project == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        return ResponseEntity.ok(new ProjectResponceChatbotDTO(project.getId(), project.getName()));
+    }
 }
 

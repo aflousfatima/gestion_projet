@@ -539,5 +539,7 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
-
+    public Projet getProjectByName(String name) {
+        return projectRepository.findByName(name).orElse(null);
+    }
 }
