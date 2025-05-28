@@ -350,7 +350,7 @@ def keyword_fallback(query: str, lang: str = 'en') -> str:
         'intent_2': ['overdue tasks', 'late tasks', 'delays', 'past due', 'tâches en retard'],
         'intent_3': ['priority tasks', 'urgent tasks', 'high priority', 'low priority', 'tâches prioritaires'],
         'intent_4': ['user stories', 'sprint stories', 'active stories', 'histoires utilisateur'],
-        'intent_5': ['remaining time', 'project completion', 'end date', 'temps restant'],
+        'intent_5': ['remaining time', 'time left', 'project completion', 'end date', 'temps restant', 'temps qu\'il reste', 'date de fin'],
         'intent_6': ['blocked tasks', 'stuck tasks', 'obstacles', 'dependencies', 'tâches bloquées'],
         'intent_7': ['assigned to', 'tasks for', 'user tasks', 'tâches pour', 'attribué à'],
         'intent_8': ['task status', 'status distribution', 'task progress', 'état des tâches'],
@@ -464,10 +464,12 @@ def generate_response(query: str, metadata: list, user_id: Optional[str] = None,
     available_templates = templates.get(intent, ['No data available.'])
     response = available_templates[min(template_idx, len(available_templates)-1)]
 
-    if intent == 'intent_9' and api_data and api_data.get('estimatedHours', 0) > 0:
-        response = response.replace('{title}', parameters.get('title', 'Unknown'))
-        response = response.replace('{estimatedDays}', f"{api_data.get('estimatedDays', 0):.2f}")
-        response = response.replace('{estimatedHours}', f"{api_data.get('estimatedHours', 0):.2f}")
+    if intent == 'intent_9' and api_data:
+        response = response.format(
+            title=parameters.get('title', 'Unknown'),
+            estimatedDays=api_data.get('estimatedDays', 0),
+            estimatedHours=api_data.get('estimatedHours', 0)
+        )
     else:
         for key, value in parameters.items():
             response = response.replace(f"{{{key}}}", str(value))
@@ -493,7 +495,7 @@ def generate_response(query: str, metadata: list, user_id: Optional[str] = None,
 
 def rag_pipeline(query: str, user_id: Optional[str] = None, use_cache: bool = True, token: Optional[str] = None):
     try:
-        metadata_results, distances, search_time = similarity_search(query, k=3, threshold=0.25)
+        metadata_results, distances, search_time = similarity_search(query, k=3, threshold=0.2)
         if not metadata_results:
             return 'out_of_scope', "No matching intent found.", [float('inf')] * 3, 0.0, [], {}, 0.0, 0.0
         
