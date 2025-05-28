@@ -24,4 +24,7 @@ class Settings:
     CACHE_PATH: str = os.getenv("CACHE_PATH")
     PROJECT_API_URL: str = os.getenv("PROJECT_API_URL", "http://localhost:8085/api/chatbot/projects")
     TASK_API_URL: str = os.getenv("TASK_API_URL", "http://localhost:8086/api/chatbot/tasks")  # Added
+    
+    REDIS_URL: str = "redis://localhost:6379"
+    AUTH_SERVICE_URL: str = "http://localhost:8083"
 settings = Settings()
