@@ -24,7 +24,6 @@ interface User {
   };
 }
 
-// Define the expected shape of WebSocket messages
 interface WebSocketMessage {
   error?: string;
   status?: string;
@@ -35,6 +34,114 @@ interface WebSocketMessage {
   confidence?: number;
 }
 
+// Sample intents with a subset of questions
+const intents = {
+  intent_1: {
+    description: "Provides a summary of the current sprint for a project.",
+    questions: [
+      "What is the summary of the current sprint?",
+      "How is the current sprint progressing?",
+    ],
+    questions_fr: [
+      "Quel est le résumé du sprint actuel ?",
+      "Comment avance le sprint en cours ?",
+    ],
+  },
+  intent_2: {
+    description: "Lists all overdue tasks for a project.",
+    questions: [
+      "Which tasks are overdue?",
+      "List overdue tasks for project {projectId}.",
+    ],
+    questions_fr: [
+      "Quelles tâches sont en retard ?",
+      "Liste les tâches en retard pour le projet {projectId}.",
+    ],
+  },
+  intent_3: {
+    description: "Lists tasks by priority (e.g., high, medium, low).",
+    questions: [
+      "List high-priority tasks.",
+      "Which tasks need immediate attention?",
+    ],
+    questions_fr: [
+      "Liste les tâches de haute priorité.",
+      "Quelles tâches nécessitent une attention immédiate ?",
+    ],
+  },
+  intent_4: {
+    description: "Lists user stories in the active sprint.",
+    questions: [
+      "What are the user stories for the current sprint?",
+      "List the user stories in the active sprint.",
+    ],
+    questions_fr: [
+      "Quelles sont les user stories du sprint actuel ?",
+      "Liste les user stories du sprint actif.",
+    ],
+  },
+  intent_5: {
+    description: "Estimates the remaining time to complete a project.",
+    questions: [
+      "How much time is left for project {projectId}?",
+      "When will project {projectId} be completed?",
+    ],
+    questions_fr: [
+      "Combien de temps reste pour le projet {projectId} ?",
+      "Quand le projet {projectId} sera-t-il terminé ?",
+    ],
+  },
+  intent_6: {
+    description: "Lists blocked tasks in a project.",
+    questions: [
+      "Which tasks are blocked?",
+      "Show me blocked tasks for project {projectId}.",
+    ],
+    questions_fr: [
+      "Quelles tâches sont bloquées ?",
+      "Montre-moi les tâches bloquées pour le projet {projectId}.",
+    ],
+  },
+  intent_7: {
+    description: "Lists tasks assigned to a specific user.",
+    questions: [
+      "Which tasks are assigned to {userId}?",
+      "What are my current tasks?",
+    ],
+    questions_fr: [
+      "Quelles tâches sont assignées à {userId} ?",
+      "Quelles sont mes tâches actuelles ?",
+    ],
+  },
+  intent_8: {
+    description: "Provides task status counts for a project.",
+    questions: [
+      "What is the status of tasks for project {projectId}?",
+      "How many tasks are completed in project {projectId}?",
+    ],
+    questions_fr: [
+      "Quel est l’état des tâches pour le projet {projectId} ?",
+      "Combien de tâches sont terminées dans le projet {projectId} ?",
+    ],
+  },
+  intent_9: {
+    description: "Predicts the duration to complete a task.",
+    questions: [
+      "How long will task {taskId} take to complete?",
+      "What’s the estimated duration for task #{taskId}?",
+    ],
+    questions_fr: [
+      "Combien de temps prendra la tâche {taskId} ?",
+      "Quelle est la durée estimée pour la tâche #{taskId} ?",
+    ],
+  },
+  out_of_scope: {
+    description: "Handles unrelated queries.",
+    questions: ["What’s the weather today?", "Tell me a joke."],
+    questions_fr: ["Quel temps fait-il aujourd’hui ?", "Raconte-moi une blague."],
+  },
+};
+
 const Chatbot: React.FC = () => {
   const { accessToken, isLoading } = useAuth();
   const axiosInstance = useAxios();
@@ -43,11 +150,12 @@ const Chatbot: React.FC = () => {
   const [input, setInput] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
-
+const [flippedCard, setFlippedCard] = useState<string | null>(null);
   // Load Lottie script
   useEffect(() => {
     console.debug("[Chatbot] Loading Lottie script");
@@ -129,14 +237,14 @@ const Chatbot: React.FC = () => {
 
       ws.onopen = () => {
         console.info("[Chatbot] WebSocket connected");
-        reconnectAttempts.current = 0; // Reset reconnect attempts
+        reconnectAttempts.current = 0;
         if (accessToken) {
           const tokenMessage = { token: `Bearer ${accessToken}` };
           console.debug("[Chatbot] Sending token message:", tokenMessage);
           ws.send(JSON.stringify(tokenMessage));
         } else {
           console.error("[Chatbot] No accessToken available, closing WebSocket");
-          ws.close(1008); // Policy violation
+          ws.close(1008);
         }
       };
 
@@ -155,7 +263,7 @@ const Chatbot: React.FC = () => {
             ...prev,
             {
               id: Date.now().toString(),
-              text: data.error || "Une erreur inconnue est survenue", // Fallback if error is undefined
+              text: data.error || "Une erreur inconnue est survenue",
               sender: "bot" as const,
             },
           ]);
@@ -187,7 +295,7 @@ const Chatbot: React.FC = () => {
       ws.onclose = (event) => {
         console.warn("[Chatbot] WebSocket disconnected", { code: event.code, reason: event.reason });
         if (reconnectAttempts.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 10000); // Exponential backoff
+          const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 10000);
           console.info(
             `[Chatbot] Attempting to reconnect WebSocket in ${delay}ms (attempt ${reconnectAttempts.current + 1})`
           );
@@ -234,7 +342,7 @@ const Chatbot: React.FC = () => {
     return () => {
       console.debug("[Chatbot] Cleaning up WebSocket");
       if (wsRef.current) {
-        wsRef.current.close(1000); // Normal closure
+        wsRef.current.close(1000);
         console.info("[Chatbot] WebSocket closed");
       }
     };
@@ -291,6 +399,13 @@ const Chatbot: React.FC = () => {
     sendMessage(action);
   };
 
+  // Handle try question
+  const handleTryQuestion = (question: string) => {
+    console.debug("[Chatbot] Setting input to question:", question);
+    setInput(question);
+    setIsGuideOpen(false);
+  };
+
   return (
     <div className="chatbot-container">
       <div
@@ -316,15 +431,28 @@ const Chatbot: React.FC = () => {
         <div className="chatbot-window">
           <div className="chatbot-header">
             <img className="navbar-logo" src="/logo.png" alt="logo" />
-            <button
-              className="close-button"
-              onClick={() => {
-                console.debug("[Chatbot] Closing chatbot window");
-                setIsOpen(false);
-              }}
-            >
-              ×
-            </button>
+            <div className="actions-chat flex items-center space-x-4">
+              <button
+                className="guide-button"
+                onClick={() => {
+                  console.debug("[Chatbot] Opening guide modal");
+                  setIsGuideOpen(true);
+                }}
+                aria-label="Ouvrir le guide du chatbot"
+              >
+               <i className="fa fa-info"> </i>
+              </button>
+              <button
+                className="close-button"
+                onClick={() => {
+                  console.debug("[Chatbot] Closing chatbot window");
+                  setIsOpen(false);
+                }}
+                aria-label="Fermer le chatbot"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <div className="messages">
             {messages.map((msg) => (
@@ -373,6 +501,7 @@ const Chatbot: React.FC = () => {
               }}
               placeholder="Compose your message..."
               className="chat-input"
+              aria-label="Saisir un message"
             />
             <button
               className="send-button"
@@ -380,6 +509,7 @@ const Chatbot: React.FC = () => {
                 console.debug("[Chatbot] Send button clicked");
                 sendMessage();
               }}
+              aria-label="Envoyer le message"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -391,6 +521,97 @@ const Chatbot: React.FC = () => {
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
             </button>
+          </div>
+        </div>
+      )}
+
+
+{isGuideOpen && (
+        <div className="guide-modal">
+          <div className="guide-modal-content">
+            <button
+              className="guide-close-button"
+              onClick={() => {
+                console.debug("[Chatbot] Closing guide modal");
+                setIsGuideOpen(false);
+                setFlippedCard(null);
+              }}
+              aria-label="Fermer le guide"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#4c1d95"
+                strokeWidth="2"
+              >
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+            <h2 className="guide-header">Guide du Chatbot</h2>
+            <p className="guide-intro">
+              Explorez les fonctionnalités de votre assistant de gestion de projets. Cliquez sur une catégorie pour découvrir des exemples de questions.
+            </p>
+            <div className="guide-tiles">
+              {Object.entries(intents).map(([intentId, intent], index) => (
+                <div
+                  key={intentId}
+                  className={`guide-tile ${flippedCard === intentId ? "active" : ""}`}
+                  onClick={() => {
+                    setFlippedCard(flippedCard === intentId ? null : intentId);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Afficher les questions pour ${intent.description}`}
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      setFlippedCard(flippedCard === intentId ? null : intentId);
+                    }
+                  }}
+                >
+                  <div className="tile-header">
+                    <span className="tile-icon">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#4c1d95"
+                        strokeWidth="2"
+                      >
+                        <path d="M12 2v20M2 12h20" /> {/* Simple plus icon, can customize per intent */}
+                      </svg>
+                    </span>
+                    <span className="tile-title">{intent.description}</span>
+                  </div>
+                  {flippedCard === intentId && (
+                    <div className="tile-questions">
+                      {[...intent.questions, ...intent.questions_fr].map((q, idx) => (
+                        <div key={`${intentId}-${idx}`} className="question-item">
+                          <span className="question-text">{q}</span>
+                          <button
+                            className="try-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTryQuestion(q);
+                            }}
+                            aria-label={`Essayer la question: ${q}`}
+                          >
+                            Essayer
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="guide-note">
+              Note : Je suis dédié aux projets, pas aux blagues ou à la météo !
+            </p>
           </div>
         </div>
       )}
