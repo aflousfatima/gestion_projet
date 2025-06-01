@@ -25,3 +25,5 @@ rouge_score
 langdetect
 redis
 websockets
+pytest-asyncio   
+fakeredis
