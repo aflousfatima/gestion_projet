@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 .and()
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/signup","/api/login","/api/refresh","/api/logout","/actuator/health","/api/invitations/verify","/api/project-members/by-user","/api/update","api/change-password").permitAll() // Endpoint public pour login
+                        .requestMatchers("/api/signup","/api/login","/api/refresh","/api/logout","/actuator/health","/api/invitations/verify","/api/project-members/by-user","/api/update","api/change-password","/api/users/details","/api/users/search").permitAll() // Endpoint public pour login
                         .requestMatchers("/swagger.html","/swagger-ui/**", "/swagger-ui.html", "/docs/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/invitations").hasRole("MANAGER") // Réservé aux managers
                         .requestMatchers("/api/me","/api/user-id","/api/auth/decode-token" ,"/api/tasks_reponsibles/by-ids").authenticated() // Accessible aux authentifiés

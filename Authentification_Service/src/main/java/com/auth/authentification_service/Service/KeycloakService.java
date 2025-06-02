@@ -924,4 +924,61 @@ public class KeycloakService {
                         }
                 ));
     }
+
+
+    @RateLimiter(name = "KeycloakServiceLimiter", fallbackMethod = "searchUserByNameRateLimiterFallback")
+    @Bulkhead(name = "KeycloakServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "searchUserByNameBulkheadFallback")
+    @Retry(name = "KeycloakServiceRetry", fallbackMethod = "searchUserByNameRetryFallback")
+    public Map<String, Object> searchUserByName(String firstName, String lastName) {
+        System.out.println("Recherche d'utilisateur avec firstName: " + firstName + ", lastName: " + lastName);
+
+        String adminToken = getAdminToken();
+        String searchUrl = keycloakUrl + "/admin/realms/" + keycloakRealm + "/users?firstName=" + firstName + "&lastName=" + lastName;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(adminToken);
+        HttpEntity<String> request = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<List<Map<String, Object>>> response = restTemplate.exchange(
+                    searchUrl,
+                    HttpMethod.GET,
+                    request,
+                    new ParameterizedTypeReference<List<Map<String, Object>>>() {}
+            );
+
+            List<Map<String, Object>> users = response.getBody();
+            if (users == null || users.isEmpty()) {
+                System.out.println("Aucun utilisateur trouvé pour firstName: " + firstName + ", lastName: " + lastName);
+                throw new RuntimeException("Utilisateur non trouvé dans Keycloak");
+            }
+
+            // Retourner le premier utilisateur trouvé (supposons une correspondance unique)
+            Map<String, Object> user = users.get(0);
+            Map<String, Object> userDetails = new HashMap<>();
+            userDetails.put("id", user.get("id"));
+            userDetails.put("firstName", user.getOrDefault("firstName", "Inconnu"));
+            userDetails.put("lastName", user.getOrDefault("lastName", "Inconnu"));
+            return userDetails;
+
+        } catch (Exception e) {
+            System.out.println("Erreur lors de la recherche d'utilisateur: " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la recherche d'utilisateur dans Keycloak", e);
+        }
+    }
+
+    public Map<String, Object> searchUserByNameRateLimiterFallback(String firstName, String lastName, Throwable t) {
+        System.out.println("RateLimiter fallback for searchUserByName: " + t.getMessage());
+        throw new RuntimeException("Rate limit exceeded for user search");
+    }
+
+    public Map<String, Object> searchUserByNameBulkheadFallback(String firstName, String lastName, Throwable t) {
+        System.out.println("Bulkhead fallback for searchUserByName: " + t.getMessage());
+        throw new RuntimeException("Too many concurrent user search requests");
+    }
+
+    public Map<String, Object> searchUserByNameRetryFallback(String firstName, String lastName, Throwable t) {
+        System.out.println("Retry fallback for searchUserByName: " + t.getMessage());
+        throw new RuntimeException("Failed to search user after retries");
+    }
 }

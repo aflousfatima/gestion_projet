@@ -550,9 +550,9 @@ const [flippedCard, setFlippedCard] = useState<string | null>(null);
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
             </button>
-            <h2 className="guide-header">Guide du Chatbot</h2>
+            <h2 className="guide-header">Chatbot Guide</h2>
             <p className="guide-intro">
-              Explorez les fonctionnalités de votre assistant de gestion de projets. Cliquez sur une catégorie pour découvrir des exemples de questions.
+              Explore the features of your project management assistant. Click on a category to discover example questions.
             </p>
             <div className="guide-tiles">
               {Object.entries(intents).map(([intentId, intent], index) => (
@@ -600,7 +600,7 @@ const [flippedCard, setFlippedCard] = useState<string | null>(null);
                             }}
                             aria-label={`Essayer la question: ${q}`}
                           >
-                            Essayer
+                             Try it
                           </button>
                         </div>
                       ))}

@@ -32,7 +32,8 @@ public class SecurityConfig {
                                 "/api/project/tasks/active_sprint/**",
                                 "/api/project/tasks/**",
                                 "/api/project/tasks/delete",
-                                "/ws/**"
+                                "/ws/**",
+                                "/api/chatbot/tasks/status"
                         ).permitAll() // Endpoints publics
 
                         .requestMatchers(

@@ -35,6 +35,11 @@ public class AuthController {
         this.loginService = loginService;
     }
 
+    @GetMapping("/users/details")
+    public Map<String, Map<String, Object>> getUserDetailsByIds(@RequestParam("ids") String ids) {
+        List<String> idList = Arrays.asList(ids.split(","));
+        return keycloakService.getUserDetailsByIds(idList);
+    }
     @Operation(summary = "Créer un utilisateur",
             description = "Cette méthode permet de créer un nouvel utilisateur dans Keycloak.")
     @ApiResponses(value = {
@@ -379,10 +384,17 @@ public class AuthController {
         String accessToken = authorizationHeader.replace("Bearer ", "");
         return keycloakService.changePassword(accessToken, passwordData);
     }
-
-    @GetMapping("/users/details")
-    public Map<String, Map<String, Object>> getUserDetailsByIds(@RequestParam("ids") String ids) {
-        List<String> idList = Arrays.asList(ids.split(","));
-        return keycloakService.getUserDetailsByIds(idList);
+    @GetMapping("/users/search")
+    public ResponseEntity<Map<String, Object>> searchUserByName(
+            @RequestParam("firstName") String firstName,
+            @RequestParam("lastName") String lastName,
+            @RequestHeader("Authorization") String accessToken) {
+        try {
+            Map<String, Object> user = keycloakService.searchUserByName(firstName, lastName);
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
+        }
     }
+
 }

@@ -241,12 +241,13 @@
 .guide-modal {
   position: fixed;
   inset: 0;
-  background: rgba(230, 230, 250, 0.92);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.3s ease-in-out;
+
 }
 
 /* Modal Content */
@@ -256,7 +257,7 @@
   padding: 32px;
   width: 90%;
   max-width: 800px;
-  max-height: 85vh;
+  height: 90vh;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
   font-family: 'Inter', 'Verdana', sans-serif;
   position: relative;
@@ -284,7 +285,7 @@
 .guide-header {
   font-size: 28px;
   font-weight: 600;
-  color: #4c1d95;
+  color: #333;
   text-align: center;
   margin-bottom: 16px;
 }
@@ -315,12 +316,12 @@
 }
 
 .guide-tile:hover {
-  background: linear-gradient(90deg, #f3e8ff, #e9d5ff);
+  background: linear-gradient(90deg, #dcdbdb, #cac9c8);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .guide-tile.active {
-  background: linear-gradient(90deg, #e9d5ff, #f3e8ff);
+  background: linear-gradient(90deg, #ece9e9, #e8e8e7);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -340,7 +341,7 @@
 .tile-title {
   font-size: 18px;
   font-weight: 500;
-  color: #4c1d95;
+  color: #333;
   flex: 1;
 }
 
@@ -376,8 +377,8 @@
 
 /* Try Button */
 .try-button {
-  background: #d8b4fe;
-  color: #4c1d95;
+  background: #F1BD6C;
+  color: #333;
   border: none;
   padding: 6px 16px;
   border-radius: 20px;
@@ -388,8 +389,8 @@
 }
 
 .try-button:hover {
-  background: #c084fc;
-  box-shadow: 0 0 8px rgba(216, 180, 254, 0.5);
+  background: #F1BD6C;
+  box-shadow: 0 0 8px #F1BD6C;
 }
 
 /* Guide Note */
