@@ -1,0 +1,101 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "tasks_dataset_suite",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "title"
+      },
+      "meta": {
+        "notes": "Task title must not be empty"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_of_type",
+      "kwargs": {
+        "column": "estimationTime",
+        "type_": "int64"
+      },
+      "meta": {
+        "notes": "Estimation time must be an integer"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "estimationTime",
+        "min_value": 0.0001
+      },
+      "meta": {
+        "notes": "Estimation time must be positive"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_strftime_format",
+      "kwargs": {
+        "column": "creationDate",
+        "strftime_format": "%Y-%m-%d"
+      },
+      "meta": {
+        "notes": "Creation date must be in YYYY-MM-DD format"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "status",
+        "value_set": [
+          "TO_DO",
+          "IN_PROGRESS",
+          "DONE",
+          "BLOCKED",
+          "ARCHIVED",
+          "CANCELLED"
+        ]
+      },
+      "meta": {
+        "notes": "Status must be one of the allowed values"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_set",
+      "kwargs": {
+        "column": "priority",
+        "value_set": [
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "CRITICAL"
+        ]
+      },
+      "meta": {
+        "notes": "Priority must be one of the allowed values"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_between",
+      "kwargs": {
+        "column": "progress",
+        "max_value": 100.0,
+        "min_value": 0.0
+      },
+      "meta": {
+        "notes": "Progress must be between 0 and 100"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "projectId"
+      },
+      "meta": {
+        "notes": "Project ID must not be empty"
+      }
+    }
+  ],
+  "ge_cloud_id": null,
+  "meta": {
+    "great_expectations_version": "0.18.21"
+  }
+}

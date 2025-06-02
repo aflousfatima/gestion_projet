@@ -27,3 +27,4 @@ redis
 websockets
 pytest-asyncio   
 fakeredis
+great_expectations

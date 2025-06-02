@@ -1,0 +1,160 @@
+{
+  "data_asset_type": null,
+  "expectation_suite_name": "intents_suite",
+  "expectations": [
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "intent_name"
+      },
+      "meta": {
+        "notes": "Intent name must exist"
+      }
+    },
+    {
+      "expectation_type": "expect_table_row_count_to_be_between",
+      "kwargs": {
+        "max_value": 100,
+        "min_value": 1
+      },
+      "meta": {
+        "notes": "At least one intent must exist, but not too many"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "description"
+      },
+      "meta": {
+        "notes": "description must not be empty for any intent"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "questions"
+      },
+      "meta": {
+        "notes": "questions must not be empty for any intent"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "questions_fr"
+      },
+      "meta": {
+        "notes": "questions_fr must not be empty for any intent"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "sample_responses"
+      },
+      "meta": {
+        "notes": "sample_responses must not be empty for any intent"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_type_list",
+      "kwargs": {
+        "column": "questions",
+        "type_list": [
+          "str"
+        ]
+      },
+      "meta": {
+        "notes": "questions must be a valid JSON string"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_json_schema",
+      "kwargs": {
+        "column": "questions",
+        "json_schema": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "meta": {
+        "notes": "questions must be a non-empty list"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_type_list",
+      "kwargs": {
+        "column": "questions_fr",
+        "type_list": [
+          "str"
+        ]
+      },
+      "meta": {
+        "notes": "questions_fr must be a valid JSON string"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_json_schema",
+      "kwargs": {
+        "column": "questions_fr",
+        "json_schema": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "meta": {
+        "notes": "questions_fr must be a non-empty list"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_be_in_type_list",
+      "kwargs": {
+        "column": "sample_responses",
+        "type_list": [
+          "str"
+        ]
+      },
+      "meta": {
+        "notes": "sample_responses must be a valid JSON string"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_match_json_schema",
+      "kwargs": {
+        "column": "sample_responses",
+        "json_schema": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "meta": {
+        "notes": "sample_responses must be a non-empty list"
+      }
+    },
+    {
+      "expectation_type": "expect_column_values_to_not_be_null",
+      "kwargs": {
+        "column": "endpoint",
+        "condition_parser": "pandas",
+        "row_condition": "intent_name != 'out_of_scope'"
+      },
+      "meta": {
+        "notes": "endpoint must not be empty for non-out_of_scope intents"
+      }
+    }
+  ],
+  "ge_cloud_id": null,
+  "meta": {
+    "great_expectations_version": "0.18.21"
+  }
+}
