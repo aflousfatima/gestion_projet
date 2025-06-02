@@ -1,0 +1,62 @@
+name: MLOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'AI_Service/app/data/intents_complete.json'
+      - 'AI_Service/app/data/tasks_dataset.csv'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'AI_Service/app/data/intents_complete.json'
+      - 'AI_Service/app/data/tasks_dataset.csv'
+  schedule:
+    - cron: '0 14 * * *' # Exécute tous les jours à 14h UTC
+
+jobs:
+  validate-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install great_expectations==0.18.21 pandas
+
+      - name: Run Great Expectations checkpoint for intents
+        working-directory: AI_Service
+        run: |
+          python manage-great_expectations/create_intents_checkpoint.py > intents_output.log 2>&1
+          cat intents_output.log
+
+      - name: Check intents validation result
+        working-directory: AI_Service
+        run: |
+          if grep -q "Success: False" intents_output.log; then
+            echo "Intents validation failed! Check the output above for details."
+            exit 1
+          fi
+        if: always()
+
+      - name: Run Great Expectations checkpoint for tasks
+        working-directory: AI_Service
+        run: |
+          python manage-great_expectations/create_checkpoint.py > tasks_output.log 2>&1
+          cat tasks_output.log
+
+      - name: Check tasks validation result
+        working-directory: AI_Service
+        run: |
+          if grep -q "Success: False" tasks_output.log; then
+            echo "Tasks validation failed! Check the output above for details."
+            exit 1
+          fi
+        if: always()
