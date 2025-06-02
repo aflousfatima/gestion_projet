@@ -1,0 +1,27 @@
+
+WebSocket Performance Test Report
+==============================
+
+Users: 1
+Average Response Time: 6264.51ms
+Median Response Time: 6264.51ms
+95th Percentile: 6264.51ms
+Error Rate: 100.00%
+Total Requests: 1
+Errors: ["401: Invalid token: HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /api/me (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001FCE14D6B10>: Failed to establish a new connection: [WinError 10061] Aucune connexion n’a pu être établie car l’ordinateur cible l’a expressément refusée'))"]
+
+Users: 10
+Average Response Time: 7150.57ms
+Median Response Time: 7240.65ms
+95th Percentile: 7279.02ms
+Error Rate: 100.00%
+Total Requests: 10
+Errors: ['Initial receive failed: ', 'Initial receive failed: ', 'Initial receive failed: ', 'Initial receive failed: ', 'Initial receive failed: ', 'Initial receive failed: ', "401: Invalid token: HTTPConnectionPool(host='localhost', port=8083): Max retries exceeded with url: /api/me (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x000001FCDE542870>: Failed to establish a new connection: [WinError 10061] Aucune connexion n’a pu être établie car l’ordinateur cible l’a expressément refusée'))", 'Initial receive failed: ', 'Initial receive failed: ', 'Initial receive failed: ']
+
+Users: 50
+Average Response Time: 5250.94ms
+Median Response Time: 5249.09ms
+95th Percentile: 5450.05ms
+Error Rate: 100.00%
+Total Requests: 50
+Errors: ['timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake', 'timed out during opening handshake']
