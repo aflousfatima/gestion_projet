@@ -174,7 +174,7 @@ jobs:
 
       - name: Copy .env file
         run: |
-          cp AI_Service/.env AI_Service/app/.env || echo "No .env file found, using defaults"
+          cp AI_Service/.env AI_Service/.env || echo "No .env file found, using defaults"
 
       - name: Run pytest
         working-directory: AI_Service
