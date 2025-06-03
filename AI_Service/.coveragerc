@@ -1,5 +1,5 @@
 [run]
-relative_files = True
-source = app
+relative_files = False
+source = /github/workspace/AI_Service/app
 omit =
     */__init__.py
