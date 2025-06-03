@@ -280,7 +280,7 @@ async def test_websocket_chat_invalid_token():
 
 @pytest.mark.asyncio
 async def test_websocket_chat_empty_query(mock_validate_token, mock_settings, mock_file_operations, mock_langdetect):
-    logger.debug("Testing test_websocket_chat_empty_query")
+    logger.debug("Testing test_websocket_chat_empty_query to see if it works")
     try:
         async with anyio.create_task_group() as tg:
             async def websocket_task():
