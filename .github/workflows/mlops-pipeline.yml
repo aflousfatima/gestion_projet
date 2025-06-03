@@ -204,6 +204,20 @@ jobs:
           name: coverage-report
           path: AI_Service/coverage.xml
 
+      - name: SonarQube Scan
+        uses: SonarSource/sonarcloud-github-action@v3.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=fatima-aflous
+            -Dsonar.projectKey=fatima-aflous_gestion-projet 
+            -Dsonar.python.version=3.12
+            -Dsonar.sources=AI_Service/app
+            -Dsonar.tests=AI_Service/tests
+            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
+            -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**
+            
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
         env:
