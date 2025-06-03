@@ -108,10 +108,10 @@ fluent_datasources:
     assets:
       csv_asset:
         type: csv
-        filepath_or_buffer: app\data\tasks_dataset.csv
+        filepath_or_buffer: app/data/tasks_dataset.csv
       json_asset:
         type: json
-        path_or_buf: app\data\intents_complete.json
+        path_or_buf: app/data/intents_complete.json
 notebooks:
 include_rendered_content:
   globally: false
