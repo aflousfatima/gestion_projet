@@ -123,22 +123,16 @@ def mock_langdetect():
         yield mock_detect
 
 
-def test_chat_endpoint_diagnostic(chat_request_data, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect, mock_rag_pipeline, mock_fetch_api_response):
+@pytest.mark.asyncio
+async def test_chat_endpoint_diagnostic(chat_request_data, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect, mock_rag_pipeline, mock_fetch_api_response):
     logger.debug("Running test_chat_endpoint_diagnostic")
     try:
-        # Run the client.post in an asyncio event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            response = loop.run_until_complete(
-                loop.run_in_executor(None, lambda: client.post(
-                    "/api/v1/chat",
-                    json=chat_request_data,
-                    headers={"Authorization": "Bearer valid_token"}
-                ))
+        async with TestClient(app) as client:
+            response = await client.post(
+                "/api/v1/chat",
+                json=chat_request_data,
+                headers={"Authorization": "Bearer valid_token"}
             )
-        finally:
-            loop.close()
         logger.debug(f"Diagnostic response: status={response.status_code}, body={response.text}")
         assert response.status_code == 200, f"Diagnostic failed: {response.text}"
         response_data = response.json()
@@ -151,25 +145,17 @@ def test_chat_endpoint_diagnostic(chat_request_data, mock_validate_token, mock_s
         logger.error(f"Diagnostic test error: {str(e)}", exc_info=True)
         raise
 
-def test_chat_endpoint_success(chat_request_data, mock_rag_pipeline, mock_fetch_api_response, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect):
+@pytest.mark.asyncio
+async def test_chat_endpoint_success(chat_request_data, mock_rag_pipeline, mock_fetch_api_response, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect):
     logger.debug("Running test_chat_endpoint_success")
     try:
-        # Debug mock setup
-        logger.debug(f"Mock rag_pipeline: {mock_rag_pipeline}")
         with patch("app.api.v1.chatbot_endpoints.rag_pipeline", mock_rag_pipeline):
-            # Run the client.post in an asyncio event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                response = loop.run_until_complete(
-                    loop.run_in_executor(None, lambda: client.post(
-                        "/api/v1/chat",
-                        json=chat_request_data,
-                        headers={"Authorization": "Bearer valid_token"}
-                    ))
+            async with TestClient(app) as client:
+                response = await client.post(
+                    "/api/v1/chat",
+                    json=chat_request_data,
+                    headers={"Authorization": "Bearer valid_token"}
                 )
-            finally:
-                loop.close()
         logger.debug(f"Response: status={response.status_code}, body={response.text}")
         assert response.status_code == 200, f"Expected status 200, got {response.status_code}: {response.text}"
         response_data = response.json()
@@ -184,11 +170,10 @@ def test_chat_endpoint_success(chat_request_data, mock_rag_pipeline, mock_fetch_
             user_id=chat_request_data["userId"],
             token="valid_token"
         )
-        # Removed: mock_fetch_api_response.assert_called_once()
     except Exception as e:
         logger.error(f"Error in test_chat_endpoint_success: {str(e)}", exc_info=True)
         raise
-     
+    
 def test_chat_endpoint_missing_token(chat_request_data):
     logger.debug("Running test_chat_endpoint_missing_token")
     try:

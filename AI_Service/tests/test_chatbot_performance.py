@@ -265,6 +265,7 @@ def calculate_metrics(responses: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 @pytest.mark.performance
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.getenv("CI") == "true", reason="Performance tests require a running server")
 async def test_http_performance(mock_validate_token, mock_settings, mock_requests_get, mock_httpx_get, redis_client):
     logger.info("Running HTTP performance tests")
     if not await check_server_availability():
@@ -301,6 +302,7 @@ async def test_http_performance(mock_validate_token, mock_settings, mock_request
 
 @pytest.mark.performance
 @pytest.mark.asyncio
+@pytest.mark.skipif(os.getenv("CI") == "true", reason="Performance tests require a running server")
 async def test_websocket_performance(mock_validate_token, mock_settings, mock_requests_get, mock_httpx_get, redis_client):
     logger.info("Running WebSocket performance tests")
     if not await check_server_availability():
