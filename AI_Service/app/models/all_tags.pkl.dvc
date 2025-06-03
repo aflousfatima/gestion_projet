@@ -1,0 +1,5 @@
+outs:
+- md5: 268acc5df3499ad18402f88acb98fe29
+  size: 99
+  hash: md5
+  path: all_tags.pkl
