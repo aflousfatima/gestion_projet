@@ -21,6 +21,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Verify DVC repository structure
+        working-directory: AI_Service
+        run: |
+          ls -la
+          ls -la .dvc || echo "DVC directory (.dvc) not found!"
+          cat .dvc/config || echo "DVC config file (.dvc/config) not found!"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
