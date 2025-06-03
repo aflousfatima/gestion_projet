@@ -28,3 +28,4 @@ websockets
 pytest-asyncio   
 fakeredis
 great_expectations
+dvc=3.59.2
