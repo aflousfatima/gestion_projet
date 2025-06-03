@@ -243,7 +243,7 @@ jobs:
             -Dsonar.organization=fatimaaflous
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
-            -Dsonar.sources=AI_Service/app/main.py,AI_Service/app/api,AI_Service/app/chatbot,AI_Service/app/core,AI_Service/app/models,AI_Service/app/preprocessing,AI_Service/app/utils
+            -Dsonar.sources=AI_Service/app
             -Dsonar.tests=AI_Service/tests
             -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
