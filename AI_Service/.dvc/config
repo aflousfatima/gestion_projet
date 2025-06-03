@@ -3,3 +3,5 @@
 ['remote "myremote"']
     url = gdrive://1R3AalsPW0O9aqkuZxbAJt25-S7lnriF3
     gdrive_user_credentials_file = ../credentials.json
+    gdrive_use_service_account = true
+    gdrive_service_account_json_file_path = ../gdrive-sa.json
