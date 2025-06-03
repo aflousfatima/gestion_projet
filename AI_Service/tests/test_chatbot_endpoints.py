@@ -122,7 +122,7 @@ def mock_langdetect():
         mock_detect.return_value = "en"
         yield mock_detect
 
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="Performance tests require a running server")
+@pytest.mark.skipif(os.getenv("CI") == "true", reason="ignore Performance tests require a running server")
 def test_chat_endpoint_diagnostic(chat_request_data, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect, mock_rag_pipeline, mock_fetch_api_response):
     logger.debug("Running test_chat_endpoint_diagnostic")
     try:
