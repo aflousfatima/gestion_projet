@@ -255,5 +255,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && '✅ Analyse SonarQube Cloud terminée avec succès ! Consultez les résultats : https://sonarcloud.io/project/overview?id=fatimaflous_gestion_projet' || '🚨 Alerte : Échec de l\'analyse SonarQube. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+            ${{ job.status == 'success' && 'Success: SonarQube Cloud analysis completed! Results: https://sonarcloud.io/project/overview?id=fatimaflous_gestion_projet' || format('Failure: SonarQube analysis failed. Check logs: https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
