@@ -69,10 +69,10 @@ jobs:
         working-directory: AI_Service
         run: |
           for file in app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl app/chatbot/data/metadata.pkl app/chatbot/data/faiss_index.bin; do
-          if [ ! -f "$file" ]; then
-          echo "Error: $file not found"
-          exit 1
-          fi
+            if [ ! -f "$file" ]; then
+              echo "Error: $file not found"
+              exit 1
+            fi
           done
 
       - name: Run Great Expectations checkpoint for intents
@@ -203,7 +203,7 @@ jobs:
         with:
           name: coverage-report
           path: AI_Service/coverage.xml
-            
+
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
         env:
@@ -221,12 +221,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-        fetch-depth: 0 # Nécessaire pour analyser l'historique Git
+          fetch-depth: 0 # Nécessaire pour analyser l'historique Git
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-        python-version: '3.12'
+          python-version: '3.12'
 
       - name: Install DVC dependencies
         run: |
@@ -277,18 +277,18 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-        args: >
-          -Dsonar.organization=fatimaaflous
-          -Dsonar.projectKey=fatimaaflous_gestion_projet
-          -Dsonar.python.version=3.12
-          -Dsonar.projectBaseDir=AI_Service
-          -Dsonar.sources=app
-          -Dsonar.tests=tests
-          -Dsonar.python.coverage.reportPaths=coverage.xml
-          -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
-          -Dsonar.coverage.exclusions=**/__init__.py
-          -Dsonar.scm.revision=main
-          -Dsonar.branch.name=main
+          args: >
+            -Dsonar.organization=fatimaaflous
+            -Dsonar.projectKey=fatimaaflous_gestion_projet
+            -Dsonar.python.version=3.12
+            -Dsonar.projectBaseDir=AI_Service
+            -Dsonar.sources=app
+            -Dsonar.tests=tests
+            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
+            -Dsonar.coverage.exclusions=**/__init__.py
+            -Dsonar.scm.revision=main
+            -Dsonar.branch.name=main
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
