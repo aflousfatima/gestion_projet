@@ -40,13 +40,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.59.2
+          pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.55.2
 
       # Configurer le compte de service Google Drive
       - name: Configure Google Drive service account
+        env:
+          GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
         run: |
-          # Écrire le secret dans un fichier JSON en évitant les problèmes d'échappement
-          printf '%s' "${{ secrets.GDRIVE_SA_CREDENTIALS }}" > AI_Service/gdrive-sa.json
+          # Écrire le secret dans un fichier JSON via une variable d'environnement
+          echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
           # Vérifier le contenu du fichier
           cat AI_Service/gdrive-sa.json
           # Vérifier la validité du JSON
@@ -54,8 +56,6 @@ jobs:
           cd AI_Service
           dvc remote modify myremote gdrive_use_service_account true
           dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
-        env:
-          GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
 
       # Restaurer les fichiers DVC depuis Google Drive
       - name: Pull DVC files
@@ -88,12 +88,12 @@ jobs:
           python manage-great_expectations/create_checkpoint.py > tasks_output.log 2>&1
           cat tasks_output.log
 
-      # Vérifier le résultat de la validation des tâches
+      # Vérifier le résultat des tâches
       - name: Check tasks validation result
         working-directory: AI_Service
         run: |
           if grep -q "Success: False" tasks_output.log || grep -q "Erreur" tasks_output.log; then
-            echo "Tasks validation failed! Check the output above for details."
+            echo "Tasks validation failed ! Check the output above for details."
             exit 1
           fi
         if: always()
@@ -105,7 +105,7 @@ jobs:
           dvc add app/data/intents_complete.json || echo "No changes in intents_complete.json"
           dvc add app/data/tasks_dataset.csv || echo "No changes in tasks_dataset.csv"
           git add app/data/*.dvc
-          git commit -m "Versionner les fichiers de données avec DVC" || echo "Aucun changement à committer"
+          git commit -m "Versionner les fichiers de données avec DVC" || echo "Aucun changement à versionner."
           dvc push
 
       # Pousser les changements Git
@@ -123,5 +123,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && '✅ Les données ont passé la validation et ont été versionnées avec succès !' || '🚨 Alerte : Échec de la validation ou du versioning. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+            ${{ job.status == 'success' && '✅ Les données ont passé la validation et ont été versionnées avec succès !' || '🚨 Alerte : Échec de la validation ou du versioning. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
