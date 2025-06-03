@@ -45,9 +45,11 @@ jobs:
       # Configurer le compte de service Google Drive
       - name: Configure Google Drive service account
         run: |
-          echo "${{ secrets.GDRIVE_SA_CREDENTIALS }}" > AI_Service/gdrive-sa.json
-          # Vérifier que le fichier JSON est valide
+          # Écrire le secret dans un fichier JSON en préservant le format
+          echo "${{ secrets.GDRIVE_SA_CREDENTIALS }}" | python -c "import sys, json; json.dump(json.load(sys.stdin), open('AI_Service/gdrive-sa.json', 'w'), indent=2)"
+          # Vérifier le contenu du fichier
           cat AI_Service/gdrive-sa.json
+          # Vérifier la validité du JSON
           python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
           cd AI_Service
           dvc remote modify myremote gdrive_use_service_account true
