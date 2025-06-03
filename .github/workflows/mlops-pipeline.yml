@@ -34,7 +34,7 @@ jobs:
       - name: Run Great Expectations checkpoint for intents
         working-directory: AI_Service
         run: |
-          python manage-great_expectations/create_intents_checkpoint.py > intents_output.log 2>&1
+          python manage-great_expectations/create_intents_checkpoint.py || { cat intents_output.log; exit 1; }
           cat intents_output.log
 
       - name: Check intents validation result
