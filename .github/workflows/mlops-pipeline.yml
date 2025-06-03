@@ -11,7 +11,6 @@ on:
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
-
   schedule:
     - cron: '0 14 * * *' # Exécute tous les jours à 14h UTC
 
@@ -30,12 +29,26 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install great_expectations==0.18.21 pandas
+          pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.55.2
+
+      - name: Configure Google Drive credentials
+        run: |
+          echo "${{ secrets.GDRIVE_CREDENTIALS }}" > gdrive_credentials.json
+          dvc remote modify myremote gdrive_user_credentials_file gdrive_credentials.json
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+
+      - name: Pull DVC files
+        working-directory: AI_Service
+        run: |
+          dvc pull app/data/intents_complete.json.dvc app/data/tasks_dataset.csv.dvc
+          ls -la app/data
+        continue-on-error: false
 
       - name: Run Great Expectations checkpoint for intents
         working-directory: AI_Service
         run: |
-          python manage-great_expectations/create_intents_checkpoint.py || { cat intents_output.log; exit 1; }
+          python manage-great_expectations/create_intents_checkpoint.py > intents_output.log 2>&1
           cat intents_output.log
 
       - name: Check intents validation result
@@ -69,5 +82,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && 'Les données ont passé la validation avec succès !' || 'Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+            ${{ job.status == 'success' && ' Les données ont passé la validation avec succès !' || ' Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
