@@ -172,9 +172,23 @@ jobs:
             fi
           done
 
-      - name: Copy .env file
+      - name: Create .env file
         run: |
-          cp AI_Service/.env AI_Service/.env || echo "No .env file found, using defaults"
+          cat << EOF > AI_Service/.env
+          MODEL_PATH=app/models/best_model.pkl
+          SCALER_PATH=app/models/scaler.pkl
+          ENCODER_PATH=app/models/encoder.pkl
+          TFIDF_PATH=app/models/tfidf.pkl
+          TAGS_PATH=app/models/all_tags.pkl
+          FEATURES_PATH=app/models/features.pkl
+          LOG_LEVEL=INFO
+          INTENTS_PATH=app/chatbot/data/intents_complete.json
+          FAISS_INDEX_PATH=app/chatbot/data/faiss_index.bin
+          METADATA_PATH=app/chatbot/data/metadata.pkl
+          CACHE_PATH=app/chatbot/data/cache.json
+          PROJECT_API_URL=http://localhost:8085/api/chatbot/projects
+          TASK_API_URL=http://localhost:8086/api/chatbot/tasks
+          EOF
 
       - name: Run pytest
         working-directory: AI_Service
