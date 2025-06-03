@@ -1,4 +1,4 @@
-name: MLOps Pipeline
+name: MLOps Pipeline with DVC and Google Drive
 
 on:
   push:
@@ -15,12 +15,14 @@ on:
     - cron: '0 14 * * *' # Exécute tous les jours à 14h UTC
 
 jobs:
-  validate-data:
+  validate-and-version:
     runs-on: ubuntu-latest
     steps:
+      # Cloner le dépôt
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Vérifier la structure du dépôt DVC
       - name: Verify DVC repository structure
         working-directory: AI_Service
         run: |
@@ -28,26 +30,30 @@ jobs:
           ls -la .dvc || echo "DVC directory (.dvc) not found!"
           cat .dvc/config || echo "DVC config file (.dvc/config) not found!"
 
+      # Configurer Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      # Installer les dépendances
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.55.2
+          pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.59.2
 
       # Configurer le compte de service Google Drive
       - name: Configure Google Drive service account
         run: |
           echo "${{ secrets.GDRIVE_SA_CREDENTIALS }}" > AI_Service/gdrive-sa.json
+          # Vérifier que le fichier JSON est valide
+          cat AI_Service/gdrive-sa.json
+          python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
           cd AI_Service
           dvc remote modify myremote gdrive_use_service_account true
           dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
         env:
           GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
-          
 
       # Restaurer les fichiers DVC depuis Google Drive
       - name: Pull DVC files
@@ -56,12 +62,14 @@ jobs:
           dvc pull
         continue-on-error: true
 
+      # Exécuter la validation des intents
       - name: Run Great Expectations checkpoint for intents
         working-directory: AI_Service
         run: |
           python manage-great_expectations/create_intents_checkpoint.py > intents_output.log 2>&1
           cat intents_output.log
 
+      # Vérifier le résultat de la validation des intents
       - name: Check intents validation result
         working-directory: AI_Service
         run: |
@@ -71,12 +79,14 @@ jobs:
           fi
         if: always()
 
+      # Exécuter la validation des tâches
       - name: Run Great Expectations checkpoint for tasks
         working-directory: AI_Service
         run: |
           python manage-great_expectations/create_checkpoint.py > tasks_output.log 2>&1
           cat tasks_output.log
 
+      # Vérifier le résultat de la validation des tâches
       - name: Check tasks validation result
         working-directory: AI_Service
         run: |
@@ -86,6 +96,24 @@ jobs:
           fi
         if: always()
 
+      # Versionner les fichiers avec DVC
+      - name: Version data with DVC
+        working-directory: AI_Service
+        run: |
+          dvc add app/data/intents_complete.json || echo "No changes in intents_complete.json"
+          dvc add app/data/tasks_dataset.csv || echo "No changes in tasks_dataset.csv"
+          git add app/data/*.dvc
+          git commit -m "Versionner les fichiers de données avec DVC" || echo "Aucun changement à committer"
+          dvc push
+
+      # Pousser les changements Git
+      - name: Push Git changes
+        run: |
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Envoyer une notification Slack
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
         env:
@@ -93,5 +121,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && '✅ Les données ont passé la validation avec succès !' || '🚨 Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+            ${{ job.status == 'success' && '✅ Les données ont passé la validation et ont été versionnées avec succès !' || '🚨 Alerte : Échec de la validation ou du versioning. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
