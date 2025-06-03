@@ -32,6 +32,7 @@ jobs:
           pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.55.2
 
       - name: Configure Google Drive credentials
+        working-directory: AI_Service
         run: |
           echo "${{ secrets.GDRIVE_CREDENTIALS }}" > gdrive_credentials.json
           dvc remote modify myremote gdrive_user_credentials_file gdrive_credentials.json
@@ -82,5 +83,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && ' Les données ont passé la validation avec succès !' || ' Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+            ${{ job.status == 'success' && '✅ Les données ont passé la validation avec succès !' || '🚨 Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
