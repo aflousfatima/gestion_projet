@@ -240,8 +240,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=fatima-aflous
-            -Dsonar.projectKey=fatima-aflous_gestion-projet
+            -Dsonar.organization=fatimaaflous
+            -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
             -Dsonar.sources=AI_Service/app
             -Dsonar.tests=AI_Service/tests
