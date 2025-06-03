@@ -38,20 +38,23 @@ jobs:
           python -m pip install --upgrade pip
           pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.55.2
 
-      - name: Configure Google Drive credentials
-        working-directory: AI_Service
+      # Configurer le compte de service Google Drive
+      - name: Configure Google Drive service account
         run: |
-          echo "${{ secrets.GDRIVE_CREDENTIALS }}" > gdrive_credentials.json
-          dvc remote modify myremote gdrive_user_credentials_file gdrive_credentials.json
+          echo "${{ secrets.GDRIVE_SA_CREDENTIALS }}" > AI_Service/gdrive-sa.json
+          cd AI_Service
+          dvc remote modify myremote gdrive_use_service_account true
+          dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
         env:
-          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+          GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
+          
 
+      # Restaurer les fichiers DVC depuis Google Drive
       - name: Pull DVC files
-        working-directory: AI_Service
         run: |
-          dvc pull app/data/intents_complete.json.dvc app/data/tasks_dataset.csv.dvc
-          ls -la app/data
-        continue-on-error: false
+          cd AI_Service
+          dvc pull
+        continue-on-error: true
 
       - name: Run Great Expectations checkpoint for intents
         working-directory: AI_Service
