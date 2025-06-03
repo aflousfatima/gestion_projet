@@ -203,20 +203,6 @@ jobs:
         with:
           name: coverage-report
           path: AI_Service/coverage.xml
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarcloud-github-action@v3.0.0
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.organization=fatima-aflous
-            -Dsonar.projectKey=fatima-aflous_gestion-projet 
-            -Dsonar.python.version=3.12
-            -Dsonar.sources=AI_Service/app
-            -Dsonar.tests=AI_Service/tests
-            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
-            -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**
             
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
@@ -226,4 +212,48 @@ jobs:
           channel-id: 'C08V19BHQVB'
           slack-message: |
             ${{ job.status == 'success' && '✅ Tous les tests pytest ont réussi ! Rapport de couverture généré.' || '🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+        if: always()
+
+  sonar-analysis:
+    runs-on: ubuntu-latest
+    needs: run-tests
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Nécessaire pour analyser l'historique Git
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: AI_Service/
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarcloud-github-action@v3.0.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=fatima-aflous 
+            -Dsonar.projectKey=fatima-aflous_gestion-projet 
+            -Dsonar.python.version=3.12
+            -Dsonar.sources=AI_Service/app
+            -Dsonar.tests=AI_Service/tests
+            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
+            -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: 'C08V19BHQVB'
+          slack-message: |
+            ${{ job.status == 'success' && '✅ Analyse SonarQube Cloud terminée avec succès ! Consultez les résultats : https://sonarcloud.io/project/overview?id=fatimaflous_gestion_projet' || '🚨 Alerte : Échec de l\'analyse SonarQube. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
