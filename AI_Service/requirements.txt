@@ -29,3 +29,4 @@ pytest-asyncio
 fakeredis
 great_expectations
 dvc=3.59.2
+dvc[gdrive]=3.59.2
