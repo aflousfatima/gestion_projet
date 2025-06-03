@@ -6,6 +6,8 @@ on:
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
+      - 'AI_Service/app/**.py' # Déclencher sur les modifications de code
+      - 'AI_Service/tests/**.py' # Déclencher sur les modifications de tests
   pull_request:
     branches: [ main ]
     paths:
@@ -127,4 +129,58 @@ jobs:
           channel-id: 'C08V19BHQVB'
           slack-message: |
             ${{ job.status == 'success' && '✅ Les données ont passé la validation et ont été versionnées avec succès !' || '🚨 Alerte : Échec de la validation ou du versioning. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+        if: always()
+    
+  run-tests:
+    runs-on: ubuntu-latest
+    needs: validate-and-version # S'exécute après validate-and-version
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r AI_Service/requirements.txt
+          pip install pytest-cov
+
+      - name: Configure Google Drive service account
+        env:
+          GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
+        run: |
+          echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
+          python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
+          cd AI_Service
+          dvc remote modify myremote gdrive_use_service_account true
+          dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
+
+      - name: Pull DVC files
+        run: |
+          cd AI_Service
+          dvc pull
+
+      - name: Run pytest
+        working-directory: AI_Service
+        run: |
+          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml -v
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: AI_Service/coverage.xml
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: 'C08V19BHQVB'
+          slack-message: |
+            ${{ job.status == 'success' && '✅ Tous les tests pytest ont réussi ! Rapport de couverture généré.' || '🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
