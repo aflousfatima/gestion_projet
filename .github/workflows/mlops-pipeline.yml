@@ -4,13 +4,14 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'AI_Service/app/data/intents_complete.json'
-      - 'AI_Service/app/data/tasks_dataset.csv'
+      - 'AI_Service/app/data/intents_complete.json.dvc'
+      - 'AI_Service/app/data/tasks_dataset.csv.dvc'
   pull_request:
     branches: [ main ]
     paths:
-      - 'AI_Service/app/data/intents_complete.json'
-      - 'AI_Service/app/data/tasks_dataset.csv'
+      - 'AI_Service/app/data/intents_complete.json.dvc'
+      - 'AI_Service/app/data/tasks_dataset.csv.dvc'
+
   schedule:
     - cron: '0 14 * * *' # Exécute tous les jours à 14h UTC
 
