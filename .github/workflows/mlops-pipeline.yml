@@ -13,6 +13,8 @@ on:
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
+      - 'AI_Service/app/**.py'
+      - 'AI_Service/tests/**.py'
   schedule:
     - cron: '0 14 * * *' # Exécute tous les jours à 14h UTC
 
