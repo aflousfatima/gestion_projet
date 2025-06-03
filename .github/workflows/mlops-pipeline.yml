@@ -233,14 +233,18 @@ jobs:
         with:
           name: coverage-report
           path: AI_Service/
+
       - name: Debug coverage report and directory structure
         run: |
-         echo "Listing files in /github/workspace/AI_Service/app:"
-         ls -R /github/workspace/AI_Service/app
-         echo "Checking coverage.xml paths:"
-         cat /github/workspace/AI_Service/coverage.xml | grep -E 'source|filename'
-         echo "Verifying coverage.xml exists:"
-         ls -l /github/workspace/AI_Service/coverage.xml
+          echo "Listing files in /github/workspace/AI_Service/app:"
+          ls -R /github/workspace/AI_Service/app || echo "app directory not found"
+          echo "Listing specific source files:"
+          ls -l /github/workspace/AI_Service/app/main.py || echo "main.py not found"
+          ls -l /github/workspace/AI_Service/app/api/v1/chatbot_endpoints.py || echo "chatbot_endpoints.py not found"
+          echo "Checking coverage.xml paths:"
+          cat /github/workspace/AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not found"
+          echo "Verifying coverage.xml exists:"
+          ls -l /github/workspace/AI_Service/coverage.xml || echo "coverage.xml not found"
     
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
