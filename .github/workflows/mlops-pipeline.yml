@@ -7,6 +7,7 @@ on:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
       - 'AI_Service/app/models/*.dvc' # Ajout des fichiers .pkl suivis par DVC
+      - 'AI_Service/app/chatbot/data/*.dvc' # Ajout pour metadata.pkl et faiss_index.bin
       - 'AI_Service/app/**.py'
       - 'AI_Service/tests/**.py'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
       - 'AI_Service/app/models/*.dvc' # Ajout des fichiers .pkl suivis par DVC
+      - 'AI_Service/app/chatbot/data/*.dvc' # Ajout pour metadata.pkl et faiss_index.bin
       - 'AI_Service/app/**.py'
       - 'AI_Service/tests/**.py'
   schedule:
@@ -63,14 +65,14 @@ jobs:
           dvc pull
           ls -la app/models/ # Debug : vérifier les fichiers .pkl
 
-      - name: Ensure model files exist
+      - name: Ensure model and data files exist
         working-directory: AI_Service
         run: |
-          for file in app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl; do
-            if [ ! -f "$file" ]; then
-              echo "Error: $file not found"
-              exit 1
-            fi
+          for file in app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl app/chatbot/data/metadata.pkl app/chatbot/data/faiss_index.bin; do
+          if [ ! -f "$file" ]; then
+          echo "Error: $file not found"
+          exit 1
+          fi
           done
 
       - name: Run Great Expectations checkpoint for intents
@@ -161,6 +163,7 @@ jobs:
           cd AI_Service
           dvc pull
           ls -la app/models/ # Debug : vérifier les fichiers .pkl
+          ls -la app/chatbot/data/ # Debug : vérifier metadata.pkl et faiss_index.bin
 
       - name: Ensure model files exist
         working-directory: AI_Service
