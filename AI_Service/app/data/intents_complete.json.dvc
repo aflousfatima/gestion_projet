@@ -1,0 +1,5 @@
+outs:
+- md5: 34ba097083a59211a1f7c51c4f8502d8
+  size: 18721
+  hash: md5
+  path: intents_complete.json
