@@ -40,7 +40,7 @@ jobs:
       - name: Check intents validation result
         working-directory: AI_Service
         run: |
-          if grep -q "Success: False" intents_output.log; then
+          if grep -q "Success: False" intents_output.log || grep -q "Erreur" intents_output.log; then
             echo "Intents validation failed! Check the output above for details."
             exit 1
           fi
@@ -55,7 +55,7 @@ jobs:
       - name: Check tasks validation result
         working-directory: AI_Service
         run: |
-          if grep -q "Success: False" tasks_output.log; then
+          if grep -q "Success: False" tasks_output.log || grep -q "Erreur" tasks_output.log; then
             echo "Tasks validation failed! Check the output above for details."
             exit 1
           fi
