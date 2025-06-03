@@ -233,7 +233,15 @@ jobs:
         with:
           name: coverage-report
           path: AI_Service/
-
+      - name: Debug coverage report and directory structure
+        run: |
+         echo "Listing files in /github/workspace/AI_Service/app:"
+         ls -R /github/workspace/AI_Service/app
+         echo "Checking coverage.xml paths:"
+         cat /github/workspace/AI_Service/coverage.xml | grep -E 'source|filename'
+         echo "Verifying coverage.xml exists:"
+         ls -l /github/workspace/AI_Service/coverage.xml
+    
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
         env:
