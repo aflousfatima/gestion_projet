@@ -64,8 +64,8 @@ jobs:
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
         with:
-          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel-id: 'C08V19BHQVB' # Remplace par l'ID de ton canal Slack
-          text: |
-            ${{ job.status == 'success' && 'Les données ont passé la validation avec succès !' || 'Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+               slack-bot-user-oauth-token: ${{ secrets.SLACK_BOT_TOKEN }}
+               channel-id: 'C08V19BHQVB'
+               slack-message: |
+                 ${{ job.status == 'success' && ' Les données ont passé la validation des données !' || ' Alerte : Les données n''ont pas passé la validation. Vérifiez les logs : https://github.com/fatimaaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
