@@ -218,12 +218,12 @@ jobs:
         working-directory: AI_Service
         run: |
           # Supprimer le préfixe 'app/' des chemins
-          sed -i 's#filename="app/\(.*\)"#filename="\1#"g' coverage.xml
+          sed -i 's@filename="app/\(.*\)"@filename="\1"@g' coverage.xml
           # Remplacer <source> par '.'
-          sed -i 's#<source>.*</source>#<source>.</source>#' coverage.xml
+          sed -i 's@<source>.*</source>@<source>.</source>@' coverage.xml
           # Débogage
           echo "Updated coverage.xml paths:"
-          cat coverage.xml | grep -E 'source|filename' | head -n 20
+          grep -E 'source|filename' coverage.xml | head -n 20
 
       - name: Debug pytest results
         working-directory: AI_Service
