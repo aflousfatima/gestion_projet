@@ -326,11 +326,15 @@ jobs:
         working-directory: AI_Service
         run: |
           if [ -f coverage-report/coverage.xml ]; then
+            echo "Found coverage.xml in coverage-report/, moving to AI_Service/"
             mv coverage-report/coverage.xml .
             rm -rf coverage-report/
+          elif [ -f coverage.xml ]; then
+            echo "coverage.xml already in correct location (AI_Service/)"
           else
-            echo "Error: coverage.xml not found in coverage-report/"
+            echo "Error: coverage.xml not found in coverage-report/ or AI_Service/"
             ls -R .
+            find . -name coverage.xml || echo "coverage.xml not found anywhere"
             exit 1
           fi
 
