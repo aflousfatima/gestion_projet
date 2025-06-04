@@ -213,8 +213,8 @@ jobs:
         run: |
           # Supprimer le préfixe 'app/' des chemins des fichiers
           sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
-          # Définir <source> comme 'app' (chemin relatif)
-          sed -i 's#<source>/github/workspace/AI_Service/app</source>#<source>app</source>#' coverage.xml
+          # Définir <source> comme '.' (répertoire courant)
+          sed -i 's#<source>/github/workspace/AI_Service/app</source>#<source>.</source>#' coverage.xml
           # Débogage
           echo "Updated coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename' | head -n 20
@@ -248,6 +248,18 @@ jobs:
           name: coverage-report
           path: AI_Service/coverage.xml
         if: always()
+
+      - name: Debug directory structure and coverage.xml
+        working-directory: AI_Service
+        run: |
+         pwd
+         ls -R
+         echo "Checking coverage.xml content:"
+         cat coverage.xml | grep -E 'source|filename' | head -n 20
+         echo "Checking if app directory exists:"
+         ls -ld app
+         echo "Checking source files in app:"
+         find app -type f -name "*.py"
 
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v4
