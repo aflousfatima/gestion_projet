@@ -206,8 +206,25 @@ jobs:
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"
-          
+         pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"          
+
+      - name: Fix coverage.xml paths for SonarCloud
+        working-directory: AI_Service
+        run: |
+          # Préfixer les chemins des fichiers avec 'app/'
+          sed -i 's#filename="\([^/]*\)"#filename="app/\1"#g' coverage.xml
+          sed -i 's#filename="api/v1/\(.*\)"#filename="app/api/v1/\1"#g' coverage.xml
+          sed -i 's#filename="chatbot/\(.*\)"#filename="app/chatbot/\1"#g' coverage.xml
+          sed -i 's#filename="core/\(.*\)"#filename="app/core/\1"#g' coverage.xml
+          sed -i 's#filename="models/\(.*\)"#filename="app/models/\1"#g' coverage.xml
+          sed -i 's#filename="preprocessing/\(.*\)"#filename="app/preprocessing/\1"#g' coverage.xml
+          sed -i 's#filename="utils/\(.*\)"#filename="app/utils/\1"#g' coverage.xml
+          # Mettre à jour <source> pour refléter le chemin absolu
+          sed -i 's#<source>app</source>#<source>/github/workspace/AI_Service/app</source>#' coverage.xml
+          # Débogage
+          echo "Updated coverage.xml paths:"
+          cat coverage.xml | grep -E 'source|filename' | head -n 20
+        
       - name: Debug pytest results
         working-directory: AI_Service
         run: |
@@ -301,9 +318,7 @@ jobs:
         run: |
           echo "Current working directory: $(pwd)"
           ls -R . || echo "AI_Service not found"
-          ls -l app/main.py || echo "main.py not found"
-          ls -l app/utils/exceptions.py || echo "exceptions.py not found"
-          ls -l app/chatbot/rag_pipeline.py || echo "rag_pipeline.py not found"
+          ls -l app/*.py app/**/*.py || echo "Python files not found"
           ls -l coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
@@ -326,6 +341,7 @@ jobs:
             -Dsonar.scm.provider=git
             -Dsonar.scm.revision=main
             -Dsonar.branch.name=main
+            -Dsonar.python.coveragePlugin=cobertura
 
       - name: Debug SonarCloud working directory
         working-directory: AI_Service
