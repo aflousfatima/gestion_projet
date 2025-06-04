@@ -1,9 +1,11 @@
 [run]
 relative_files = True
-source = AI_Service/app
+source = app
 branch = true
 omit =
     */__init__.py
+    */tests/*
+    */manage-great_expectations/*
 
 [report]
 exclude_lines =
@@ -12,3 +14,5 @@ exclude_lines =
     if __name__ == .__main__.:
 omit =
     */__init__.py
+    */tests/*
+    */manage-great_expectations/*

@@ -12,3 +12,5 @@ __pycache__/
 credentials.json
 .bin
 .json
+.properties
+.scannerwork

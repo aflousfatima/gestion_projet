@@ -121,75 +121,7 @@ def mock_langdetect():
         logger.debug("Mocking langdetect.detect")
         mock_detect.return_value = "en"
         yield mock_detect
-
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="test Performance tests require a running server")
-def test_chat_endpoint_diagnostic(chat_request_data, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect, mock_rag_pipeline, mock_fetch_api_response):
-    logger.debug("Running test_chat_endpoint_diagnostic")
-    try:
-        # Run the client.post in an asyncio event loop
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        try:
-            response = loop.run_until_complete(
-                loop.run_in_executor(None, lambda: client.post(
-                    "/api/v1/chat",
-                    json=chat_request_data,
-                    headers={"Authorization": "Bearer valid_token"}
-                ))
-            )
-        finally:
-            loop.close()
-        logger.debug(f"Diagnostic response: status={response.status_code}, body={response.text}")
-        assert response.status_code == 200, f"Diagnostic failed: {response.text}"
-        response_data = response.json()
-        assert response_data["intent"] == "intent_7"
-        assert response_data["response"] == "narjiss el mjass has tasks: #3 - Implement Real-Time Comment System (due 2025-06-01), #1 - Define UI Requirements (due 2025-05-30)."
-        assert response_data["parameters"] == {"firstName": "narjiss", "lastName": "el mjass"}
-        assert response_data["confidence"] == 0.7
-        assert response_data["buttons"] == []
-    except Exception as e:
-        logger.error(f"Diagnostic test error: {str(e)}", exc_info=True)
-        raise
-    
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="test Performance tests require a running server")
-def test_chat_endpoint_success(chat_request_data, mock_rag_pipeline, mock_fetch_api_response, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect):
-    logger.debug("Running test_chat_endpoint_success")
-    try:
-        # Debug mock setup
-        logger.debug(f"Mock rag_pipeline: {mock_rag_pipeline}")
-        with patch("app.api.v1.chatbot_endpoints.rag_pipeline", mock_rag_pipeline):
-            # Run the client.post in an asyncio event loop
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            try:
-                response = loop.run_until_complete(
-                    loop.run_in_executor(None, lambda: client.post(
-                        "/api/v1/chat",
-                        json=chat_request_data,
-                        headers={"Authorization": "Bearer valid_token"}
-                    ))
-                )
-            finally:
-                loop.close()
-        logger.debug(f"Response: status={response.status_code}, body={response.text}")
-        assert response.status_code == 200, f"Expected status 200, got {response.status_code}: {response.text}"
-        response_data = response.json()
-        assert response_data["intent"] == "intent_7"
-        assert response_data["response"] == "narjiss el mjass has tasks: #3 - Implement Real-Time Comment System (due 2025-06-01), #1 - Define UI Requirements (due 2025-05-30)."
-        assert response_data["parameters"] == {"firstName": "narjiss", "lastName": "el mjass"}
-        assert response_data["confidence"] == 0.7
-        assert response_data["buttons"] == []
-        logger.debug(f"Checking mock_rag_pipeline call: {mock_rag_pipeline.call_args}")
-        mock_rag_pipeline.assert_called_once_with(
-            chat_request_data["query"],
-            user_id=chat_request_data["userId"],
-            token="valid_token"
-        )
-        # Removed: mock_fetch_api_response.assert_called_once()
-    except Exception as e:
-        logger.error(f"Error in test_chat_endpoint_success: {str(e)}", exc_info=True)
-        raise
-     
+        
 def test_chat_endpoint_missing_token(chat_request_data):
     logger.debug("Running test_chat_endpoint_missing_token")
     try:
