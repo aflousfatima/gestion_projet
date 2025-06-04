@@ -211,16 +211,10 @@ jobs:
       - name: Fix coverage.xml paths for SonarCloud
         working-directory: AI_Service
         run: |
-          # Préfixer les chemins des fichiers avec 'app/'
-          sed -i 's#filename="\([^/]*\)"#filename="app/\1"#g' coverage.xml
-          sed -i 's#filename="api/v1/\(.*\)"#filename="app/api/v1/\1"#g' coverage.xml
-          sed -i 's#filename="chatbot/\(.*\)"#filename="app/chatbot/\1"#g' coverage.xml
-          sed -i 's#filename="core/\(.*\)"#filename="app/core/\1"#g' coverage.xml
-          sed -i 's#filename="models/\(.*\)"#filename="app/models/\1"#g' coverage.xml
-          sed -i 's#filename="preprocessing/\(.*\)"#filename="app/preprocessing/\1"#g' coverage.xml
-          sed -i 's#filename="utils/\(.*\)"#filename="app/utils/\1"#g' coverage.xml
-          # Mettre à jour <source> pour refléter le chemin absolu
-          sed -i 's#<source>app</source>#<source>/github/workspace/AI_Service/app</source>#' coverage.xml
+          # Supprimer le préfixe 'app/' des chemins des fichiers
+          sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
+          # Définir <source> comme 'app' (chemin relatif)
+          sed -i 's#<source>/github/workspace/AI_Service/app</source>#<source>app</source>#' coverage.xml
           # Débogage
           echo "Updated coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename' | head -n 20
