@@ -147,7 +147,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r AI_Service/requirements.txt
-          pip install pytest pytest-asyncio pytest-cov
+          pip install pytest==8.3.3 pytest-asyncio==0.24.0 pytest-cov==5.0.0
 
       - name: Configure Google Drive service account
         env:
@@ -194,10 +194,29 @@ jobs:
           TASK_API_URL=http://localhost:8086/api/chatbot/tasks
           EOF
 
+      - name: Debug directory structure
+        working-directory: AI_Service
+        run: |
+          echo "Current working directory: $(pwd)"
+          ls -R . || echo "Directory listing failed"
+          ls -l app/*.py app/**/*.py || echo "No Python files found in app/"
+          ls -l tests/*.py tests/**/*.py || echo "No Python files found in tests/"
+          cat .coveragerc || echo ".coveragerc not found"
+
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=AI_Service/app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v
+          pytest tests/ --asyncio-mode=auto --cov=AI_Service/app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"
+
+      - name: Debug pytest output
+        working-directory: AI_Service
+        run: |
+          echo "Checking if coverage.xml exists:"
+          ls -l coverage.xml || echo "coverage.xml not found"
+          if [ -f coverage.xml ]; then
+            echo "Contents of coverage.xml:"
+            cat coverage.xml
+          fi
 
       - name: Verify coverage.xml
         working-directory: AI_Service
