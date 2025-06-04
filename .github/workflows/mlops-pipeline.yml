@@ -291,7 +291,6 @@ jobs:
         with:
           args: >
             -Dsonar.organization=fatimaaflous
- Melaniewu 3:50 AM
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
             -Dsonar.projectBaseDir=.
