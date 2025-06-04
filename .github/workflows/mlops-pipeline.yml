@@ -342,5 +342,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-          ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+            ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
