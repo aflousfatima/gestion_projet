@@ -151,7 +151,7 @@ def test_chat_endpoint_diagnostic(chat_request_data, mock_validate_token, mock_s
         logger.error(f"Diagnostic test error: {str(e)}", exc_info=True)
         raise
     
-@pytest.mark.skipif(os.getenv("CI") == "true", reason="test Performance tests require a running server")
+@pytest.mark.skipif(os.getenv("CI") == "true", reason="Performance tests require a running server")
 def test_chat_endpoint_success(chat_request_data, mock_rag_pipeline, mock_fetch_api_response, mock_validate_token, mock_settings, mock_file_operations, mock_langdetect):
     logger.debug("Running test_chat_endpoint_success")
     try:
