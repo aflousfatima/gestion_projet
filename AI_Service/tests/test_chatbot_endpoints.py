@@ -175,7 +175,7 @@ async def test_websocket_chat_success(mock_rag_pipeline, mock_redis_client, mock
                         logger.debug(f"Received typing response: {typing_response}")
                         assert typing_response == {"status": "typing"}
 
-                        # Receive actual response
+                        # Receive actual response from
                         response = websocket.receive_json()
                         logger.debug(f"Received response: {response}")
                         assert response["intent"] == "intent_7"
