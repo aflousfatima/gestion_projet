@@ -321,8 +321,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.organization=fatimaflous
-            -Dsonar.projectKey=fatimaflous_gestion_projet
+            -Dsonar.organization=fatimaaflous
+            -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
             -Dsonar.projectBaseDir=.
             -Dsonar.sources=AI_Service/app
