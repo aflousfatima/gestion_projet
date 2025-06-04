@@ -196,11 +196,12 @@ jobs:
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc --cov-source=app -v
+          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc -v
 
-      - name: Debug coverage.xml content
+      - name: Debug pytest results
         working-directory: AI_Service
         run: |
+          echo "Pytest exit code: $?"
           ls -l coverage.xml || echo "coverage.xml not found"
           cat coverage.xml | head -n 50 || echo "coverage.xml not readable"
           cat coverage.xml | grep -E 'source|filename' || echo "No source or filename entries found"
@@ -210,6 +211,7 @@ jobs:
         with:
           name: coverage-report
           path: AI_Service/coverage.xml
+        if: always()
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
@@ -280,6 +282,12 @@ jobs:
           echo "Checking coverage.xml paths:"
           cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
+      - name: Fix coverage.xml paths
+        run: |
+          sed -i 's|<source>app</source>|<source>AI_Service/app</source>|g' AI_Service/coverage.xml
+          sed -i 's|filename="|filename="app/|g' AI_Service/coverage.xml
+          cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
         env:
@@ -289,10 +297,10 @@ jobs:
             -Dsonar.organization=fatimaaflous
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
-            -Dsonar.projectBaseDir=AI_Service
-            -Dsonar.sources=app
-            -Dsonar.tests=tests
-            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.projectBaseDir=.
+            -Dsonar.sources=AI_Service/app
+            -Dsonar.tests=AI_Service/tests
+            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.revision=main
