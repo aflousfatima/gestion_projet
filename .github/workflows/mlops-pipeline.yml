@@ -196,8 +196,7 @@ jobs:
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc -v
-
+          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc --cov-branch -v
       - name: Debug pytest results
         working-directory: AI_Service
         run: |
