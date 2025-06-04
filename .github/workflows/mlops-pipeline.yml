@@ -207,7 +207,7 @@ jobs:
         working-directory: AI_Service
         run: |
           pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"
-
+          
       - name: Debug pytest results
         working-directory: AI_Service
         run: |
@@ -230,21 +230,6 @@ jobs:
           echo "Coverage.xml generated, size: $(wc -l coverage.xml) lines"
           echo "Checking coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename'
-
-      - name: Fix coverage.xml paths
-        working-directory: AI_Service
-        run: |
-          sed -i 's|<source>app</source>|<source>AI_Service/app</source>|g' coverage.xml
-          sed -i 's|filename="|filename="AI_Service/app/|g' coverage.xml
-          echo "Coverage.xml paths after fix:"
-          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
-
-      - name: Remove __init__.py from coverage.xml
-        working-directory: AI_Service
-        run: |
-          sed -i '/<class name="__init__.py" filename="AI_Service\/app\/[^"]*__init__.py"/,/<\/class>/d' coverage.xml
-          echo "Coverage.xml after removing __init__.py entries:"
-          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
           
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -286,8 +271,8 @@ jobs:
 
       - name: Install DVC
         run: |
-          python -m pip install --upgrade pip
-          pip install dvc[gdrive]==3.55.2
+            python -m pip install --upgrade pip
+            pip install dvc[gdrive]==3.55.2
 
       - name: Configure Google Drive service account
         env:
@@ -312,15 +297,16 @@ jobs:
           path: AI_Service/
 
       - name: Debug coverage report and directory structure
+        working-directory: AI_Service
         run: |
           echo "Current working directory: $(pwd)"
-          ls -R AI_Service || echo "AI_Service not found"
-          ls -l AI_Service/app/main.py || echo "main.py not found"
-          ls -l AI_Service/app/utils/exceptions.py || echo "exceptions.py not found"
-          ls -l AI_Service/app/chatbot/rag_pipeline.py || echo "rag_pipeline.py not found"
-          ls -l AI_Service/coverage.xml || echo "coverage.xml not found"
+          ls -R . || echo "AI_Service not found"
+          ls -l app/main.py || echo "main.py not found"
+          ls -l app/utils/exceptions.py || echo "exceptions.py not found"
+          ls -l app/chatbot/rag_pipeline.py || echo "rag_pipeline.py not found"
+          ls -l coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
-          cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
@@ -331,10 +317,10 @@ jobs:
             -Dsonar.organization=fatimaaflous
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
-            -Dsonar.projectBaseDir=.
-            -Dsonar.sources=AI_Service/app
-            -Dsonar.tests=AI_Service/tests
-            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
+            -Dsonar.projectBaseDir=AI_Service
+            -Dsonar.sources=app
+            -Dsonar.tests=tests
+            -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.provider=git
@@ -342,11 +328,12 @@ jobs:
             -Dsonar.branch.name=main
 
       - name: Debug SonarCloud working directory
+        working-directory: AI_Service
         run: |
           echo "SonarCloud working directory: $(pwd)"
-          ls -la AI_Service/
-          ls -la AI_Service/app/
-          ls -l AI_Service/coverage.xml || echo "coverage.xml not found in AI_Service"
+          ls -la .
+          ls -la app/
+          ls -l coverage.xml || echo "coverage.xml not found"
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
@@ -355,5 +342,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+          ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
