@@ -198,6 +198,12 @@ jobs:
         run: |
           pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc -v
 
+      - name: Debug coverage.xml content
+        working-directory: AI_Service
+        run: |
+          ls -l coverage.xml || echo "coverage.xml not found"
+          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
@@ -270,7 +276,7 @@ jobs:
           echo "Checking coverage.xml:"
           ls -l AI_Service/coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
-          cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable""
+          cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
@@ -284,7 +290,7 @@ jobs:
             -Dsonar.projectBaseDir=AI_Service
             -Dsonar.sources=app
             -Dsonar.tests=tests
-            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.revision=main
