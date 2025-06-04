@@ -206,16 +206,18 @@ jobs:
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=AI_Service/app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"
+          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"
 
-      - name: Debug pytest output
+      - name: Debug pytest results
         working-directory: AI_Service
         run: |
-          echo "Checking if coverage.xml exists:"
+          echo "Pytest exit code: $?"
           ls -l coverage.xml || echo "coverage.xml not found"
           if [ -f coverage.xml ]; then
-            echo "Contents of coverage.xml:"
-            cat coverage.xml
+            echo "Contents of coverage.xml (first 50 lines):"
+            cat coverage.xml | head -n 50
+            echo "Checking coverage.xml paths:"
+            cat coverage.xml | grep -E 'source|filename'
           fi
 
       - name: Verify coverage.xml
@@ -225,31 +227,40 @@ jobs:
             echo "Error: coverage.xml is empty or not generated"
             exit 1
           fi
+          echo "Coverage.xml generated, size: $(wc -l coverage.xml) lines"
           echo "Checking coverage.xml paths:"
-          cat coverage.xml | grep -E 'source|filename'
+            cat coverage.xml | grep -E 'source|filename'
+
+      - name: Fix coverage.xml paths
+        working-directory: AI_Service
+        run: |
+          sed -i 's|<source>app</source>|<source>AI_Service/app</source>|g' coverage.xml
+          sed -i 's|filename="|filename="AI_Service/app/|g' coverage.xml
+          echo "Coverage.xml paths after fix:"
+          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.0
         with:
           name: coverage-report
           path: AI_Service/coverage.xml
         if: always()
 
       - name: Upload coverage HTML report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.0
         with:
           name: coverage-html
           path: AI_Service/cov_html
         if: always()
 
       - name: Send Slack notification
-        uses: slackapi/slack-github-action@v1.26.0
+        uses: slackapi/slack-github-action@v1.0.0
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && format('✅ Tous les tests pytest ont réussi ! Couverture des lignes : {0}%, branches : {1}%. Rapport : https://github.com/fatimaflous/gestion_projet/actions/runs/{2}', '73.48', '43.85', github.run_id) || format('🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+            ${{ job.status == 'success' && format('✅ Tous les tests pytest ont réussi ! Couverture des lignes : {0}%, branches : {1}%.'}, '73.00', '43.85' || format('🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id)) }}
         if: always()
 
   sonar-analysis:
@@ -266,14 +277,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install DVC dependencies
+      - name: Install DVC
+        run: actions install
         run: |
           python -m pip install --upgrade pip
-          pip install dvc[gdrive]==3.55.2
+          pip install dvc[gdrive_service_account]=3.55.2
 
-      - name: Configure Google Drive service account
+      - name: Configure Google Drive
         env:
-          GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
+          GDRIVE_SA_CREDENTIALS: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
           echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
           python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
@@ -295,10 +307,11 @@ jobs:
 
       - name: Debug coverage report and directory structure
         run: |
-          echo "Current working directory: $(pwd)"
+          echo "Current working directory:: $(pwd)"
           ls -R AI_Service || echo "AI_Service not found"
-          ls -l AI_Service/app/utils/exceptions.py || echo "exceptions.py not found"
-          ls -l AI_Service/app/chatbot/rag_pipeline.py || echo "rag_pipeline.py not found"
+          ls -l AI_Service/app/main.py || echo "main.py not found"
+          ls -l AI_Service/app/utils/exceptions.py || echo "exceptions.py or not found"
+          ls -l AI_Service/app/chatbot/rag_pipeline.py || echo Cháls -l "rag_pipeline.py not found"
           ls -l AI_Service/coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
           cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
@@ -308,9 +321,9 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-          args: >
-            -Dsonar.organization=fatimaaflous
-            -Dsonar.projectKey=fatimaaflous_gestion_projet
+          args: |
+            -Dsonar.organization=fatimaflous
+            -Dsonar.projectKey=fatimaflous_gestion_projet
             -Dsonar.python.version=3.12
             -Dsonar.projectBaseDir=.
             -Dsonar.sources=AI_Service/app
@@ -336,5 +349,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+            ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
