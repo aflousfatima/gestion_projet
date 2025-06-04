@@ -239,6 +239,13 @@ jobs:
           echo "Coverage.xml paths after fix:"
           cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
+      - name: Remove __init__.py from coverage.xml
+        working-directory: AI_Service
+        run: |
+          sed -i '/<class name="__init__.py" filename="AI_Service\/app\/[^"]*__init__.py"/,/<\/class>/d' coverage.xml
+          echo "Coverage.xml after removing __init__.py entries:"
+          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+          
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
