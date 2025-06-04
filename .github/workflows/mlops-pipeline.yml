@@ -208,13 +208,20 @@ jobs:
         run: |
          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"          
 
+      - name: Debug coverage.xml before fixing paths
+        working-directory: AI_Service
+        run: |
+          echo "Coverage.xml content before fixing paths:"
+          cat coverage.xml | grep -E 'source|filename' | head -n 20
+    
       - name: Fix coverage.xml paths for SonarCloud
         working-directory: AI_Service
         run: |
           # Supprimer le préfixe 'app/' des chemins des fichiers
+          # Supprimer le préfixe 'app/' des chemins des fichiers
           sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
-          # Définir <source> comme '.' (répertoire courant)
-          sed -i 's#<source>/github/workspace/AI_Service/app</source>#<source>.</source>#' coverage.xml
+          # Remplacer <source> par '.' (peu importe la valeur initiale)
+          sed -i 's#<source>.*</source>#<source>.</source>#' coverage.xml
           # Débogage
           echo "Updated coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename' | head -n 20
@@ -312,6 +319,13 @@ jobs:
           cd AI_Service
           dvc pull
           ls -la app/ app/data/ app/models/ app/chatbot/data/ || echo "DVC files not found"
+
+      - name: Check downloaded coverage.xml content
+        working-directory: AI_Service
+        run: |
+          echo "Checking downloaded coverage.xml content:"
+          ls -l coverage.xml
+          cat coverage.xml | grep -E 'source|filename' | head -n 20
 
       - name: Download coverage report
         uses: actions/download-artifact@v4
