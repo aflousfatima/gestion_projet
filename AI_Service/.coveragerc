@@ -1,6 +1,7 @@
 [run]
 relative_files = True
-source = app
+source = AI_Service/app
+branch = true
 
 [report]
 exclude_lines =
