@@ -5,19 +5,20 @@ on:
     branches: [ main ]
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
-      - 'AI_service/app_data/tasks_dataset.csv.dvc'
-      - 'AI_service/app/services/*.dvc'
-      - 'AI_service/app_data/data/*.dvc'
-      - 'AI_Service/app/**/*.py'
-      - 'AI_service/tests_services/*.py'
+      - 'AI_Service/app/data/tasks_dataset.csv.dvc'
+      - 'AI_Service/app/models/*.dvc'
+      - 'AI_Service/app/chatbot/data/*.dvc'
+      - 'AI_Service/app/**.py'
+      - 'AI_Service/tests/**.py'
   pull_request:
     branches: [ main ]
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
-      - 'AI_service/app_data/tasks_dataset.csv.dvc'
-      - 'AI_service/app/services/*.dvc'
-      - 'AI_service/app/**/*.py'
-      - 'AI_service/tests_services/*.py'
+      - 'AI_Service/app/data/tasks_dataset.csv.dvc'
+      - 'AI_Service/app/models/*.dvc'
+      - 'AI_Service/app/chatbot/data/*.dvc'
+      - 'AI_Service/app/**.py'
+      - 'AI_Service/tests/**.py'
   schedule:
     - cron: '0 14 * * *'
 
