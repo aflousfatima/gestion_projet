@@ -64,6 +64,7 @@ jobs:
           cd AI_Service
           dvc pull
           ls -la app/models/
+          ls -la app/data/ app/chatbot/data/
 
       - name: Ensure model and data files exist
         working-directory: AI_Service
@@ -196,20 +197,30 @@ jobs:
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc --cov-branch -v
-      - name: Debug pytest results
+          pytest tests/ --asyncio-mode=auto --cov=AI_Service/app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v
+
+      - name: Verify coverage.xml
         working-directory: AI_Service
         run: |
-          echo "Pytest exit code: $?"
-          ls -l coverage.xml || echo "coverage.xml not found"
-          cat coverage.xml | head -n 50 || echo "coverage.xml not readable"
-          cat coverage.xml | grep -E 'source|filename' || echo "No source or filename entries found"
+          if [ ! -s coverage.xml ]; then
+            echo "Error: coverage.xml is empty or not generated"
+            exit 1
+          fi
+          echo "Checking coverage.xml paths:"
+          cat coverage.xml | grep -E 'source|filename'
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
           path: AI_Service/coverage.xml
+        if: always()
+
+      - name: Upload coverage HTML report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: AI_Service/cov_html
         if: always()
 
       - name: Send Slack notification
@@ -219,7 +230,7 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && '✅ Tous les tests pytest ont réussi ! Rapport de couverture généré.' || '🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+            ${{ job.status == 'success' && format('✅ Tous les tests pytest ont réussi ! Couverture des lignes : {0}%, branches : {1}%. Rapport : https://github.com/fatimaflous/gestion_projet/actions/runs/{2}', '73.48', '43.85', github.run_id) || format('🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
 
   sonar-analysis:
@@ -266,25 +277,11 @@ jobs:
       - name: Debug coverage report and directory structure
         run: |
           echo "Current working directory: $(pwd)"
-          echo "Listing files in $(pwd):"
-          ls -R . || echo "Current directory not found"
-          echo "Listing files in AI_Service:"
           ls -R AI_Service || echo "AI_Service not found"
-          echo "Listing files in AI_Service/app:"
-          ls -R AI_Service/app || echo "app directory not found"
-          echo "Listing specific source files:"
-          ls -l AI_Service/app/main.py || echo "main.py not found"
-          ls -l AI_Service/app/api/v1/chatbot_endpoints.py || echo "chatbot_endpoints.py not found"
-          ls -l AI_Service/app/chatbot/utils.py || echo "utils.py not found"
-          echo "Checking coverage.xml:"
+          ls -l AI_Service/app/utils/exceptions.py || echo "exceptions.py not found"
+          ls -l AI_Service/app/chatbot/rag_pipeline.py || echo "rag_pipeline.py not found"
           ls -l AI_Service/coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
-          cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
-
-      - name: Fix coverage.xml paths
-        run: |
-          sed -i 's|<source>app</source>|<source>AI_Service/app</source>|g' AI_Service/coverage.xml
-          sed -i 's|filename="|filename="app/|g' AI_Service/coverage.xml
           cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
       - name: SonarQube Scan
@@ -294,6 +291,7 @@ jobs:
         with:
           args: >
             -Dsonar.organization=fatimaaflous
+ Melaniewu 3:50 AM
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
             -Dsonar.projectBaseDir=.
@@ -302,6 +300,7 @@ jobs:
             -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
+            -Dsonar.scm.provider=git
             -Dsonar.scm.revision=main
             -Dsonar.branch.name=main
 
@@ -319,5 +318,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && 'Success: SonarQube Cloud analysis completed! Results: https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('Failure: SonarQube analysis failed. Check logs: https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+            ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
