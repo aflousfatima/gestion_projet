@@ -5,20 +5,19 @@ on:
     branches: [ main ]
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
-      - 'AI_Service/app/data/tasks_dataset.csv.dvc'
-      - 'AI_Service/app/models/*.dvc'
-      - 'AI_Service/app/chatbot/data/*.dvc'
-      - 'AI_Service/app/**.py'
-      - 'AI_Service/tests/**.py'
+      - 'AI_service/app_data/tasks_dataset.csv.dvc'
+      - 'AI_service/app/services/*.dvc'
+      - 'AI_service/app_data/data/*.dvc'
+      - 'AI_Service/app/**/*.py'
+      - 'AI_service/tests_services/*.py'
   pull_request:
     branches: [ main ]
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
-      - 'AI_Service/app/data/tasks_dataset.csv.dvc'
-      - 'AI_Service/app/models/*.dvc'
-      - 'AI_Service/app/chatbot/data/*.dvc'
-      - 'AI_Service/app/**.py'
-      - 'AI_Service/tests/**.py'
+      - 'AI_service/app_data/tasks_dataset.csv.dvc'
+      - 'AI_service/app/services/*.dvc'
+      - 'AI_service/app/**/*.py'
+      - 'AI_service/tests_services/*.py'
   schedule:
     - cron: '0 14 * * *'
 
@@ -47,14 +46,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install great_expectations==0.18.21 pandas dvc[gdrive]==3.55.2
+          pip install great_expectations==0.18.21 pandas dvc[gdrive]=3.55.2
 
       - name: Configure Google Drive service account
         env:
           GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
         run: |
           echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
-          python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
+          python -c "import json; json.load(open('AI_service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
           cd AI_Service
           dvc remote modify myremote gdrive_use_service_account true
           dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
@@ -63,13 +62,13 @@ jobs:
         run: |
           cd AI_Service
           dvc pull
-          ls -la app/models/
-          ls -la app/data/ app/chatbot/data/
+          ls -la app/services/
+          ls -la app/data/ app/services/data/
 
       - name: Ensure model and data files exist
-        working-directory: AI_Service
+        working-directory: ai_service
         run: |
-          for file in app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl app/chatbot/data/metadata.pkl app/chatbot/data/faiss_index.bin; do
+          for file in app/data/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl app/chatbot/data/metadata.pkl app/chatbot/data/faiss_index.bin; do
             if [ ! -f "$file" ]; then
               echo "Error: $file not found"
               exit 1
@@ -154,7 +153,7 @@ jobs:
           GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
         run: |
           echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
-          python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
+          python -c "import json; json.load(open('AI_service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
           cd AI_Service
           dvc remote modify myremote gdrive_use_service_account true
           dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
@@ -163,13 +162,13 @@ jobs:
         run: |
           cd AI_Service
           dvc pull
-          ls -la app/models/
-          ls -la app/chatbot/data/
+          ls -la app/services/
+          ls -la app/services/data/
 
       - name: Ensure model files exist
-        working-directory: AI_Service
+        working-directory: ai_service
         run: |
-          for file in app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl; do
+          for file in app/data/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl; do
             if [ ! -f "$file" ]; then
               echo "Error: $file not found"
               exit 1
@@ -217,10 +216,10 @@ jobs:
       - name: Fix coverage.xml paths for SonarCloud
         working-directory: AI_Service
         run: |
-          # Ne pas supprimer le préfixe 'app/' des chemins
-          # sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
-          # Remplacer <source> par './app'
-          sed -i 's#<source>.*</source>#<source>./app</source>#' coverage.xml
+          # Supprimer le préfixe 'app/' des chemins
+          sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
+          # Remplacer <source> par '.'
+          sed -i 's#<source>.*</source>#<source>.</source>#' coverage.xml
           # Débogage
           echo "Updated coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename' | head -n 20
@@ -301,14 +300,14 @@ jobs:
       - name: Install DVC
         run: |
           python -m pip install --upgrade pip
-          pip install dvc[gdrive]==3.55.2
+          pip install dvc[gdrive]=3.55.2
 
       - name: Configure Google Drive service account
         env:
           GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
         run: |
           echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
-          python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
+          python -c "import json; json.load(open('AI_service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
           cd AI_Service
           dvc remote modify myremote gdrive_use_service_account true
           dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
@@ -342,21 +341,21 @@ jobs:
           fi
 
       - name: Check downloaded coverage.xml content
-        working-directory: AI_Service
+        working-directory: AI_Service/app
         run: |
           echo "Checking downloaded coverage.xml content:"
-          ls -l coverage.xml || { echo "Error: coverage.xml not found"; exit 1; }
-          cat coverage.xml | grep -E 'source|filename' | head -n 20
+          ls -l ../coverage.xml || { echo "Error: coverage.xml not found"; exit 1; }
+          cat ../coverage.xml | grep -E 'source|filename' | head -n 20
 
       - name: Debug coverage report and directory structure
-        working-directory: AI_Service
+        working-directory: AI_Service/app
         run: |
           echo "Current working directory: $(pwd)"
-          ls -R . || echo "AI_Service not found"
-          ls -l app/*.py app/**/*.py || echo "Python files not found"
-          ls -l coverage.xml || echo "coverage.xml not found"
+          ls -R . || echo "AI_Service/app not found"
+          ls -l *.py api/v1/*.py || echo "Python files not found"
+          ls -l ../coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
-          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+          cat ../coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
 
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
@@ -367,10 +366,10 @@ jobs:
             -Dsonar.organization=fatimaaflous
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
-            -Dsonar.projectBaseDir=AI_Service
-            -Dsonar.sources=app
-            -Dsonar.tests=tests
-            -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.projectBaseDir=AI_Service/app
+            -Dsonar.sources=.
+            -Dsonar.tests=../tests
+            -Dsonar.python.coverage.reportPaths=../coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.provider=git
@@ -379,12 +378,12 @@ jobs:
             -Dsonar.python.coveragePlugin=cobertura
 
       - name: Debug SonarCloud working directory
-        working-directory: AI_Service
+        working-directory: AI_Service/app
         run: |
           echo "SonarCloud working directory: $(pwd)"
           ls -la .
-          ls -la app/
-          ls -l coverage.xml || echo "coverage.xml not found"
+          ls -la ../tests/
+          ls -l ../coverage.xml || echo "coverage.xml not found"
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
