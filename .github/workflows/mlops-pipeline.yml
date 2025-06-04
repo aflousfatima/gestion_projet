@@ -257,20 +257,20 @@ jobs:
 
       - name: Debug coverage report and directory structure
         run: |
-          echo "Listing files in /github/workspace:"
-          ls -R /github/workspace || echo "Workspace not found"
-          echo "Listing files in /github/workspace/AI_Service:"
-          ls -R /github/workspace/AI_Service || echo "AI_Service not found"
-          echo "Listing files in /github/workspace/AI_Service/app:"
-          ls -R /github/workspace/AI_Service/app || echo "app directory not found"
+          echo "Listing files in $(pwd):"
+          ls -R . || echo "Current directory not found"
+          echo "Listing files in AI_Service:"
+          ls -R AI_Service || echo "AI_Service not found"
+          echo "Listing files in AI_Service/app:"
+          ls -R AI_Service/app || echo "app directory not found"
           echo "Listing specific source files:"
-          ls -l /github/workspace/AI_Service/app/main.py || echo "main.py not found"
-          ls -l /github/workspace/AI_Service/app/api/v1/chatbot_endpoints.py || echo "chatbot_endpoints.py not found"
-          ls -l /github/workspace/AI_Service/app/chatbot/utils.py || echo "utils.py not found"
+          ls -l AI_Service/app/main.py || echo "main.py not found"
+          ls -l AI_Service/app/api/v1/chatbot_endpoints.py || echo "chatbot_endpoints.py not found"
+          ls -l AI_Service/app/chatbot/utils.py || echo "utils.py not found"
           echo "Checking coverage.xml:"
-          ls -l /github/workspace/AI_Service/coverage.xml || echo "coverage.xml not found"
+          ls -l AI_Service/coverage.xml || echo "coverage.xml not found"
           echo "Checking coverage.xml paths:"
-          cat /github/workspace/AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+          cat AI_Service/coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable""
 
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
