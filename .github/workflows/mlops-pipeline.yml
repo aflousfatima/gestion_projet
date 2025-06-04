@@ -217,8 +217,11 @@ jobs:
       - name: Fix coverage.xml paths for SonarCloud
         working-directory: AI_Service
         run: |
-          sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
-          sed -i 's#<source>.*</source>#<source>.</source>#' coverage.xml
+          # Ne pas supprimer le préfixe 'app/' des chemins
+          # sed -i 's#filename="app/\(.*\)"#filename="\1"#g' coverage.xml
+          # Remplacer <source> par './app'
+          sed -i 's#<source>.*</source>#<source>./app</source>#' coverage.xml
+          # Débogage
           echo "Updated coverage.xml paths:"
           cat coverage.xml | grep -E 'source|filename' | head -n 20
 
