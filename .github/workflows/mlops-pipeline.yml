@@ -6,8 +6,8 @@ on:
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
-      - 'AI_Service/app/models/*.dvc' # Ajout des fichiers .pkl suivis par DVC
-      - 'AI_Service/app/chatbot/data/*.dvc' # Ajout pour metadata.pkl et faiss_index.bin
+      - 'AI_Service/app/models/*.dvc'
+      - 'AI_Service/app/chatbot/data/*.dvc'
       - 'AI_Service/app/**.py'
       - 'AI_Service/tests/**.py'
   pull_request:
@@ -15,8 +15,8 @@ on:
     paths:
       - 'AI_Service/app/data/intents_complete.json.dvc'
       - 'AI_Service/app/data/tasks_dataset.csv.dvc'
-      - 'AI_Service/app/models/*.dvc' # Ajout des fichiers .pkl suivis par DVC
-      - 'AI_Service/app/chatbot/data/*.dvc' # Ajout pour metadata.pkl et faiss_index.bin
+      - 'AI_Service/app/models/*.dvc'
+      - 'AI_Service/app/chatbot/data/*.dvc'
       - 'AI_Service/app/**.py'
       - 'AI_Service/tests/**.py'
   schedule:
@@ -63,7 +63,7 @@ jobs:
         run: |
           cd AI_Service
           dvc pull
-          ls -la app/models/ # Debug : vérifier les fichiers .pkl
+          ls -la app/models/
 
       - name: Ensure model and data files exist
         working-directory: AI_Service
@@ -110,7 +110,7 @@ jobs:
         run: |
           dvc add app/data/intents_complete.json || echo "No changes in intents_complete.json"
           dvc add app/data/tasks_dataset.csv || echo "No changes in tasks_dataset.csv"
-          git add app/data/*.dvc app/models/*.dvc # Ajout des fichiers .dvc pour .pkl
+          git add app/data/*.dvc app/models/*.dvc
           git commit -m "Versionner les fichiers de données avec DVC" || echo "Aucun changement à versionner."
           dvc push
 
@@ -162,8 +162,8 @@ jobs:
         run: |
           cd AI_Service
           dvc pull
-          ls -la app/models/ # Debug : vérifier les fichiers .pkl
-          ls -la app/chatbot/data/ # Debug : vérifier metadata.pkl et faiss_index.bin
+          ls -la app/models/
+          ls -la app/chatbot/data/
 
       - name: Ensure model files exist
         working-directory: AI_Service
@@ -196,13 +196,14 @@ jobs:
       - name: Run pytest
         working-directory: AI_Service
         run: |
-          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc -v
+          pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-config=.coveragerc --cov-source=app -v
 
       - name: Debug coverage.xml content
         working-directory: AI_Service
         run: |
           ls -l coverage.xml || echo "coverage.xml not found"
-          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
+          cat coverage.xml | head -n 50 || echo "coverage.xml not readable"
+          cat coverage.xml | grep -E 'source|filename' || echo "No source or filename entries found"
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -227,7 +228,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Nécessaire pour analyser l'historique Git
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -263,6 +264,7 @@ jobs:
 
       - name: Debug coverage report and directory structure
         run: |
+          echo "Current working directory: $(pwd)"
           echo "Listing files in $(pwd):"
           ls -R . || echo "Current directory not found"
           echo "Listing files in AI_Service:"
@@ -290,11 +292,18 @@ jobs:
             -Dsonar.projectBaseDir=AI_Service
             -Dsonar.sources=app
             -Dsonar.tests=tests
-            -Dsonar.python.coverage.reportPaths=AI_Service/coverage.xml
+            -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.revision=main
             -Dsonar.branch.name=main
+
+      - name: Debug SonarCloud working directory
+        run: |
+          echo "SonarCloud working directory: $(pwd)"
+          ls -la AI_Service/
+          ls -la AI_Service/app/
+          ls -l AI_Service/coverage.xml || echo "coverage.xml not found in AI_Service"
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
@@ -303,5 +312,5 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && 'Success: SonarQube Cloud analysis completed! Results: https://sonarcloud.io/project/overview?id=fatimaflous_gestion_projet' || format('Failure: SonarQube analysis failed. Check logs: https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+            ${{ job.status == 'success' && 'Success: SonarQube Cloud analysis completed! Results: https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('Failure: SonarQube analysis failed. Check logs: https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
