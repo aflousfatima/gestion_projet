@@ -294,3 +294,122 @@ jobs:
           slack-message: |
             ${{ job.status == 'success' && '✅ Analyse SonarCloud terminée ! Résultats : https://sonarcloud.io/project/overview?id=fatimaaflous_gestion_projet' || format('🚨 Échec de l’analyse SonarCloud. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
         if: always()
+
+
+  train-model:
+    runs-on: ubuntu-latest
+    needs: sonar-analysis
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r AI_Service/requirements.txt
+          pip install mlflow==2.17.0 dvc[gdrive]==3.55.2
+
+      - name: Configure Google Drive service account
+        env:
+          GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
+        run: |
+          echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
+          python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
+          cd AI_Service
+          dvc remote modify myremote gdrive_use_service_account true
+          dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
+
+      - name: Pull DVC files
+        run: |
+          cd AI_Service
+          dvc pull
+          ls -la app/models/ app/data/ app/chatbot/data/
+
+      - name: Create .env file
+        run: |
+          cat << EOF > AI_Service/.env
+          DATA_PATH=app/data/tasks_dataset.csv
+          MODEL_PATH=app/models/best_model.pkl
+          SCALER_PATH=app/models/scaler.pkl
+          ENCODER_PATH=app/models/encoder.pkl
+          TFIDF_PATH=app/models/tfidf.pkl
+          TAGS_PATH=app/models/all_tags.pkl
+          FEATURES_PATH=app/models/features.pkl
+          INTENTS_PATH=app/data/intents_complete.json
+          FAISS_INDEX_PATH=app/chatbot/data/faiss_index.bin
+          METADATA_PATH=app/chatbot/data/metadata.pkl
+          CACHE_PATH=app/chatbot/data/cache.json
+          SIMILARITY_THRESHOLD=0.8
+          LOG_LEVEL=INFO
+          PROJECT_API_URL=http://localhost:8085/api/chatbot/projects
+          TASK_API_URL=http://localhost:8086/api/chatbot/tasks
+          EOF
+
+      - name: Check modified files
+        id: check_files
+        run: |
+          MODIFIED_FILES=$(git diff --name-only HEAD^ HEAD)
+          if [[ "$MODIFIED_FILES" =~ "AI_Service/app/data/tasks_dataset.csv.dvc" ]]; then
+            echo "predictor=true" >> $GITHUB_OUTPUT
+          else
+            echo "predictor=false" >> $GITHUB_OUTPUT
+          fi
+          if [[ "$MODIFIED_FILES" =~ "AI_Service/app/data/intents_complete.json.dvc" ]]; then
+            echo "chatbot=true" >> $GITHUB_OUTPUT
+          else
+            echo "chatbot=false" >> $GITHUB_OUTPUT
+          fi
+          echo "Modified files: $MODIFIED_FILES"
+
+      - name: Train predictor model
+        if: steps.check_files.outputs.predictor == 'true'
+        working-directory: AI_Service
+        run: |
+          python app/training/train_predictor.py || { echo "Predictor training failed"; exit 1; }
+
+      - name: Train chatbot model
+        if: steps.check_files.outputs.chatbot == 'true'
+        working-directory: AI_Service
+        run: |
+          python app/training/train_chatbot.py || { echo "Chatbot training failed"; exit 1; }
+
+      - name: Version predictor files with DVC
+        if: steps.check_files.outputs.predictor == 'true'
+        working-directory: AI_Service
+        run: |
+          dvc add app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl
+          git add app/models/*.dvc
+          git commit -m "Versionner les fichiers du modèle de prédiction avec DVC" || echo "Aucun changement à versionner."
+          dvc push
+
+      - name: Version chatbot files with DVC
+        if: steps.check_files.outputs.chatbot == 'true'
+        working-directory: AI_Service
+        run: |
+          dvc add app/chatbot/data/faiss_index.bin app/chatbot/data/metadata.pkl
+          git add app/chatbot/data/*.dvc
+          git commit -m "Versionner les fichiers du chatbot avec DVC" || echo "Aucun changement à versionner."
+          dvc push
+
+      - name: Update .env file
+        run: |
+          git add AI_Service/.env
+          git commit -m "Mettre à jour .env avec les nouveaux chemins" || echo "Aucun changement dans .env"
+          git push origin main
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Send Slack notification
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: 'C08V19BHQVB'
+          slack-message: |
+            ${{ job.status == 'success' && '✅ Entraînement réussi ! Fichiers versionnés sur Google Drive.' || '🚨 Alerte : Échec de l’entraînement. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
+        if: always()
