@@ -352,8 +352,9 @@ def main():
         # Comparaison des modèles
         results_df = pd.DataFrame(results)
         logger.info("Comparaison des modèles :\n" + results_df.sort_values(by='MMRE').to_string(index=False))
-        mlflow.log_artifact(pd.DataFrame.to_csv(results_df, 'results.csv'))
-
+        results_df.to_csv('results.csv')
+        mlflow.log_artifact('results.csv')
+        
         # Visualisations
         os.makedirs(PLOTS_DIR, exist_ok=True)
         plt.figure(figsize=(12, 6))
