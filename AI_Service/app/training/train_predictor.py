@@ -415,7 +415,8 @@ def main():
             mlflow.log_artifact(os.path.join(PLOTS_DIR, 'feature_importance.png'))
             plt.close()
             logger.info(f"Importance des features ({best_model_name}):\n" + feature_importance.to_string(index=False))
-            mlflow.log_artifact(pd.DataFrame.to_csv(feature_importance, 'feature_importance.csv'))
+            feature_importance.to_csv('feature_importance.csv')
+            mlflow.log_artifact('feature_importance.csv')
 
         # Comparaison des modèles par MMRE
         plt.figure(figsize=(12, 6))
