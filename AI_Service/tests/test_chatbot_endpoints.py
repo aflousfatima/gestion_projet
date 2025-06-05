@@ -12,7 +12,7 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Set Windows event loop policy to avoid all asyncio issues
+# Set Windows event loop policy to avoid asyncio issues
 if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     logger.debug("Set WindowsSelectorEventLoopPolicy for asyncio")
