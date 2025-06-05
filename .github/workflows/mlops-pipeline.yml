@@ -212,6 +212,22 @@ jobs:
           name: coverage-html
           path: AI_Service/cov_html
         if: always()
+        
+      - name: Install XML tools
+        run: sudo apt-get install -y libxml2-utils
+
+      - name: Extract coverage data
+        id: coverage
+        run: |
+            LINE_COVERAGE=$(xmllint --xpath "string(//coverage/@line-rate)" AI_Service/coverage.xml)
+            BRANCH_COVERAGE=$(xmllint --xpath "string(//coverage/@branch-rate)" AI_Service/coverage.xml)
+    
+            # Conversion en pourcentage
+            LINE_PERCENT=$(awk "BEGIN {printf \"%.2f\", $LINE_COVERAGE * 100}")
+            BRANCH_PERCENT=$(awk "BEGIN {printf \"%.2f\", $BRANCH_COVERAGE * 100}")
+
+            echo "line=${LINE_PERCENT}" >> $GITHUB_OUTPUT
+            echo "branch=${BRANCH_PERCENT}" >> $GITHUB_OUTPUT
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
@@ -220,7 +236,8 @@ jobs:
         with:
           channel-id: 'C08V19BHQVB'
           slack-message: |
-            ${{ job.status == 'success' && format('✅ Tous les tests pytest ont réussi ! Couverture des lignes : {0}%, branches : {1}%.', '73.00', '43.85') || format('🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+            ${{ job.status == 'success' && format('✅ Tous les tests pytest ont réussi ! Couverture des lignes : {0}%, branches : {1}%.', steps.coverage.outputs.line, steps.coverage.outputs.branch) || format('🚨 Alerte : Échec des tests pytest. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/{0}', github.run_id) }}
+
         if: always()
 
   sonar-analysis:
@@ -273,10 +290,10 @@ jobs:
             -Dsonar.organization=fatimaaflous
             -Dsonar.projectKey=fatimaaflous_gestion_projet
             -Dsonar.python.version=3.12
-            -Dsonar.projectBaseDir=AI_Service/app
-            -Dsonar.sources=.
-            -Dsonar.tests=../tests
-            -Dsonar.python.coverage.reportPaths=../coverage.xml
+            -Dsonar.projectBaseDir=AI_Service
+            -Dsonar.sources=app
+            -Dsonar.tests=tests
+            -Dsonar.python.coverage.reportPaths=coverage.xml
             -Dsonar.exclusions=**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.provider=git
