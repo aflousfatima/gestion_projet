@@ -948,10 +948,10 @@ def main():
         plot_response_times(test_queries, search_times, param_times, response_times, PLOT_PATH)
         plot_distance_boxplot(distances_list, predicted_intents, PLOT_PATH)
         save_metrics_table(
-            precision_at_1, fidelity_scores, similarity_scores, bleu_scores, meteor_scores,
-            rouge_scores, rouge_scores, response_diversity, search_times, response_times, param_times, PLOT_PATH
+            precision_at_1, fidelity_scores, rouge_scores, similarity_scores, bleu_scores, meteor_scores,
+            [score['rouge1'] for score in rouge_scores], [score['rougeL'] for score in rouge_scores],
+            response_diversity, search_times, response_times, param_times, PLOT_PATH
         )
-
         # Save error log
         if error_log:
             error_df = pd.DataFrame(error_log)
