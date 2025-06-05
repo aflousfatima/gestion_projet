@@ -302,6 +302,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -353,7 +355,7 @@ jobs:
       - name: Check modified files
         id: check_files
         run: |
-          MODIFIED_FILES=$(git diff --name-only HEAD^ HEAD)
+          MODIFIED_FILES=$(git diff --name-only HEAD^ HEAD || echo "")
           if [[ "$MODIFIED_FILES" =~ "AI_Service/app/data/tasks_dataset.csv.dvc" ]]; then
             echo "predictor=true" >> $GITHUB_OUTPUT
           else
