@@ -194,59 +194,10 @@ jobs:
           TASK_API_URL=http://localhost:8086/api/chatbot/tasks
           EOF
 
-      - name: Debug directory structure
-        working-directory: AI_Service
-        run: |
-          echo "Current working directory: $(pwd)"
-          ls -R . || echo "Directory listing failed"
-          ls -l app/*.py app/**/*.py || echo "No Python files found in app/"
-          ls -l tests/*.py tests/**/*.py || echo "No Python files found in tests/"
-          cat .coveragerc || echo ".coveragerc not found"
-
       - name: Run pytest
         working-directory: AI_Service
         run: |
           pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v || echo "Pytest failed, check logs above"
-
-      - name: Debug coverage.xml before fixing paths
-        working-directory: AI_Service
-        run: |
-          echo "Coverage.xml content before fixing paths:"
-          cat coverage.xml | grep -E 'source|filename' | head -n 20
-
-      - name: Fix coverage.xml paths for SonarCloud
-        working-directory: AI_Service
-        run: |
-          # Supprimer le préfixe 'app/' des chemins
-          sed -i 's@filename="app/\(.*\)"@filename="\1"@g' coverage.xml
-          # Remplacer <source> par '.'
-          sed -i 's@<source>.*</source>@<source>.</source>@' coverage.xml
-          # Débogage
-          echo "Updated coverage.xml paths:"
-          grep -E 'source|filename' coverage.xml | head -n 20
-
-      - name: Debug pytest results
-        working-directory: AI_Service
-        run: |
-          echo "Pytest exit code: $?"
-          ls -l coverage.xml || echo "coverage.xml not found"
-          if [ -f coverage.xml ]; then
-            echo "Contents of coverage.xml (first 50 lines):"
-            cat coverage.xml | head -n 50
-            echo "Checking coverage.xml paths:"
-            cat coverage.xml | grep -E 'source|filename'
-          fi
-
-      - name: Verify coverage.xml
-        working-directory: AI_Service
-        run: |
-          if [ ! -s coverage.xml ]; then
-            echo "Error: coverage.xml is empty or not generated"
-            exit 1
-          fi
-          echo "Coverage.xml generated, size: $(wc -l coverage.xml) lines"
-          echo "Checking coverage.xml paths:"
-          cat coverage.xml | grep -E 'source|filename'
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
@@ -254,18 +205,6 @@ jobs:
           name: coverage-report
           path: AI_Service/coverage.xml
         if: always()
-
-      - name: Debug directory structure and coverage.xml
-        working-directory: AI_Service
-        run: |
-          pwd
-          ls -R
-          echo "Checking coverage.xml content:"
-          cat coverage.xml | grep -E 'source|filename' | head -n 20
-          echo "Checking if app directory exists:"
-          ls -ld app
-          echo "Checking source files in app:"
-          find app -type f -name "*.py"
 
       - name: Upload coverage HTML report
         uses: actions/upload-artifact@v4
@@ -325,39 +264,6 @@ jobs:
           name: coverage-report
           path: AI_Service/
 
-      - name: Move coverage.xml to correct location
-        working-directory: AI_Service
-        run: |
-          if [ -f coverage-report/coverage.xml ]; then
-            echo "Found coverage.xml in coverage-report/, moving to AI_Service/"
-            mv coverage-report/coverage.xml .
-            rm -rf coverage-report/
-          elif [ -f coverage.xml ]; then
-            echo "coverage.xml already in correct location (AI_Service/)"
-          else
-            echo "Error: coverage.xml not found in coverage-report/ or AI_Service/"
-            ls -R .
-            find . -name coverage.xml || echo "coverage.xml not found anywhere"
-            exit 1
-          fi
-
-      - name: Check downloaded coverage.xml content
-        working-directory: AI_Service
-        run: |
-          echo "Checking downloaded coverage.xml content:"
-          ls -l coverage.xml || { echo "Error: coverage.xml not found"; exit 1; }
-          cat coverage.xml | grep -E 'source|filename' | head -n 20
-
-      - name: Debug coverage report and directory structure
-        working-directory: AI_Service
-        run: |
-          echo "Current working directory: $(pwd)"
-          ls -R . || echo "AI_Service not found"
-          ls -l app/*.py app/**/*.py || echo "Python files not found"
-          ls -l coverage.xml || echo "coverage.xml not found"
-          echo "Checking coverage.xml paths:"
-          cat coverage.xml | grep -E 'source|filename' || echo "coverage.xml not readable"
-
       - name: SonarQube Scan
         uses: SonarSource/sonarcloud-github-action@v3.0.0
         env:
@@ -371,20 +277,13 @@ jobs:
             -Dsonar.sources=.
             -Dsonar.tests=../tests
             -Dsonar.python.coverage.reportPaths=../coverage.xml
-            -Dsonar.exclusions=**/migrations/**,**/tests/**,**/manage-great_expectations/**,**/__init__.py
+            -Dsonar.exclusions=**/tests/**,**/manage-great_expectations/**,**/__init__.py
             -Dsonar.coverage.exclusions=**/__init__.py
             -Dsonar.scm.provider=git
             -Dsonar.scm.revision=main
             -Dsonar.branch.name=main
             -Dsonar.python.coveragePlugin=cobertura
 
-      - name: Debug SonarCloud working directory
-        working-directory: AI_Service
-        run: |
-          echo "SonarCloud working directory: $(pwd)"
-          ls -la .
-          ls -la ../tests/
-          ls -l ../coverage.xml || echo "coverage.xml not found"
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
