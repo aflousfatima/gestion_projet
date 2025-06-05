@@ -18,9 +18,14 @@ import logging
 from dotenv import load_dotenv
 import warnings
 warnings.filterwarnings('ignore')
-
+os.makedirs('app/logs', exist_ok=True)
 # Configurer le logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(message)s',
+    filename='app/logs/chatbot_log.txt',
+    filemode='a'
+)
 logger = logging.getLogger(__name__)
 
 # Charger les variables d'environnement
