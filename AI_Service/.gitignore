@@ -5,7 +5,6 @@ venv/
 __pycache__/
 *.pyc
 .env
-*.log
 .pytest_cache/
 *.pkl
 .csv
