@@ -544,8 +544,8 @@ def main():
         predictions_df = pd.DataFrame(predictions)
         logger.info("Prédictions pour les tâches fictives :\n" + predictions_df.pivot(index='Model', columns='Task', values='Prediction (min)').join(
             predictions_df.groupby('Model')['Expected (min)'].first().rename('Expected (min)')).to_string())
-        mlflow.log_artifact(pd.DataFrame.to_csv(predictions_df, 'predictions.csv'))
-
+        predictions_df.to_csv('predictions.csv')
+        mlflow.log_artifact('predictions.csv')
         # Moyenne des deux meilleurs modèles
         best_models = results_df.sort_values('MMRE').iloc[:2]['Model'].tolist()
         best_predictions = predictions_df[predictions_df['Model'].isin(best_models)]
