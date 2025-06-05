@@ -384,6 +384,8 @@ jobs:
         if: steps.check_files.outputs.predictor == 'true'
         working-directory: AI_Service
         run: |
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
           dvc add app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl
           git add app/models/*.dvc
           git commit -m "Versionner les fichiers du modèle de prédiction avec DVC" || echo "Aucun changement à versionner."
@@ -397,14 +399,6 @@ jobs:
           git add app/chatbot/data/*.dvc
           git commit -m "Versionner les fichiers du chatbot avec DVC" || echo "Aucun changement à versionner."
           dvc push
-
-      - name: Update .env file
-        run: |
-          git add AI_Service/.env
-          git commit -m "Mettre à jour .env avec les nouveaux chemins" || echo "Aucun changement dans .env"
-          git push origin main
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
