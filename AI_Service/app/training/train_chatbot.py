@@ -361,16 +361,18 @@ def similarity_search(query, k=3, threshold=0.25):
             adjusted_score *= 0.2
         intent_scores[intent].append(adjusted_score)
 
-    intent_avg_scores = {intent: np.mean(scores) for intent, scores in intent_scores.items()}
+    intent_avg_scores = {intent: min(scores) for intent, scores in intent_scores.items()}
     best_intent = min(intent_avg_scores, key=intent_avg_scores.get)
     best_results = [meta for meta, score in filtered_results if meta['intent'] == best_intent]
     best_scores = [score for meta, score in filtered_results if meta['intent'] == best_intent]
     search_time = time.perf_counter() - start_time
 
+    # Compute confidence
     confidence = 1.0 - min(best_scores) if best_scores else 0.0
     conversation_context['confidence'] = confidence
     logger.info(f"Query '{query}' matched intent '{best_intent}' with confidence {confidence:.2f}")
-    return best_results[:k], best_scores[:k], search_time, confidence
+    
+    return best_results[:k], best_scores[:k], search_time
 
 # Keyword fallback
 def keyword_fallback(query, lang='en'):
@@ -513,18 +515,18 @@ def generate_response(query, metadata, use_cache=True):
 # RAG pipeline
 def rag_pipeline(query, use_cache=True):
     try:
-        metadata_results, distances, search_time, confidence = similarity_search(query, k=3, threshold=0.25)
+        metadata_results, distances, search_time = similarity_search(query, k=3, threshold=0.25)
         if not metadata_results:
             return 'out_of_scope', "No matching intent found.", [float('inf')] * 3, 0.0, [], {}, 0.0, 0.0, 0.0
         
         intent = metadata_results[0]['intent']
         response, response_time, param_time = generate_response(query, metadata_results, use_cache=use_cache)
         
-        return intent, response, distances, response_time, metadata_results, extract_parameters(query, intent), search_time, param_time, confidence
+        return intent, response, distances, response_time, metadata_results, extract_parameters(query, intent), search_time, param_time, conversation_context['confidence']
     except Exception as e:
         logger.error(f"Error in rag_pipeline for query '{query}': {str(e)}")
         return 'out_of_scope', "Error processing query.", [float('inf')] * 3, 0.0, [], {}, 0.0, 0.0, 0.0
-
+    
 # Visualizations
 def plot_distance_histogram(distances, plot_path):
     plt.figure(figsize=(8, 6), dpi=300)
