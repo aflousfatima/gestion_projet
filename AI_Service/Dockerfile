@@ -13,6 +13,7 @@ RUN apt-get update && apt-get upgrade -y && \
     python3-dev \
     g++ \
     gcc \
+    libatlas-base-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Définir le répertoire de travail
@@ -23,8 +24,8 @@ RUN pip install --no-cache-dir --upgrade pip
 
 # Copier et installer les dépendances Python depuis PyPI
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && \
-    ls -la /usr/local/lib/python3.12/dist-packages || { echo "Error: dist-packages directory not found"; exit 1; }
+RUN pip install --no-cache-dir -r requirements.txt > /tmp/pip_install_log.txt 2>&1 && \
+    ls -la /usr/local/lib/python3.12/site-packages || { echo "Error: site-packages directory not found"; cat /tmp/pip_install_log.txt; exit 1; }
 
 # ----------- Stage 2: Final Image -------------
 FROM python:3.12-slim
@@ -37,13 +38,14 @@ RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
     libopenblas-dev \
     libgomp1 \
+    libatlas-base-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Définir le répertoire de travail
 WORKDIR /app
 
 # Copier les packages Python installés depuis l'étape builder
-COPY --from=builder /usr/local/lib/python3.12/dist-packages /usr/local/lib/python3.12/dist-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
 # Copier le code applicatif et les fichiers de données (gérés par DVC)
