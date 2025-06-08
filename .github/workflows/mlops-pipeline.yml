@@ -428,3 +428,70 @@ jobs:
           slack-message: |
             ${{ job.status == 'success' && '✅ Entraînement réussi ! Fichiers versionnés sur Google Drive.' || '🚨 Alerte : Échec de l’entraînement. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
+  build-and-push-docker:
+    runs-on: ubuntu-latest
+    needs: train-model
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Install DVC
+      run: |
+        python -m pip install --upgrade pip
+        pip install dvc[gdrive]==3.55.2
+
+    - name: Configure Google Drive service account
+      env:
+        GDRIVE_SA_CREDENTIALS: ${{ secrets.GDRIVE_SA_CREDENTIALS }}
+      run: |
+        echo "$GDRIVE_SA_CREDENTIALS" > AI_Service/gdrive-sa.json
+        python -c "import json; json.load(open('AI_Service/gdrive-sa.json'))" || { echo "Invalid JSON in gdrive-sa.json"; exit 1; }
+        cd AI_Service
+        dvc remote modify myremote gdrive_use_service_account true
+        dvc remote modify myremote gdrive_service_account_json_file_path gdrive-sa.json
+
+    - name: Pull DVC files
+      run: |
+        cd AI_Service
+        dvc pull
+        ls -la app/models/ app/data/ app/chatbot/data/
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: AI_Service
+        file: AI_Service/Dockerfile
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository }}/ai-service:latest
+          ghcr.io/${{ github.repository }}/ai-service:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Send Slack notification
+      uses: slackapi/slack-github-action@v1.26.0
+      env:
+        SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      with:
+        channel-id: 'C08V19BHQVB'
+        slack-message: |
+          ${{ job.status == 'success' && format('✅ Image Docker construite et poussée vers GHCR : ghcr.io/{0}/ai-service:latest', github.repository) || format('🚨 Échec de la construction/push de l’image Docker. Vérifiez les logs : https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+      if: always()
