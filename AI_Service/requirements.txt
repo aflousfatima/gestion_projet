@@ -3,14 +3,8 @@ uvicorn
 pydantic
 pandas
 numpy
-optuna
-lightgbm
-xgboost
-catboost
 scikit-learn
 scipy
-matplotlib 
-seaborn
 joblib
 python-dotenv
 pytest
@@ -27,7 +21,3 @@ redis
 websockets
 pytest-asyncio   
 fakeredis
-great_expectations
-dvc==3.59.2
-dvc[gdrive]==3.59.2
-mlflow==2.22.0
