@@ -440,6 +440,13 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Debug directory structure
+      run: |
+        pwd
+        ls -la
+        find . -maxdepth 3
+      continue-on-error: true
+
     - name: Clean up disk space
       run: |
         df -h
@@ -517,7 +524,6 @@ jobs:
       run: |
         docker buildx rm --all-inactive || true
         docker buildx prune -f
-      working-directory: AI_Service
       continue-on-error: true
 
     - name: Log in to GitHub Container Registry
@@ -529,23 +535,20 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        cd AI_Service
-        docker build -t ghcr.io/${{ github.repository }}/ai-service:latest -f Dockerfile --no-cache .
+        docker build -t ghcr.io/${{ github.repository }}/ai-service:latest -f AI_Service/Dockerfile --no-cache AI_Service
         docker push ghcr.io/${{ github.repository }}/ai-service:latest
-      working-directory: AI_Service
 
     - name: Inspect Docker image size
       run: |
         docker images ghcr.io/${{ github.repository }}/ai-service:latest
-        docker image inspect ghcr.io/${{ github.repository }}/ai-service:latest | jq '.[0].Size' | awk '{print $1/1024/1024 " MB"}'
-      working-directory: AI_Service
+        docker image inspect ghcr.io/${{ github.repository }}/ai-service:latest | jq '. [0].Size' | awk '{print $1/1024/1024 "MB"}'
       continue-on-error: true
 
-    - name: Clean up after build
+    - name: Clean up after Docker build
       run: |
         df -h
         sudo rm -rf /tmp/*
-        docker system prune -af
+        docker system prune -f
         df -h
       continue-on-error: true
 
@@ -556,5 +559,5 @@ jobs:
       with:
         channel-id: 'C08V19BHQVB'
         slack-message: |
-          ${{ job.status == 'success' && format('✅ Image Docker construite et poussée vers GHCR : ghcr.io/{0}/ai-service:latest', github.repository) || format('🚗 Échec de la construction/push de l’image Docker. Vérifiez les logs : https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+          ${{ job.status == 'success' && format('✅ Image Docker construite et poussée vers GHCR : ghcr.io/{0}/ai-service:latest', github.repository) || format('🚨 Échec de la construction/push de l’image Docker. Vérifiez les logs : https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
       if: always()
