@@ -428,6 +428,8 @@ jobs:
           slack-message: |
             ${{ job.status == 'success' && '✅ Entraînement réussi ! Fichiers versionnés sur Google Drive.' || '🚨 Alerte : Échec de l’entraînement. Vérifiez les logs : https://github.com/fatimaflous/gestion_projet/actions/runs/${{ github.run_id }}' }}
         if: always()
+
+        
   build-and-push-docker:
     runs-on: ubuntu-latest
     needs: train-model
@@ -463,6 +465,26 @@ jobs:
         cd AI_Service
         dvc pull
         ls -la app/models/ app/data/ app/chatbot/data/
+
+    - name: Create .env file
+      run: |
+        cat << EOF > AI_Service/.env
+        MODEL_PATH=app/models/best_model.pkl
+        SCALER_PATH=app/models/scaler.pkl
+        ENCODER_PATH=app/models/encoder.pkl
+        TFIDF_PATH=app/models/tfidf.pkl
+        TAGS_PATH=app/models/all_tags.pkl
+        FEATURES_PATH=app/models/features.pkl
+        DATA_PATH=app/data/tasks_dataset.csv
+        INTENTS_PATH=app/data/intents_complete.json
+        FAISS_INDEX_PATH=app/chatbot/data/faiss_index.bin
+        METADATA_PATH=app/chatbot/data/metadata.pkl
+        CACHE_PATH=app/chatbot/data/cache.json
+        SIMILARITY_THRESHOLD=0.8
+        LOG_LEVEL=INFO
+        PROJECT_API_URL=http://localhost:8085/api/chatbot/projects
+        TASK_API_URL=http://localhost:8086/api/chatbot/tasks
+        EOF
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
