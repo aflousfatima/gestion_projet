@@ -530,7 +530,7 @@ jobs:
         file: AI_Service/Dockerfile
         push: true
         tags: ghcr.io/${{ github.repository }}/ai-service:latest
-        cache-from: type=gha,scope=${{ github.workflow }}
+        cache-from: none
         cache-to: none
 
     - name: Inspect Docker image size
