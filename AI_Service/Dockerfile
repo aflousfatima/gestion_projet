@@ -20,13 +20,14 @@ RUN apt-get update && apt-get upgrade -y && \
 WORKDIR /app
 
 # Mettre à jour pip pour éviter les problèmes de dépendances
-RUN pip install --no-cache-dir --upgrade pip
+RUN pip install --no-cache-dir --upgrade pip && \
+    rm -rf /root/.cache/pip
 
 # Copier et installer les dépendances Python depuis PyPI
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt > /tmp/pip_install_log.txt 2>&1 && \
-    ls -la /usr/local/lib/python3.12/site-packages || { echo "Error: site-packages directory not found"; cat /tmp/pip_install_log.txt; exit 1; }
-
+    ls -la /usr/local/lib/python3.12/site-packages || { echo "Error: site-packages directory not found"; cat /tmp/pip_install_log.txt; exit 1; } && \
+    rm -rf /root/.cache/pip /tmp/pip_install_log.txt
 # ----------- Stage 2: Final Image -------------
 FROM python:3.12-slim
 
