@@ -513,12 +513,6 @@ jobs:
     - name: Install jq
       run: sudo apt-get install -y jq
 
-    - name: Test network connectivity
-      run: |
-        ping -c 4 ghcr.io
-        curl -I https://ghcr.io
-      working-directory: AI_Service
-
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
