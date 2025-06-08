@@ -524,7 +524,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push Docker image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v5
       with:
         context: AI_Service
         file: AI_Service/Dockerfile
@@ -532,6 +532,9 @@ jobs:
         tags: ghcr.io/${{ github.repository }}/ai-service:latest
         cache-from: none
         cache-to: none
+        no-cache: true
+        buildkit: true
+        provenance: false
 
     - name: Inspect Docker image size
       run: |
