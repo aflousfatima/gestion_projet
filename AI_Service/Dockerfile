@@ -20,7 +20,7 @@ RUN apt-get update && apt-get upgrade -y && \
 WORKDIR /app
 
 RUN pip install --upgrade pip && \
-    pip install fastapi==0.115.12 uvicorn==0.34.3 pydantic==2.11.5 pandas==2.2.6 numpy==1.7.0 scipy==1.15.3 joblib==1.5.1 python-dotenv==1.1.0 httpx==0.27.2 sentence-transformers==2.7.0 faiss-cpu==1.8.0 langchain==3.0 langchain-community==0.0 langchain-huggingface==0.2.0 ntk==3.9.1 langdetect==1.0.9 redis==5.2.0 websockets==12.0 && \
+    pip install fastapi==0.115.12 uvicorn==0.34.3 pydantic==2.11.5 pandas==2.1.4 numpy==2.1.1 scikit-learn==1.7.0 scipy==1.15.3 joblib==1.5.1 python-dotenv==1.1.0 httpx==0.27.2 sentence-transformers==2.7.0 faiss-cpu==1.8.0 langchain==0.3.0 langchain-community==0.3.0 langchain-huggingface==0.2.0 nltk==3.9.1 langdetect==1.0.9 redis==5.2.0 websockets==12.0 && \
     rm -rf /root/.cache/pip /tmp/*
     
 # ----------- Stage 2: Final Image -------------
