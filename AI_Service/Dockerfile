@@ -18,9 +18,13 @@ RUN apt-get update && apt-get upgrade -y && \
 # Définir le répertoire de travail
 WORKDIR /app
 
+# Mettre à jour pip pour éviter les problèmes de dépendances
+RUN pip install --no-cache-dir --upgrade pip
+
 # Copier et installer les dépendances Python depuis PyPI
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt && \
+    ls -la /usr/local/lib/python3.12/dist-packages || { echo "Error: dist-packages directory not found"; exit 1; }
 
 # ----------- Stage 2: Final Image -------------
 FROM python:3.12-slim
@@ -42,7 +46,7 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.12/dist-packages /usr/local/lib/python3.12/dist-packages
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
-# Copier le code applicatif, le fichier .env, et les fichiers de données (gérés par DVC)
+# Copier le code applicatif et les fichiers de données (gérés par DVC)
 COPY app/ app/
 
 # Exposer le port utilisé par FastAPI
