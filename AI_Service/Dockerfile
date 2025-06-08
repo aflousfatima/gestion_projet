@@ -44,7 +44,6 @@ COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
 # Copier le code applicatif, le fichier .env, et les fichiers de données (gérés par DVC)
 COPY app/ app/
-COPY .env .env
 
 # Exposer le port utilisé par FastAPI
 EXPOSE 8000
