@@ -3,7 +3,8 @@ FROM python:3.12-slim AS builder
 
 # Configurer l'environnement pour éviter les invites interactives
 ENV DEBIAN_FRONTEND=noninteractive
-
+    PIP_NO_CACHE_DIR=1
+    
 # Installer les dépendances système nécessaires pour compiler les packages Python
 RUN apt-get update && apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
@@ -20,8 +21,8 @@ WORKDIR /app
 
 # Copier et installer les dépendances Python depuis PyPI
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
+RUN pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /root/.cache/pip /tmp/* /var/tmp/*
 # ----------- Stage 2: Final Image -------------
 FROM python:3.12-slim
 
@@ -39,7 +40,7 @@ RUN apt-get update && apt-get upgrade -y && \
 WORKDIR /app
 
 # Copier les packages Python installés depuis l'étape builder
-COPY --from=builder /usr/local/lib/python3.12/dist-packages /usr/local/lib/python3.12/dist-packages
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/uvicorn /usr/local/bin/uvicorn
 
 # Copier le code applicatif, le fichier .env, et les fichiers de données (gérés par DVC)
