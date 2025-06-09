@@ -3,7 +3,6 @@ FROM python:3.12-slim AS builder
 
 # Configurer l'environnement pour éviter les invites interactives
 ENV DEBIAN_FRONTEND=noninteractive
-    PIP_NO_CACHE_DIR=1
     
 # Installer les dépendances système nécessaires pour compiler les packages Python
 RUN apt-get update && apt-get upgrade -y && \
