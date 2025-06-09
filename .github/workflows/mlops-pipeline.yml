@@ -561,3 +561,226 @@ jobs:
         slack-message: |
           ${{ job.status == 'success' && format('✅ Image Docker construite et poussée vers GHCR : ghcr.io/{0}/ai-service:latest', github.repository) || format('🚨 Échec de la construction/push de l’image Docker. Vérifiez les logs : https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
       if: always()
+
+      
+  deploy-monitoring:
+    runs-on: ubuntu-latest
+    needs: build-and-push-docker
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create Docker network
+        run: |
+          docker network create monitoring || true
+
+      - name: Create monitoring directory
+        run: |
+          mkdir -p AI_Service/monitoring/grafana/provisioning/datasources
+
+      - name: Create Prometheus configuration
+        run: |
+          cat << EOF > AI_Service/monitoring/prometheus.yml
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+          alerting:
+            alertmanagers:
+              - static_configs:
+                  - targets: []
+          rule_files:
+            - "/etc/prometheus/alerts.yml"
+          scrape_configs:
+            - job_name: 'pushgateway'
+              static_configs:
+                - targets: ['pushgateway:9091']
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+            - job_name: 'ai_service'
+              static_configs:
+                - targets: ['ai-service:8000']  # Scrape l’endpoint /metrics de AI_Service
+          EOF
+
+      - name: Create Prometheus alerting rules
+        run: |
+          cat << EOF > AI_Service/monitoring/alerts.yml
+          groups:
+          - name: example
+            rules:
+            - alert: HighErrorRate
+              expr: job:request_error_rate:sum{job="ai_service"} > 0.05
+              for: 5m
+              labels:
+                severity: warning
+              annotations:
+                summary: "Taux d'erreur élevé détecté"
+                description: "Le taux d'erreur pour {{ \$labels.job }} est de {{ \$value }}%, au-dessus du seuil de 5%."
+          EOF
+
+      - name: Create Grafana provisioning for Prometheus datasource
+        run: |
+          cat << EOF > AI_Service/monitoring/grafana/provisioning/datasources/datasource.yml
+          apiVersion: 1
+          datasources:
+            - name: Prometheus
+              type: prometheus
+              url: http://prometheus:9090
+              access: proxy
+              isDefault: true
+          EOF
+
+      - name: Run AI_Service container
+        run: |
+          docker run -d \
+            --name ai-service \
+            --network monitoring \
+            -p 8000:8000 \
+            -v $(pwd)/AI_Service/.env:/app/.env \
+            ghcr.io/fatimaflous/gestion_projet/ai-service:latest
+
+      - name: Run Prometheus container
+        run: |
+          docker run -d \
+            --name prometheus \
+            --network monitoring \
+            -p 9090:9090 \
+            -v $(pwd)/AI_Service/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml \
+            -v $(pwd)/AI_Service/monitoring/alerts.yml:/etc/prometheus/alerts.yml \
+            prom/prometheus:v2.54.1
+
+      - name: Run Pushgateway container
+        run: |
+          docker run -d \
+            --name pushgateway \
+            --network monitoring \
+            -p 9091:9091 \
+            prom/pushgateway:v1.9.0
+
+      - name: Run Grafana container
+        run: |
+          docker run -d \
+            --name grafana \
+            --network monitoring \
+            -p 3000:3000 \
+            -e GF_SECURITY_ADMIN_USER=admin \
+            -e GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }} \
+            -v $(pwd)/AI_Service/monitoring/grafana/provisioning:/etc/grafana/provisioning \
+            grafana/grafana:11.2.0
+
+      - name: Wait for services to start
+        run: |
+          sleep 15
+          docker ps -a
+
+      - name: Verify AI_Service is running
+        run: |
+          curl -s http://localhost:8000/health | jq . || echo "AI_Service health check failed"
+          if [ $? -ne 0 ]; then
+            echo "AI_Service n'est pas en cours d'exécution"
+            exit 1
+          fi
+
+      - name: Verify Prometheus is running
+        run: |
+          curl -s http://localhost:9090/api/v1/status/buildinfo | jq .
+          if [ $? -ne 0 ]; then
+            echo "Prometheus n'est pas en cours d'exécution"
+            exit 1
+          fi
+
+      - name: Verify Pushgateway is running
+        run: |
+          curl -s http://localhost:9091/-/healthy
+          if [ $? -ne 0 ]; then
+            echo "Pushgateway n'est pas en cours d'exécution"
+            exit 1
+          fi
+
+      - name: Verify Grafana is running
+        run: |
+          curl -s http://localhost:3000/api/health | jq .
+          if [ $? -ne 0 ]; then
+            echo "Grafana n'est pas en cours d'exécution"
+            exit 1
+          fi
+
+      - name: Push sample metrics to Pushgateway
+        run: |
+          echo 'ai_service_requests_total{job="ai_service",endpoint="/predict"} 100' | curl --data-binary @- http://localhost:9091/metrics/job/ai_service
+          echo 'ai_service_request_error_rate{job="ai_service",endpoint="/predict"} 0.02' | curl --data-binary @- http://localhost:9091/metrics/job/ai_service
+          curl -s http://localhost:9091/api/v1/metrics | grep ai_service
+
+      - name: Configure Grafana dashboard
+        run: |
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Basic $(echo -n admin:${{ secrets.GRAFANA_ADMIN_PASSWORD }} | base64)" \
+            -d '{
+              "dashboard": {
+                "id": null,
+                "title": "Métriques AI Service",
+                "tags": ["ai_service"],
+                "timezone": "browser",
+                "schemaVersion": 36,
+                "version": 0,
+                "panels": [
+                  {
+                    "id": 1,
+                    "title": "Requêtes Totales",
+                    "type": "timeseries",
+                    "datasource": "Prometheus",
+                    "targets": [
+                      {
+                        "expr": "ai_service_requests_total{job=\"ai_service\"}",
+                        "legendFormat": "{{endpoint}}",
+                        "format": "time_series"
+                      }
+                    ],
+                    "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 }
+                  },
+                  {
+                    "id": 2,
+                    "title": "Taux d’Erreur",
+                    "type": "timeseries",
+                    "datasource": "Prometheus",
+                    "targets": [
+                      {
+                        "expr": "ai_service_request_error_rate{job=\"ai_service\"}",
+                        "legendFormat": "{{endpoint}}",
+                        "format": "time_series"
+                      }
+                    ],
+                    "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 }
+                  }
+                ]
+              },
+              "overwrite": true,
+              "folderId": 0
+            }' \
+            http://localhost:3000/api/dashboards/db
+
+      - name: Send Slack notification for monitoring
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: 'C08V19BHQVB'
+          text: |
+            ${{ job.status == 'success' && '✅ Stack de monitoring (Prometheus, Pushgateway, Grafana) déployée avec succès dans GitHub Actions !' || format('🚨 Échec du déploiement de la stack de monitoring. Vérifiez les logs : https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+        if: always()
+
+      - name: Send Slack alert for high error rate
+        if: always()
+        run: |
+          ERROR_RATE=$(curl -s 'http://localhost:9090/api/v1/query?query=ai_service_request_error_rate{job="ai_service"}' | jq -r '.data.result[0].value[1]' || echo "0")
+          if (( $(echo "$ERROR_RATE > 0.05" | bc -l) )); then
+            curl -X POST \
+              -H 'Content-type: application/json' \
+              -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
+              -d "{\"channel\":\"C08V19BHQVB\",\"text\":\"🚨 Alerte : Taux d'erreur élevé détecté : ${ERROR_RATE}% (seuil : 5%)\"}" \
+              https://slack.com/api/chat.postMessage
+          fi
