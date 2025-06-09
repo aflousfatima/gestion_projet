@@ -1,0 +1,11 @@
+groups:
+- name: example
+  rules:
+  - alert: HighErrorRate
+    expr: job:request_error_rate:sum{job="ai_service"} > 0.05
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Taux d'erreur élevé détecté"
+      description: "Le taux d'erreur pour {{ $labels.job }} est de {{ $value }}%, au-dessus du seuil de 5%."
