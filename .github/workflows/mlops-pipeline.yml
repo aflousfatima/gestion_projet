@@ -566,10 +566,25 @@ jobs:
   deploy-monitoring:
     runs-on: ubuntu-latest
     needs: build-and-push-docker
+    permissions:
+      packages: read
+      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Debug pull image
+        run: |
+          docker pull ghcr.io/fatimaaflous/gestion_projet/ai-service:latest || echo "Failed to pull image"
+        continue-on-error: true
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -775,12 +790,11 @@ jobs:
 
       - name: Send Slack alert for high error rate
         if: always()
-        run: |
-          ERROR_RATE=$(curl -s 'http://localhost:9090/api/v1/query?query=ai_service_request_error_rate{job="ai_service"}' | jq -r '.data.result[0].value[1]' || echo "0")
-          if (( $(echo "$ERROR_RATE > 0.05" | bc -l) )); then
-            curl -X POST \
-              -H 'Content-type: application/json' \
-              -H "Authorization: Bearer ${{ secrets.SLACK_BOT_TOKEN }}" \
-              -d "{\"channel\":\"C08V19BHQVB\",\"text\":\"🚨 Alerte : Taux d'erreur élevé détecté : ${ERROR_RATE}% (seuil : 5%)\"}" \
-              https://slack.com/api/chat.postMessage
-          fi
+        uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: 'C08V19BHQVB'
+          slack-message: |
+            ${{ job.status == 'success' && '✅ Stack de monitoring (Prometheus, Pushgateway, Grafana) déployée avec succès dans GitHub Actions !' || format('🚨 Échec du déploiement de la stack de monitoring. Vérifiez les logs : https://github.com/{0}/actions/runs/{1}', github.repository, github.run_id) }}
+            ${{ $(curl -s 'http://localhost:9090/api/v1/query?query=ai_service_request_error_rate{job="ai_service"}' | jq -r '.data.result[0].value[1]' || echo "0") > 0.05 && format('🚨 Alerte : Taux d\'erreur élevé détecté : {0}% (seuil : 5%)', $(curl -s 'http://localhost:9090/api/v1/query?query=ai_service_request_error_rate{job="ai_service"}' | jq -r '.data.result[0].value[1]' || echo "0")) || '' }}
