@@ -5,9 +5,11 @@ import com.task.taskservice.Entity.*;
 import com.task.taskservice.Enumeration.WorkItemPriority;
 import com.task.taskservice.Enumeration.WorkItemStatus;
 import com.task.taskservice.Repository.ProcessedCommitRepository;
+import com.task.taskservice.event.TaskAssignedEvent;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.slf4j.Logger;
@@ -20,8 +22,10 @@ import com.task.taskservice.Repository.FileAttachmentRepository;
 import com.task.taskservice.Repository.TagRepository;
 import com.task.taskservice.Repository.TaskRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -60,9 +64,19 @@ public class TaskService {
     private  final ProcessedCommitRepository processedCommitRepository;
     @Autowired
     private final  CloudinaryService cloudinaryService;
+
+    private final KafkaTemplate<String, TaskAssignedEvent> kafkaTemplate;
+
+    @Value("${spring.kafka.bootstrap-servers}")
+    private String kafkaBootstrapServers;
+
+    @PostConstruct
+    public void logKafkaConfig() {
+        logger.info("Kafka bootstrap servers: {}", kafkaBootstrapServers);
+    }
     @Autowired
     public TaskService(TaskRepository taskRepository,
-                       TagRepository tagRepository, TaskMapper taskMapper, AuthClient authClient,ProjectClient projectClient , CloudinaryService cloudinaryService , FileAttachmentRepository fileAttachmentRepository , GitHubIntegrationClient gitHubIntegrationClient , ProcessedCommitRepository processedCommitRepository) {
+                       TagRepository tagRepository, TaskMapper taskMapper, AuthClient authClient,ProjectClient projectClient , CloudinaryService cloudinaryService , FileAttachmentRepository fileAttachmentRepository , GitHubIntegrationClient gitHubIntegrationClient , ProcessedCommitRepository processedCommitRepository ,KafkaTemplate<String, TaskAssignedEvent> kafkaTemplate ) {
         this.taskRepository = taskRepository;
         this.tagRepository = tagRepository;
         this.taskMapper = taskMapper;
@@ -72,6 +86,7 @@ public class TaskService {
         this.fileAttachmentRepository = fileAttachmentRepository;
         this.gitHubIntegrationClient= gitHubIntegrationClient;
         this.processedCommitRepository= processedCommitRepository;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
 
@@ -157,6 +172,18 @@ public class TaskService {
         // Save the task
         Task savedTask = taskRepository.save(task);
 
+        // Publier TaskAssignedEvent si des utilisateurs sont assignés
+        if (taskDTO.getAssignedUserIds() != null && !taskDTO.getAssignedUserIds().isEmpty()) {
+            TaskAssignedEvent event = new TaskAssignedEvent(
+                    savedTask.getId(),
+                    new HashSet<>(taskDTO.getAssignedUserIds()),
+                    createdBy,
+                    LocalDateTime.now()
+            );
+            kafkaTemplate.send("task-events", savedTask.getId().toString(), event);
+            logger.info("✅ TaskAssignedEvent publié pour la tâche ID: {}", savedTask.getId());
+        }
+
         // Convert back to DTO and return
         return taskMapper.toDTO(savedTask);
     }
@@ -171,9 +198,7 @@ public class TaskService {
         throw new RuntimeException("Failed to create task after retries");
     }
 
-    @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "updateTaskRateLimiterFallback")
-    @Bulkhead(name = "TaskServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "updateTaskBulkheadFallback")
-    @Retry(name = "TaskServiceRetry", fallbackMethod = "updateTaskRetryFallback")
+
     @Transactional
     public TaskDTO updateTask(Long taskId, TaskDTO taskDTO, String token) {
         // Validate token
@@ -313,6 +338,15 @@ public class TaskService {
             if (!newUserIds.equals(task.getAssignedUserIds())) {
                 changes.append("Utilisateurs assignés modifiés; ");
                 task.setAssignedUserIds(newUserIds);
+                // Publier TaskAssignedEvent
+                TaskAssignedEvent event = new TaskAssignedEvent(
+                        taskId,
+                        newUserIds,
+                        updatedBy,
+                        LocalDateTime.now()
+                );
+                kafkaTemplate.send("task-events", taskId.toString(), event);
+                logger.info("✅ TaskAssignedEvent publié pour la tâche ID: {}", taskId);
             }
         }
 
@@ -364,21 +398,6 @@ public class TaskService {
         }
 
         return responseDTO;
-    }
-
-    public TaskDTO updateTaskRateLimiterFallback(Long taskId, TaskDTO taskDTO, String token, Throwable t) {
-        logger.error("RateLimiter fallback for updateTask: {}", t.getMessage());
-        throw new RuntimeException("Rate limit exceeded for task update");
-    }
-
-    public TaskDTO updateTaskBulkheadFallback(Long taskId, TaskDTO taskDTO, String token, Throwable t) {
-        logger.error("Bulkhead fallback for updateTask: {}", t.getMessage());
-        throw new RuntimeException("Too many concurrent task update requests");
-    }
-
-    public TaskDTO updateTaskRetryFallback(Long taskId, TaskDTO taskDTO, String token, Throwable t) {
-        logger.error("Retry fallback for updateTask: {}", t.getMessage());
-        throw new RuntimeException("Failed to update task after retries");
     }
 
     @RateLimiter(name = "TaskServiceLimiter", fallbackMethod = "updateTaskByCommitRateLimiterFallback")
