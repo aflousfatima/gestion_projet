@@ -567,12 +567,25 @@ jobs:
     runs-on: ubuntu-latest
     needs: build-and-push-docker
     permissions:
+      contents: read
       packages: read
       
     steps:
+      - name: Debug repository access
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Attempting to list repository contents"
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3+json" \
+                https://api.github.com/repos/fatimaaflous/gestion_projet/contents
+        continue-on-error: true
+        
       - name: Checkout repository
         uses: actions/checkout@v4
-
+        with:
+         token: ${{ secrets.GITHUB_TOKEN }}
+    
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
