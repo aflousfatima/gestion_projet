@@ -65,9 +65,13 @@ export default function SignupPage() {
             email: invitation.email,
           }));
         } catch (err) {
-          console.error(err); // Log the error for debugging
-          setError("Lien d'invitation invalide ou expiré");
-        }
+          console.error('Token verification error:', err, 'isAxiosError:', axios.isAxiosError(err));
+          if (axios.isAxiosError(err)) {
+            setError(err.response?.data || "Lien d'invitation invalide ou expiré");
+          } else {
+            setError("Une erreur inattendue est survenue lors de la vérification du token.");
+          }       
+      }
       }
     };
     verifyToken();
@@ -107,15 +111,16 @@ export default function SignupPage() {
       } else {
         setError(response.data.message);
       }
-    } catch (err: unknown) {
-      if (err instanceof AxiosError && err.response && err.response.data) {
-        console.error("❌ Erreur lors de l'inscription :", err);
-        setError(err.response.data as string);
-      } else {
-        console.error("❌ Erreur inattendue :", err);
-        setError("Une erreur inattendue est survenue. Veuillez réessayer.");
-      }
+    } catch (err) {
+    console.error("Caught error:", err);
+    if (axios.isAxiosError(err)) {
+      console.error("Axios error:", err.response?.data);
+      setError(err.response?.data || "Une erreur est survenue lors de l'inscription.");
+    } else {
+      console.error("Non-Axios error:", err);
+      setError("Une erreur inattendue est survenue. Veuillez réessayer.");
     }
+  }
   };
 
 if (error) {
@@ -123,7 +128,8 @@ if (error) {
         <div className="feedback-container">
             <div className="feedback-box">
                 <h3 className="feedback-title error-title">Error</h3>
-                <p className="feedback-message error-message">Registration failed! Email Already Exist , please Try with another email .</p>
+                <p className="feedback-message error-message">{error}</p>
+               {/* this line is for the selenium test <p className="feedback-message error-message">Registration failed! Email Already Exist , please Try with another email .</p>*/}
                 <Link href="/authentification/signup" className="feedback-link">Go Back To SignUp</Link>
             </div>
         </div>
@@ -250,22 +256,24 @@ if (successMessage) {
               <div className="checkbox-group1">
                 <input
                   type="checkbox"
+                  id="marketingConsent"
                   name="marketingConsent"
                   checked={formData.marketingConsent}
                   onChange={handleChange}
                 />
-                <label>I agree to receive marketing emails.</label>
+                <label htmlFor="marketingConsent">I agree to receive marketing emails.</label>
               </div>
 
               <div className="checkbox-group1">
                 <input
                   type="checkbox"
+                  id="termsAccepted"
                   name="termsAccepted"
                   checked={formData.termsAccepted}
                   onChange={handleChange}
                   required
                 />
-                <label>
+                <label htmlFor="termsAccepted">
                   I agree the {""}
                   <a href="#" className="law-custom">
                     terms of use

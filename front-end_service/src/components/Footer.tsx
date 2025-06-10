@@ -11,7 +11,7 @@ const Footer = () => {
                 src="/logo.png"
                 alt="AGILIA Logo"
                 className="footer-logo mb-3"
-              ></img>
+              />
               <p className="footer-text">
                 Elevate your workflow. Stay organized. Deliver faster.
               </p>
@@ -46,17 +46,17 @@ const Footer = () => {
             <div className="col-lg-3 col-md-6 mb-4">
               <h5 className="text-uppercase">Follow Us</h5>
               <div className="d-flex gap-3">
-                <a href="#" className="social-icon">
-                  <i className="fab fa-facebook-f"></i>
+                <a href="#" className="social-icon" aria-label="Facebook">
+                  <i className="fab fa-facebook-f" />
                 </a>
-                <a href="#" className="social-icon">
-                  <i className="fab fa-twitter"></i>
+                <a href="#" className="social-icon" aria-label="Twitter">
+                  <i className="fab fa-twitter" />
                 </a>
-                <a href="#" className="social-icon">
-                  <i className="fab fa-linkedin-in"></i>
+                <a href="#" className="social-icon" aria-label="LinkedIn">
+                  <i className="fab fa-linkedin-in" />
                 </a>
-                <a href="#" className="social-icon">
-                  <i className="fab fa-github"></i>
+                <a href="#" className="social-icon" aria-label="GitHub">
+                  <i className="fab fa-github" />
                 </a>
               </div>
             </div>
@@ -78,7 +78,7 @@ const Footer = () => {
 
           <div className="text-center pt-3 border-top">
             <p className="mb-0">
-              &copy; 2025 AGILIA. All rights reserved. |{" "}
+              © 2025 AGILIA. All rights reserved. |{" "}
               <a href="#" className="footer-link">
                 Privacy Policy
               </a>{" "}

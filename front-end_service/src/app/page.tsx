@@ -108,7 +108,7 @@ In today’s fast-paced world, project management needs to be efficient, collabo
   With real-time updates and an intuitive interface, your team can stay aligned, communicate effectively, and achieve goals with confidence. 
   Start managing your projects smarter today!
           </p>
-          <button className="cta-button">Get Started</button>
+          <button className="cta-button" type="button">Get Started</button>
           </div >
       </div>
     </div>
