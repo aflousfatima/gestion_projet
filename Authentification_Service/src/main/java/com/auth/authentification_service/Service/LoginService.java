@@ -124,7 +124,7 @@ public class LoginService {
 
     public String decodeToken(String token) {
         try {
-            System.out.println("🔍 Tentative de décodage du token : " + token);
+            System.out.println(" Tentative de décodage du token : " + token);
 
             // Décoder le token sans valider la signature
             DecodedJWT decodedJWT = JWT.decode(token);
