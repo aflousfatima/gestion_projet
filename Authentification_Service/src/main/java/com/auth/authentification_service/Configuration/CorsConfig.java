@@ -16,7 +16,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOriginPatterns(List.of("http://localhost:3000"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Méthodes autorisées
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); //toutes  Méthodes autorisées
         config.setAllowedHeaders(List.of(
                 "Accept", "Accept-Language", "Content-Language", "Content-Type",
                 "Authorization", "Cookie", "X-Requested-With", "Origin", "Host"
