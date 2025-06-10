@@ -1,7 +1,7 @@
 name: Monorepo Orchestrator
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -50,10 +50,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Debug - Check ci.yml existence
         run: |
-          ls -l .shared/workflows/ci.yml || echo "ci.yml not found"
-          cat .shared/workflows/ci.yml || echo "Failed to read ci.yml"
+          ls -l .github/workflows/ci.yml || echo "ci.yml not found"
+          cat .github/workflows/ci.yml || echo "Failed to read ci.yml"
       - name: Run CI for ${{ matrix.service }}
-        uses: fatimaaflous/gestion_projet/.shared/workflows/ci.yml@${{ github.sha }}
+        uses: ./.github/workflows/ci.yml
         with:
           service_name: ${{ matrix.service }}
           service_path: ${{ matrix.service }}
