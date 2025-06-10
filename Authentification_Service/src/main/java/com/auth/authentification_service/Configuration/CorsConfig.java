@@ -21,7 +21,7 @@ public class CorsConfig {
                 "Accept", "Accept-Language", "Content-Language", "Content-Type",
                 "Authorization", "Cookie", "X-Requested-With", "Origin", "Host"
         ));
-        config.setAllowCredentials(true); // Autorise  credentials (cookies, tokens, etc.)
+        config.setAllowCredentials(true); // Autorise tous credentials (cookies, tokens, etc.)
         config.setExposedHeaders(List.of("Set-Cookie")); // Permet au client d’accéder au Set-Cookie
 
         source.registerCorsConfiguration("/**", config);
