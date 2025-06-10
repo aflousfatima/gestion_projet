@@ -48,6 +48,10 @@ jobs:
         service: ${{ fromJson(needs.detect-changes.outputs.modified_services) }}
     steps:
       - uses: actions/checkout@v4
+      - name: Debug - Check ci.yml existence
+        run: |
+          ls -l .shared/workflows/ci.yml || echo "ci.yml not found"
+          cat .shared/workflows/ci.yml || echo "Failed to read ci.yml"
       - name: Run CI for ${{ matrix.service }}
         uses: ./.shared/workflows/ci.yml
         with:
