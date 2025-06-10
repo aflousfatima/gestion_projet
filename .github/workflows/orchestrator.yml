@@ -1,1 +1,52 @@
+name: Monorepo Orchestrator
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      modified_services: ${{ steps.set-matrix.outputs.modified_services }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Detect modified services
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            auth_service: Authentification_Service/**
+            collab_service: collaboration-service/**
+            github_service: github-integration-service/**
+            notif_service: Notification_Service/**
+            project_service: Project_Service/**
+            task_service: Task-Service/**
+      - name: Set modified services matrix
+        id: set-matrix
+        run: |
+          MODIFIED_SERVICES=()
+          [[ "${{ steps.filter.outputs.auth_service }}" == "true" ]] && MODIFIED_SERVICES+=("Authentification_Service")
+          [[ "${{ steps.filter.outputs.collab_service }}" == "true" ]] && MODIFIED_SERVICES+=("collaboration-service")
+          [[ "${{ steps.filter.outputs.github_service }}" == "true" ]] && MODIFIED_SERVICES+=("github-integration-service")
+          [[ "${{ steps.filter.outputs.notif_service }}" == "true" ]] && MODIFIED_SERVICES+=("Notification_Service")
+          [[ "${{ steps.filter.outputs.project_service }}" == "true" ]] && MODIFIED_SERVICES+=("Project_Service")
+          [[ "${{ steps.filter.outputs.task_service }}" == "true" ]] && MODIFIED_SERVICES+=("Task-Service")
+          echo "modified_services=$(jq -c . <<< "${MODIFIED_SERVICES[@]}")" >> $GITHUB_OUTPUT
+
+  ci:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.modified_services != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.modified_services) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run CI for ${{ matrix.service }}
+        uses: ./.shared/workflows/ci.yml
+        with:
+          service_name: ${{ matrix.service }}
+          service_path: ${{ matrix.service }}
+          java_version: '17'
