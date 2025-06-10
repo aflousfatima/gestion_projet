@@ -27,13 +27,17 @@ jobs:
         id: set-matrix
         run: |
           MODIFIED_SERVICES=()
-          [[ "${{ steps.filter.outputs.auth_service }}" == "true" ]] && MODIFIED_SERVICES+=("Authentification_Service")
-          [[ "${{ steps.filter.outputs.collab_service }}" == "true" ]] && MODIFIED_SERVICES+=("collaboration-service")
-          [[ "${{ steps.filter.outputs.github_service }}" == "true" ]] && MODIFIED_SERVICES+=("github-integration-service")
-          [[ "${{ steps.filter.outputs.notif_service }}" == "true" ]] && MODIFIED_SERVICES+=("Notification_Service")
-          [[ "${{ steps.filter.outputs.project_service }}" == "true" ]] && MODIFIED_SERVICES+=("Project_Service")
-          [[ "${{ steps.filter.outputs.task_service }}" == "true" ]] && MODIFIED_SERVICES+=("Task-Service")
-          echo "modified_services=$(jq -c . <<< "${MODIFIED_SERVICES[@]}")" >> $GITHUB_OUTPUT
+          [[ "${{ steps.filter.outputs.auth_service }}" == "true" ]] && MODIFIED_SERVICES+=('"Authentification_Service"')
+          [[ "${{ steps.filter.outputs.collab_service }}" == "true" ]] && MODIFIED_SERVICES+=('"collaboration-service"')
+          [[ "${{ steps.filter.outputs.github_service }}" == "true" ]] && MODIFIED_SERVICES+=('"github-integration-service"')
+          [[ "${{ steps.filter.outputs.notif_service }}" == "true" ]] && MODIFIED_SERVICES+=('"Notification_Service"')
+          [[ "${{ steps.filter.outputs.project_service }}" == "true" ]] && MODIFIED_SERVICES+=('"Project_Service"')
+          [[ "${{ steps.filter.outputs.task_service }}" == "true" ]] && MODIFIED_SERVICES+=('"Task-Service"')
+          if [ ${#MODIFIED_SERVICES[@]} -eq 0 ]; then
+            echo 'modified_services=[]' >> $GITHUB_OUTPUT
+          else
+            echo "modified_services=[${MODIFIED_SERVICES[*]}]" >> $GITHUB_OUTPUT
+          fi
 
   ci:
     needs: detect-changes
