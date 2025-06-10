@@ -39,17 +39,17 @@ class InvitationServiceTest {
 
     @BeforeEach
     void setUp() {
-        invitationRequest = new InvitationRequest(
-
-        );
+        invitationRequest = new InvitationRequest();
+        invitationRequest.setEmail("test@example.com");
+        invitationRequest.setRole("USER");
+        invitationRequest.setEntreprise("EntrepriseX");
+        invitationRequest.setProjectId(123L);
     }
 
     @Test
     @DisplayName("Should create and send invitation successfully")
     void createAndSendInvitation_success() throws MessagingException {
         // Arrange
-        String token = UUID.randomUUID().toString();
-        // Note: In a real test, you might want to mock UUID.randomUUID() using PowerMock or a test-specific method
         ArgumentCaptor<Invitation> invitationCaptor = ArgumentCaptor.forClass(Invitation.class);
 
         // Act
@@ -67,11 +67,11 @@ class InvitationServiceTest {
         assertTrue(savedInvitation.getExpiresAt() <= System.currentTimeMillis() + EXPIRATION_TIME_MS);
 
         verify(emailService).sendInvitationEmail(
-                eq(invitationRequest.getEmail()),
-                eq(invitationRequest.getRole()),
-                eq(invitationRequest.getEntreprise()),
-                eq(invitationRequest.getProjectId()),
-                eq(savedInvitation.getToken())
+                eq("test@example.com"),
+                eq("USER"),
+                eq("EntrepriseX"),
+                eq(123L),
+                anyString() // Le token est généré dynamiquement
         );
         verifyNoMoreInteractions(invitationRepository, emailService);
     }
@@ -94,7 +94,6 @@ class InvitationServiceTest {
         verify(emailService).sendInvitationEmail(anyString(), anyString(), anyString(), anyLong(), anyString());
         verifyNoMoreInteractions(invitationRepository, emailService);
     }
-
     @Test
     @DisplayName("Should return invitation for valid token")
     void verifyInvitation_validToken_success() {

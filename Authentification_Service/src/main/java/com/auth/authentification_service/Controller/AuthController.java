@@ -19,6 +19,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/")
@@ -28,6 +30,8 @@ import java.util.Map;
         description = "Cette API gère l'authentification des utilisateurs et la gestion des tokens."
 ))
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
+
     private final KeycloakService keycloakService;
     private  final LoginService loginService;
     public AuthController(KeycloakService keycloakService , LoginService loginService) {
@@ -73,19 +77,20 @@ public class AuthController {
 
             // Création du cookie HttpOnly avec le refresh_token
             Cookie refreshTokenCookie = new Cookie("REFRESH_TOKEN", tokens.getRefreshToken());
-            refreshTokenCookie.setSecure(false); // ⚠ Met à true en prod (HTTPS obligatoire)
+            refreshTokenCookie.setSecure(false); // ⚠ Met à true en prod
             refreshTokenCookie.setHttpOnly(true);
             refreshTokenCookie.setPath("/");
-            refreshTokenCookie.setDomain("localhost");  // Exemple de domaine explicitement défini
+            refreshTokenCookie.setDomain("localhost");
             refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60); // 7 jours
-            refreshTokenCookie.setAttribute("SameSite", "Lax"); // Ajoute ceci
-            response.addCookie(refreshTokenCookie);  // Envoie du cookie au navigateur
+            refreshTokenCookie.setAttribute("SameSite", "Lax");
+            response.addCookie(refreshTokenCookie);
 
-            // Retourner seulement l'access_token dans la réponse JSON
             return ResponseEntity.ok(Collections.singletonMap("access_token", tokens.getAccessToken()));
-
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Échec de l'authentification");
+            // Log l'erreur pour plus de détails
+            log.error("Échec de l'authentification: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Collections.singletonMap("error", "Échec de l'authentification: " + e.getMessage()));
         }
     }
 

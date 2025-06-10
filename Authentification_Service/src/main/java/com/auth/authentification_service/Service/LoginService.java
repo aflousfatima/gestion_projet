@@ -40,9 +40,7 @@ public class LoginService {
         this.keycloakService= keycloakService;
     }
 
-    @RateLimiter(name = "LoginServiceLimiter", fallbackMethod = "rateLimiterFallback")
-    @Bulkhead(name = "LoginServiceBulkhead", type = Bulkhead.Type.SEMAPHORE, fallbackMethod = "bulkheadFallback")
-    @Retry(name = "LoginServiceRetry", fallbackMethod = "retryFallback")
+
     public TokenDto authenticateUser(String email, String password) throws Exception {
         System.out.println("Récupération du client secret depuis Vault...");
         String keycloakClientSecret = vaultService.getClientSecret();
@@ -74,20 +72,6 @@ public class LoginService {
             System.out.println("Échec de l'authentification avec Keycloak !");
             throw new Exception("Échec de l'authentification avec Keycloak");
         }
-    }
-
-    public TokenDto rateLimiterFallback(String email, String password, Throwable t) {
-        System.out.println("RateLimiter fallback triggered : " + t.getMessage());
-        return new TokenDto("","");
-    }
-
-    public TokenDto bulkheadFallback(String email, String password, Throwable t) {
-        System.out.println("Bulkhead fallback triggered : " + t.getMessage());
-        return new TokenDto("","");
-    }
-    public TokenDto retryFallback(String email, String password, Throwable t) {
-        System.out.println("Retry fallback triggered: " + t.getMessage());
-        return new TokenDto("", "");
     }
 
     @RateLimiter(name = "LoginServiceLimiter", fallbackMethod = "refreshRateLimiterFallback")
