@@ -103,3 +103,4 @@ jobs:
             -Dsonar.coverage.jacoco.xmlReportPaths=${{ github.workspace }}/${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
             -Dsonar.sources=src/main/java \
             -Dsonar.java.binaries=target/classes
+            
