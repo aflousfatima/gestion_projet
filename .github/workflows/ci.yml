@@ -77,6 +77,8 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} 
         run: |
           cd ${{ inputs.service_path }}
+          mvn -B clean compile \
+            -DskipTests
           mvn -B sonar:sonar \
             -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} \
             -Dsonar.organization=fatimaaflous \
