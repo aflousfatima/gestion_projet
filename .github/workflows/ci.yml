@@ -81,7 +81,8 @@ jobs:
         with:
           name: jacoco-report-${{ inputs.service_name }}
           path: ${{ inputs.service_path }}/target/site/jacoco/
-          
+      - name: Verify JaCoCo report
+        run: ls -R ${{ inputs.service_path }}/target/site/jacoco/
       - name: SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -97,4 +98,4 @@ jobs:
             -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
             -Dsonar.scm.provider=git \
             -Dsonar.java.coveragePlugin=jacoco \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+            -Dsonar.coverage.jacoco.xmlReportPaths=${{ github.workspace }}/${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
