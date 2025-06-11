@@ -6,3 +6,4 @@ if [ -z "$SERVICE_PATH" ]; then
 fi
 cd "$SERVICE_PATH" || exit 1
 mvn clean package -DskipTests
+
