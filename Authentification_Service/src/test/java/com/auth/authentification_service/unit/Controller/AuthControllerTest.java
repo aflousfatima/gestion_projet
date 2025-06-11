@@ -164,7 +164,7 @@ public class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().string("Échec de l'authentification"));
+                .andExpect(jsonPath("$.error").value("Échec de l'authentification: Invalid credentials"));
 
         verify(loginService).authenticateUser("test@example.com", "wrongpassword");
         verifyNoInteractions(keycloakService);
