@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
       - name: Set up JDK ${{ inputs.java_version }}
         uses: actions/setup-java@v4
         with:
@@ -76,27 +76,19 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Download JaCoCo report
-        uses: actions/download-artifact@v4
-        with:
-          name: jacoco-report-${{ inputs.service_name }}
-          path: ${{ inputs.service_path }}/target/site/jacoco/
-      - name: Verify JaCoCo report
-        run: ls -R ${{ inputs.service_path }}/target/site/jacoco/
-      - name: Inspect JaCoCo report content
-        run: head -n 50 ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
       - name: Verify project structure
         run: |
           ls -R ${{ inputs.service_path }}/src/main/java
-          ls -R ${{ inputs.service_path }}/target/classes
+          ls -R ${{ inputs.service_path }}/target/classes || echo "ERROR: target/classes not found"
       - name: SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} 
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           cd ${{ inputs.service_path }}
-          mvn -B clean compile \
-            -DskipTests
+          mvn -B clean verify
+          ls -R target/classes || echo "ERROR: target/classes not found"
+          ls -R target/site/jacoco || echo "ERROR: jacoco.xml not found"
           mvn -B sonar:sonar \
             -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} \
             -Dsonar.organization=fatimaaflous \
