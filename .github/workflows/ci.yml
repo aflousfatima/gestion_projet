@@ -51,6 +51,11 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Run unit and integration tests
         run: bash .shared/scripts/test.sh ${{ inputs.service_path }}
+      - name: Upload JaCoCo report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report-${{ inputs.service_name }}
+          path: ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
     
   sonar-analysis:
     runs-on: ubuntu-latest
@@ -58,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 
+          fetch-depth: 0
       - name: Set up JDK ${{ inputs.java_version }}
         uses: actions/setup-java@v4
         with:
@@ -71,21 +76,24 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+      - name: Download JaCoCo report
+        uses: actions/download-artifact@v4
+        with:
+          name: jacoco-report-${{ inputs.service_name }}
+          path: ${{ inputs.service_path }}/target/site/jacoco/
       - name: SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} 
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           cd ${{ inputs.service_path }}
-          mvn -B clean compile \
-            -DskipTests
+          mvn -B clean compile -DskipTests
           mvn -B sonar:sonar \
-            -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} \
-            -Dsonar.organization=fatimaaflous \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
-            -Dsonar.scm.provider=git \
-            -Dsonar.java.coveragePlugin=jacoco \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-
-            
+              -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} \
+              -Dsonar.organization=fatimy \
+              -Dsonar.host.url=${{SONAR_HOST_URL}} \
+              -Dsonar.login=${{SONAR_TOKEN}} \
+              -Dsonar.scm.provider=git \
+              -Dsonar.java.binaries=target/classes \
+              -Dsonar.java.coveragePlugin=jacoco \
+              -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
