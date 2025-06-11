@@ -85,6 +85,10 @@ jobs:
         run: ls -R ${{ inputs.service_path }}/target/site/jacoco/
       - name: Inspect JaCoCo report content
         run: head -n 50 ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
+      - name: Verify project structure
+        run: |
+          ls -R ${{ inputs.service_path }}/src/main/java
+          ls -R ${{ inputs.service_path }}/target/classes
       - name: SonarQube Scan
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
