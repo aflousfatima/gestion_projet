@@ -29,6 +29,13 @@
 	<properties>
 		<java.version>17</java.version>
 		<spring-cloud.version>2024.0.0</spring-cloud.version>
+		<sonar.projectKey>fatimaaflous_gestion_projet_Authentification_Service</sonar.projectKey>
+		<sonar.organization>fatimaaflous</sonar.organization>
+		<sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
+		<sonar.coverage.jacoco.xmlReportPaths>${project.basedir}/target/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+		<sonar.sources>src/main/java</sonar.sources>
+		<sonar.java.binaries>target/classes</sonar.java.binaries>
+		<sonar.exclusions>**/test/**,**/generated/**</sonar.exclusions>
 	</properties>
 	<dependencies>
 
@@ -244,6 +251,7 @@
 				<version>0.8.12</version>
 				<executions>
 					<execution>
+						<id>prepare-agent</id>
 						<goals>
 							<goal>prepare-agent</goal>
 						</goals>
@@ -254,8 +262,19 @@
 						<goals>
 							<goal>report</goal>
 						</goals>
+						<configuration>
+							<formats>
+								<format>XML</format>
+							</formats>
+							<outputDirectory>${project.basedir}/target/site/jacoco</outputDirectory>
+						</configuration>
 					</execution>
 				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>4.0.0.4121</version>
 			</plugin>
 
 		</plugins>
