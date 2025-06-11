@@ -51,3 +51,39 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Run unit and integration tests
         run: bash .shared/scripts/test.sh ${{ inputs.service_path }}
+    
+  sonar-analysis:
+    runs-on: ubuntu-latest
+    needs: tests
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 
+      - name: Set up JDK ${{ inputs.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: SonarQube Scan
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} 
+        run: |
+          cd ${{ inputs.service_path }}
+          mvn -B sonar:sonar \
+            -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} \
+            -Dsonar.organization=fatimaaflous \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }} \
+            -Dsonar.scm.provider=git \
+            -Dsonar.java.coveragePlugin=jacoco \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+            
