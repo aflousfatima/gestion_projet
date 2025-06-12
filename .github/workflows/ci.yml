@@ -174,8 +174,12 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read
     steps:
       - uses: actions/checkout@v4
+      - name: Convert service name to lowercase
+        id: lowercase
+        run: echo "service_name_lower=$(echo ${{ inputs.service_name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
       - name: Scan Docker image with Trivy
         uses: aquasecurity/trivy-action@0.28.0
         with:
@@ -185,7 +189,7 @@ jobs:
           output: trivy-image-scan-${{ inputs.service_name }}.sarif
           severity: CRITICAL,HIGH
           vuln-type: os,library
-          scanners: vuln,secret,config
+          scanners: vuln,secret,misconfig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Trivy SARIF results
