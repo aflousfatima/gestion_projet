@@ -24,7 +24,7 @@ try:
     client = TestClient(app, backend="asyncio")
     logger.debug("TestClient initialized")
 except Exception as e:
-    logger.error(f"Failed to initialize TestClient: {str(e)}", exc_info=True)
+    logger.error(f"Failed to initialize the TestClient: {str(e)}", exc_info=True)
     raise
 
 @pytest.fixture(autouse=True)
