@@ -167,7 +167,38 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: --progress=plain
-          
+
+trivy-scan:
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
+          scan-type: image
+          format: sarif
+          output: trivy-image-scan-${{ inputs.service_name }}.sarif
+          severity: CRITICAL,HIGH
+          vuln-type: os,library
+          scanners: vuln,secret,config
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Trivy SARIF results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results-${{ inputs.service_name }}
+          path: trivy-image-scan-${{ inputs.service_name }}.sarif
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image-scan-${{ inputs.service_name }}.sarif
+        if: always()
+        
   sonar-analysis:
     runs-on: ubuntu-latest
     needs: [tests, snyk-scan, docker-build-push]
