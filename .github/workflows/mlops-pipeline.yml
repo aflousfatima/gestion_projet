@@ -281,7 +281,7 @@ jobs:
         run: |
           for file in app/models/best_model.pkl app/models/scaler.pkl app/models/encoder.pkl app/models/tfidf.pkl app/models/all_tags.pkl app/models/features.pkl; do
             if [ ! -f "$file" ]; then
-              echo "Error: $file not found
+              echo "Error: $file not found"
               exit 1
             fi
           done
