@@ -270,12 +270,24 @@ jobs:
         uses: sigstore/cosign-installer@v3.8.1
         with:
           cosign-release: 'v2.4.3'
+      - name: Debug image availability
+        run: |
+          echo "Listing available images:"
+          docker images
+          echo "Attempting to pull image:"
+          docker pull ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }} || true
       - name: Get image digest
         id: get-digest
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }}
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE 2>/dev/null | cut -d'@' -f2 || echo "")
+          if [ -z "$DIGEST" ]; then
+            echo "Failed to get digest, pulling image explicitly"
+            docker pull $IMAGE
+            DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
+          fi
           echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Digest found: $DIGEST"
       - name: Load Cosign Private Key
         run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" | tr -d '\r' > cosign.key
       - name: Load Cosign Public Key
@@ -283,18 +295,17 @@ jobs:
       - name: Check for existing signature
         id: check-signature
         run: |
-         if cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} >/dev/null 2>&1; then
-           echo "Signature exists, skipping signing"
-           echo "signature_exists=true" >> $GITHUB_OUTPUT
-         else
-           echo "signature_exists=false" >> $GITHUB_OUTPUT
-         fi
+          if cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} >/dev/null 2>&1; then
+            echo "Signature exists, skipping signing"
+            echo "signature_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "signature_exists=false" >> $GITHUB_OUTPUT
+          fi
       - name: Sign the Docker image with Cosign
         if: steps.check-signature.outputs.signature_exists == 'false'
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
-
       - name: Verify the Docker image signature
         run: |
           cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
