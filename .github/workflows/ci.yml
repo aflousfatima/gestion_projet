@@ -245,7 +245,46 @@ jobs:
         with:
           name: trivy-scan-json-${{ inputs.service_name }}
           path: trivy-image-scan-${{ inputs.service_name }}.json
-        
+
+  sign_and_verify:
+    runs-on: ubuntu-latest
+    needs: docker-build-push
+    permissions:
+      contents: read
+      packages: read,write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Convert service name to lowercase
+        id: lowercase
+        run: echo "service_name_lower=$(echo ${{ inputs.service_name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.8.1
+        with:
+          cosign-release: 'v2.4.3'
+      - name: Load Cosign Private Key
+        run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" | tr -d '\r' > cosign.key
+      - name: Load Cosign Public Key
+        run: echo "${{ secrets.COSIGN_PUBLIC_KEY }}" | tr -d '\r' > cosign.pub
+      - name: Sign the Docker image with Cosign
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: cosign sign --yes --key cosign.key ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }}
+      - name: Verify the Docker image signature
+        run: |
+          cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }} | jq .
+          echo "Signature verification succeeded!"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
   sonar-analysis:
     runs-on: ubuntu-latest
     needs: [tests, snyk-scan, docker-build-push]
