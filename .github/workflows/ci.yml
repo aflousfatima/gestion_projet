@@ -283,7 +283,7 @@ jobs:
       - name: Sign the Docker image with Cosign
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key cosign.key --no-tlog-upload --force ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+        run: cosign sign --yes --key cosign.key --tlog-upload=false --force ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Verify the Docker image signature
         run: |
           cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
