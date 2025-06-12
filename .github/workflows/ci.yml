@@ -177,6 +177,8 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@v4
+        with:
+         token: ${{ secrets.GITHUB_TOKEN }}
       - name: Convert service name to lowercase
         id: lowercase
         run: echo "service_name_lower=$(echo ${{ inputs.service_name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
