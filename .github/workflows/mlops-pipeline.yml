@@ -324,10 +324,16 @@ jobs:
         run: |
           LINE_COVERAGE=$(xmllint --xpath "string(//coverage/@line-rate)" AI_Service/coverage.xml)
           BRANCH_COVERAGE=$(xmllint --xpath "string(//coverage/@branch-rate)" AI_Service/coverage.xml)
-          # Convert to percentage
-          LINE_PERCENT=$(awk "BEGIN {printf \"%.2f\", $LINE_COVERAGE * 100}")
-          BRANCH_PERCENT=$(awk "BEGIN {printf \"%.2f\", $BRANCH_PHONE * 100}")
-
+          echo "LINE_COVERAGE=$LINE_COVERAGE"
+          echo "BRANCH_COVERAGE=$BRANCH_COVERAGE"
+          # Vérification des valeurs
+          if [[ -z "$LINE_COVERAGE" || -z "$BRANCH_COVERAGE" ]]; then
+            echo "Erreur : couverture vide ou invalide"
+            exit 1
+          fi
+          # Conversion en pourcentage avec awk
+          LINE_PERCENT=$(awk "BEGIN {printf \"%.2f\", ${LINE_COVERAGE} * 100}")
+          BRANCH_PERCENT=$(awk "BEGIN {printf \"%.2f\", ${BRANCH_COVERAGE} * 100}")
           echo "line=${LINE_PERCENT}" >> $GITHUB_OUTPUT
           echo "branch=${BRANCH_PERCENT}" >> $GITHUB_OUTPUT
 
