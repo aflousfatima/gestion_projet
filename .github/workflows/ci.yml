@@ -245,11 +245,6 @@ jobs:
         with:
           name: trivy-scan-json-${{ inputs.service_name }}
           path: trivy-image-scan-${{ inputs.service_name }}.json
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
-        with:
-          sarif_file: trivy-image-scan-${{ inputs.service_name }}.sarif
         
   sonar-analysis:
     runs-on: ubuntu-latest
