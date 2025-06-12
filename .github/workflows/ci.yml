@@ -306,12 +306,11 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+
       - name: Verify the Docker image signature
-        run: |
-          cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
-          echo "Signature verification succeeded!"
-          env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: cosign verify --key cosign.pub --no-tlog ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
+      - name: Confirm verification success
+        run: echo "Signature verification succeeded!"
       
   sonar-analysis:
     runs-on: ubuntu-latest
