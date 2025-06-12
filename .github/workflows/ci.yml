@@ -280,10 +280,21 @@ jobs:
         run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" | tr -d '\r' > cosign.key
       - name: Load Cosign Public Key
         run: echo "${{ secrets.COSIGN_PUBLIC_KEY }}" | tr -d '\r' > cosign.pub
+      - name: Check for existing signature
+        id: check-signature
+        run: |
+         if cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} >/dev/null 2>&1; then
+           echo "Signature exists, skipping signing"
+           echo "signature_exists=true" >> $GITHUB_OUTPUT
+         else
+           echo "signature_exists=false" >> $GITHUB_OUTPUT
+         fi
       - name: Sign the Docker image with Cosign
+        if: steps.check-signature.outputs.signature_exists == 'false'
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key cosign.key --tlog-upload=false --force ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+        run: cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+
       - name: Verify the Docker image signature
         run: |
           cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
