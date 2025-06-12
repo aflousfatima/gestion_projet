@@ -304,13 +304,7 @@ jobs:
           TASK_API_URL=http://localhost:8086/api/chatbot/tasks
           EOF
 
-      - name: Verify project structure
-        working-directory: AI_Service
-        run: |
-          ls -R app/ tests/
-          ls -l coverage.xml || echo "Coverage report not found"
-
-      - name: Run pytest
+      - name: Run pytest with coverage
         working-directory: AI_Service
         run: |
           pytest tests/ --asyncio-mode=auto --cov=app --cov-report=xml:coverage.xml --cov-report=html:cov_html --cov-config=.coveragerc --cov-branch -v
@@ -359,7 +353,6 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
 
       - name: Send Slack notification
         uses: slackapi/slack-github-action@v1.26.0
