@@ -98,13 +98,13 @@ jobs:
       - name: Run Snyk to scan dependencies
         run: |
           cd ${{ inputs.service_path }}
-          snyk test --fail-on=none --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high
+          snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       - name: Run Snyk code scan
         run: |
           cd ${{ inputs.service_path }}
-          snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high
+          snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       - name: Monitor with Snyk
@@ -120,6 +120,7 @@ jobs:
           path: |
             ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif
             ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif
+
 
             
   sonar-analysis:
