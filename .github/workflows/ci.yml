@@ -61,49 +61,48 @@ jobs:
     runs-on: ubuntu-latest
     needs: tests
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK ${{ inputs.java_version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ inputs.java_version }}
-          distribution: 'temurin'
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Run Snyk to scan dependencies
-        uses: snyk/actions/maven@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: test
-          args: --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high
-          maven-dir: ${{ inputs.service_path }}
-      - name: Run Snyk code scan
-        uses: snyk/actions/maven@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: code test
-          args: --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high
-          maven-dir: ${{ inputs.service_path }}
-      - name: Monitor with Snyk
-        uses: snyk/actions/maven@master
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          command: monitor
-          maven-dir: ${{ inputs.service_path }}
-      - name: Upload Snyk SARIF results
-        uses: actions/upload-artifact@v4
-        with:
-          name: snyk-scan-results-${{ inputs.service_name }}
-          path: |
-            ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif
-            ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif  
+    - uses: actions/checkout@v4
+    - name: Set up JDK ${{ inputs.java_version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java_version }}
+        distribution: 'temurin'
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - name: Debug directory contents
+      run: |
+        ls -R ${{ inputs.service_path }}
+        cat ${{ inputs.service_path }}/pom.xml || echo "ERROR: pom.xml not found"
+    - name: Run Snyk to scan dependencies
+      run: |
+        cd ${{ inputs.service_path }}
+        snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - name: Run Snyk code scan
+      run: |
+        cd ${{ inputs.service_path }}
+        snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - name: Monitor with Snyk
+      run: |
+        cd ${{ inputs.service_path }}
+        snyk monitor
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - name: Upload Snyk SARIF results
+      uses: actions/upload-artifact@v4
+      with:
+        name: snyk-scan-results-${{ inputs.service_name }}
+        path: |
+          ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif
+          ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif 
   
   sonar-analysis:
     runs-on: ubuntu-latest
