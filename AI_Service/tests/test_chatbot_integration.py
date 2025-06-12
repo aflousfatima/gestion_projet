@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 # Set Windows event loop policy to avoid asyncio issues
 if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    logger.debug("Set WindowsSelectorEventLoopPolicy for asyncio")
+    logger.debug("Set set WindowsSelectorEventLoopPolicy for asyncio")
 
 # Initialize TestClient
 try:
