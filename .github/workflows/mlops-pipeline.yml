@@ -340,7 +340,7 @@ jobs:
       - name: Create sonar-project.properties
         run: |
           cat << EOF > AI_Service/sonar-project.properties
-          sonar.projectKey=fatimaaflous_gestion_projet_AI_Service
+          sonar.projectKey=fatimaaflous_gestion_projet_IA_Service
           sonar.organization=fatimaaflous
           sonar.python.version=3.12
           sonar.sources=app
