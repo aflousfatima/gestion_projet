@@ -270,6 +270,12 @@ jobs:
         uses: sigstore/cosign-installer@v3.8.1
         with:
           cosign-release: 'v2.4.3'
+      - name: Get image digest
+        id: get-digest
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }}
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
+          echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
       - name: Load Cosign Private Key
         run: echo "${{ secrets.COSIGN_PRIVATE_KEY }}" | tr -d '\r' > cosign.key
       - name: Load Cosign Public Key
@@ -277,12 +283,12 @@ jobs:
       - name: Sign the Docker image with Cosign
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key cosign.key ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }}
+        run: cosign sign --yes --key cosign.key --no-tlog-upload --force ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Verify the Docker image signature
         run: |
-          cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }} | jq .
+          cosign verify --key cosign.pub ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
           echo "Signature verification succeeded!"
-        env:
+          env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
   sonar-analysis:
