@@ -38,13 +38,12 @@ jobs:
       - name: Build with Maven and generate in-toto link
         run: |
           in-toto-run --step-name maven-build \
-          --materials ${{ inputs.service_path }}/pom.xml \
-          --products ${{ inputs.service_path }}/target/*.jar \
-          --signing-key in-toto.key \
-          --run-timeout 300 \
-          --verbose \
-          -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
-          
+            --materials ${{ inputs.service_path }}/pom.xml \
+            --products ${{ inputs.service_path }}/target/*.jar \
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
+            -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
@@ -75,7 +74,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Run unit and integration tests and generate in-toto link
@@ -83,7 +82,9 @@ jobs:
           in-toto-run --step-name tests \
             --materials ${{ inputs.service_path }}/target/*.jar \
             --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
-            --key in-toto.key \
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
             -- bash .shared/scripts/test.sh ${{ inputs.service_path }}
       - name: Upload JaCoCo report
         uses: actions/upload-artifact@v4
@@ -120,7 +121,7 @@ jobs:
       - name: Install Snyk CLI
         run: npm install -g snyk
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Debug directory contents
@@ -143,7 +144,9 @@ jobs:
           in-toto-run --step-name snyk-scan \
             --materials pom.xml \
             --products snyk_test_${{ inputs.service_name }}.sarif snyk_code_test_${{ inputs.service_name }}.sarif \
-            --key in-toto.key \
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
             -- sh -c 'snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -184,7 +187,7 @@ jobs:
           ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR found in target/"
           ls -l ${{ inputs.service_path }}/Dockerfile || echo "ERROR: Dockerfile not found"
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Set up Docker Buildx
@@ -202,7 +205,9 @@ jobs:
         run: |
           in-toto-run --step-name docker-build-push \
             --materials ${{ inputs.service_path }}/target/*.jar ${{ inputs.service_path }}/Dockerfile \
-            --key in-toto.key \
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
             -- docker buildx build \
               --file ${{ inputs.service_path }}/Dockerfile \
               --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest \
@@ -240,7 +245,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Debug image existence
@@ -258,8 +263,10 @@ jobs:
         run: |
           in-toto-run --step-name trivy-scan \
             --products trivy-image-scan-${{ inputs.service_name }}.sarif trivy-image-scan-${{ inputs.service_name }}.json \
-            --key in-toto.key \
-            -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
+            -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library ---IN_TOTO_PRIVATE_KEY scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Trivy SARIF results
@@ -299,7 +306,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Install Cosign
@@ -345,7 +352,9 @@ jobs:
           in-toto-run --step-name sign-image \
             --materials cosign.key \
             --products cosign.pub \
-            --key in-toto.key \
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
             -- cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Generate SLSA provenance attestation
         env:
@@ -382,7 +391,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Verify project structure
@@ -397,7 +406,9 @@ jobs:
           cd ${{ inputs.service_path }}
           in-toto-run --step-name sonar-analysis \
             --materials target/site/jacoco/jacoco.xml \
-            --key in-toto.key \
+            --signing-key in-toto.key \
+            --run-timeout 300 \
+            --verbose \
             -- sh -c 'mvn -B clean verify; mvn -B sonar:sonar -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=fatimaaflous -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
@@ -411,7 +422,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install in-toto
-        run: pip install in-toto
+        run: pip install in-toto --upgrade
       - name: Download in-toto links
         uses: actions/download-artifact@v4
         with:
