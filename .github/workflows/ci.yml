@@ -140,14 +140,13 @@ jobs:
           ./mvnw --version || echo "ERROR: mvnw failed to run"
       - name: Run Snyk scans and generate in-toto link
         run: |
-          cd ${{ inputs.service_path }}
-          in-toto-run --step-name snyk-scan \
-            --materials pom.xml \
-            --products snyk_test_${{ inputs.service_name }}.sarif snyk_code_test_${{ inputs.service_name }}.sarif \
+            in-toto-run --step-name snyk-scan \
+            --materials ${{ inputs.service_path }}/pom.xml \
+            --products ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif \
             --signing-key in-toto.key \
             --run-timeout 300 \
             --verbose \
-            -- sh -c 'snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
+            -- sh -c 'cd ${{ inputs.service_path }} && snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; cd ${{ inputs.service_path }} && snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       - name: Monitor with Snyk
@@ -360,7 +359,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign attest --yes --key cosign.key --tlog-upload=false --predicate-type=https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+          cosign attest --yes --key cosign.key --tlog-upload=false --type=slsa ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Verify SLSA provenance attestation
         run: cosign verify-attestation --key cosign.pub --no-tlog --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
       - name: Upload in-toto link
