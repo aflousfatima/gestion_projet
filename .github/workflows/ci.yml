@@ -479,21 +479,17 @@ jobs:
         run: |
           cat .in-toto/root.layout
           python3 -m json.tool .in-toto/root.layout || echo "ERROR: Invalid JSON in root.layout"
+          grep '"signatures"' .in-toto/root.layout || echo "ERROR: No signatures found in root.layout"
       - name: Validate link files
         run: |
           for link in *.link; do
             echo "Validating $link"
             python3 -m json.tool "$link" || echo "ERROR: Invalid JSON in $link"
+            grep '"keyid": "7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"' "$link" || echo "ERROR: Incorrect keyid in $link"
           done
       - name: Load in-toto public key
         run: |
           echo "${{ secrets.IN_TOTO_PUBLIC_KEY }}" | tr -d '\r\n' | sed 's/[^[:print:]]//g' > in-toto.pub
           cat in-toto.pub
-      - name: Verify link signatures
-        run: |
-          for link in *.link; do
-            echo "Verifying signature for $link"
-            in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub --link-dir . --verbose --inspection-timeout 30 || echo "ERROR: Signature verification failed for $link"
-          done
       - name: Verify in-toto pipeline
         run: in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub --verbose
