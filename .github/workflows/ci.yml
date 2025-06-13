@@ -40,6 +40,7 @@ jobs:
           --products ${{ inputs.service_path }}/target/*.jar \
           --key in-toto.key \
           -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
+          
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
