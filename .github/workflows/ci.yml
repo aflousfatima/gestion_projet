@@ -474,4 +474,4 @@ jobs:
       - name: Load in-toto public key
         run: echo "${{ secrets.IN_TOTO_PUBLIC_KEY }}" | tr -d '\r' > in-toto.pub
       - name: Verify in-toto pipeline
-        run: in-toto-verify --layout .in-toto/root.layout --layout-key in-toto.pub
+        run: in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub
