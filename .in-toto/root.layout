@@ -49,17 +49,7 @@
       "keytype": "rsa",
       "scheme": "rsassa-pss-sha256",
       "keyval": {
-        "public": "-----BEGIN PUBLIC KEY-----
-MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAve0suE1riuJtafZvkJGh
-ebsj0drwfXITrI9+tuUKX2TzS+mIcxeVP7oxPGY7forkz0X8Els9gGc/jE8sHXuA
-3AjLWYi8om+6AL1JvAFgY9GBQ46FUV1nSgC0eH50rrbPB5yYqaq7VGEz7Rd4RcOt
-ECuiTpsAXXBZSacT99YvaufZizvzCi0y31d0ufQExiy30agtUeJJ8TF2skJ83s76
-PhZ9g79I6xG7cmLLizRBhozmAIRwQyRRI7aro7yaLf8VuFZhur8NHgU5n9h0ymF3
-JQLq578bcv/eig7x1IhqGaUMOdfa56H2i5Bx5/XnG39a9yvpLO/zFwuBV3hHOXB9
-UvdtUP7Z8kNgmxmB0qrjazDjQUFNZ/gL1OBhYTlcQe16v+RTeN9L1zwNJzg/ML1n
-tI9KzrQlalaaIT+HPi1dIZV5lk/oCkiDlV7xgL+c2FHzq6HaXV45Het6mCiq65iH
-cklriEvzPJj2N/9KQ0fHOqF5OnfD5QPRmv64UU86Qib1AgMBAAE=
------END PUBLIC KEY-----"
+        "public": "-----BEGIN PUBLIC KEY-----MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAve0suE1riuJtafZvkJGhebsj0drwfXITrI9+tuUKX2TzS+mIcxeVP7oxPGY7forkz0X8Els9gGc/jE8sHXuA3AjLWYi8om+6AL1JvAFgY9GBQ46FUV1nSgC0eH50rrbPB5yYqaq7VGEz7Rd4RcOtECuiTpsAXXBZSacT99YvaufZizvzCi0y31d0ufQExiy30agtUeJJ8TF2skJ83s76PhZ9g79I6xG7cmLLizRBhozmAIRwQyRRI7aro7yaLf8VuFZhur8NHgU5n9h0ymF3JQLq578bcv/eig7x1IhqGaUMOdfa56H2i5Bx5/XnG39a9yvpLO/zFwuBV3hHOXB9UvdtUP7Z8kNgmxmB0qrjazDjQUFNZ/gL1OBhYTlcQe16v+RTeN9L1zwNJzg/ML1ntI9KzrQlalaaIT+HPi1dIZV5lk/oCkiDlV7xgL+c2FHzq6HaXV45Het6mCiq65iHcklriEvzPJj2N/9KQ0fHOqF5OnfD5QPRmv64UU86Qib1AgMBAAE=-----END PUBLIC KEY-----"
       }
     }
   },
