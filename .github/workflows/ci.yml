@@ -471,7 +471,23 @@ jobs:
         with:
           name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
           path: .
+      - name: Debug directory contents
+        run: |
+          ls -l .in-toto/root.layout || echo "ERROR: root.layout not found"
+          ls -l *.link || echo "ERROR: No link files found"
+      - name: Validate layout file
+        run: |
+          cat .in-toto/root.layout
+          python3 -m json.tool .in-toto/root.layout || echo "ERROR: Invalid JSON in root.layout"
+      - name: Validate link files
+        run: |
+          for link in *.link; do
+            echo "Validating $link"
+            python3 -m json.tool "$link" || echo "ERROR: Invalid JSON in $link"
+          done
       - name: Load in-toto public key
-        run: echo "${{ secrets.IN_TOTO_PUBLIC_KEY }}" | tr -d '\r' > in-toto.pub
+        run: |
+          echo "${{ secrets.IN_TOTO_PUBLIC_KEY }}" | tr -d '\r\n' | sed 's/[^[:print:]]//g' > in-toto.pub
+          cat in-toto.pub
       - name: Verify in-toto pipeline
-        run: in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub
+        run: in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub --verbose
