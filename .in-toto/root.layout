@@ -5,52 +5,61 @@
       "name": "maven-build",
       "expected_materials": [["MATCH", "pom.xml", "WITH", "FILES"]],
       "expected_products": [["CREATE", "target/*.jar"]],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     },
     {
       "name": "tests",
       "expected_materials": [["MATCH", "target/*.jar", "WITH", "FILES"]],
       "expected_products": [["CREATE", "target/site/jacoco/jacoco.xml"]],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     },
     {
       "name": "snyk-scan",
       "expected_materials": [["MATCH", "pom.xml", "WITH", "FILES"]],
       "expected_products": [["CREATE", "snyk_test_*.sarif"], ["CREATE", "snyk_code_test_*.sarif"]],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     },
     {
       "name": "trivy-scan",
       "expected_materials": [],
       "expected_products": [["CREATE", "trivy-image-scan-*.sarif"], ["CREATE", "trivy-image-scan-*.json"]],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     },
     {
       "name": "docker-build-push",
       "expected_materials": [["MATCH", "target/*.jar", "WITH", "FILES"], ["MATCH", "Dockerfile", "WITH", "FILES"]],
       "expected_products": [],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     },
     {
       "name": "sign-image",
       "expected_materials": [],
       "expected_products": [],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     },
     {
       "name": "sonar-analysis",
       "expected_materials": [["MATCH", "target/site/jacoco/jacoco.xml", "WITH", "FILES"]],
       "expected_products": [],
-      "pubkeys": ["1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44"]
+      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
     }
   ],
   "keys": {
-    "1e1a960034b5864ea7e248fd229d7dc843ef2898923e035a5f57baf94ea4cd44": {
+    "7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e": {
       "keytype": "rsa",
       "scheme": "rsassa-pss-sha256",
       "keyval": {
-        "public": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDf/7Cpi7rjpoQ85jhtW8snWJJJ8e2lKSN/lFvSWoeeT6W4Rh/ZHgObM8/nYCVnUGAj+eVtrfRdqUxOxLrNw3OLG5+SZ2yKCkb73OLxcnDVSIW8ClmRnJiaaTIrGFyDVJR5WpbrT+39kjzbAfyPplMoaUIWzTBgOi4vPPcwoxLuswFGhBcjssf8mgYQKP6f2hI9vrKe/CuA7e4NVdd7Y2SPm/BS9JWmm6vZkxqOeFuCa/LS65ZlJ+ZZeWOpDW3jlVhr7x0QkkQ+O9+Tq3SJFyweqiT2Ey5kEyx2PlQXV1B8R1OsXEgo0bFEt1v1tNNuag9EY/gi0sRZWMdZfxttYMETW0+o6T1KgZKJOryeinOfad7WG622ZBXjH3MkN26fLXvWL1eY/tCDQfQ2QZr7NcMhG607+cXsp6jFpdp3us5x2kinGRKAbw/W/nlYVGcFxpAe0w71kB97VdDB7pxsJjsXwjhjSGQbTfYNcDqJZ+WoZzIZnNyDQChVs9frOklh886lRATRK+a83xno5lFO0z10LofAjtnfoynh6AhHMf0vy05mBb/ZZkf5JPspAb6PAsVIU+RHp9P/D8eMKGy8OYz/P3QYurAVLJwmve8JHMZX889QJe3OcCe78iVDBvyVZQ+mMFtojz7rB4H0vJz8ecbyQiwBP5ILBbv8qbZwzJICXQ== fatima@DESKTOP-EC990BF
-"
+        "public": "-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAve0suE1riuJtafZvkJGh
+ebsj0drwfXITrI9+tuUKX2TzS+mIcxeVP7oxPGY7forkz0X8Els9gGc/jE8sHXuA
+3AjLWYi8om+6AL1JvAFgY9GBQ46FUV1nSgC0eH50rrbPB5yYqaq7VGEz7Rd4RcOt
+ECuiTpsAXXBZSacT99YvaufZizvzCi0y31d0ufQExiy30agtUeJJ8TF2skJ83s76
+PhZ9g79I6xG7cmLLizRBhozmAIRwQyRRI7aro7yaLf8VuFZhur8NHgU5n9h0ymF3
+JQLq578bcv/eig7x1IhqGaUMOdfa56H2i5Bx5/XnG39a9yvpLO/zFwuBV3hHOXB9
+UvdtUP7Z8kNgmxmB0qrjazDjQUFNZ/gL1OBhYTlcQe16v+RTeN9L1zwNJzg/ML1n
+tI9KzrQlalaaIT+HPi1dIZV5lk/oCkiDlV7xgL+c2FHzq6HaXV45Het6mCiq65iH
+cklriEvzPJj2N/9KQ0fHOqF5OnfD5QPRmv64UU86Qib1AgMBAAE=
+-----END PUBLIC KEY-----"
       }
     }
   },
