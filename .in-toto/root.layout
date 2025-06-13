@@ -1,0 +1,57 @@
+{
+  "_type": "layout",
+  "steps": [
+    {
+      "name": "maven-build",
+      "expected_materials": [["MATCH", "pom.xml", "WITH", "FILES"]],
+      "expected_products": [["CREATE", "target/*.jar"]],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    },
+    {
+      "name": "tests",
+      "expected_materials": [["MATCH", "target/*.jar", "WITH", "FILES"]],
+      "expected_products": [["CREATE", "target/site/jacoco/jacoco.xml"]],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    },
+    {
+      "name": "snyk-scan",
+      "expected_materials": [["MATCH", "pom.xml", "WITH", "FILES"]],
+      "expected_products": [["CREATE", "snyk_test_*.sarif"], ["CREATE", "snyk_code_test_*.sarif"]],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    },
+    {
+      "name": "trivy-scan",
+      "expected_materials": [],
+      "expected_products": [["CREATE", "trivy-image-scan-*.sarif"], ["CREATE", "trivy-image-scan-*.json"]],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    },
+    {
+      "name": "docker-build-push",
+      "expected_materials": [["MATCH", "target/*.jar", "WITH", "FILES"], ["MATCH", "Dockerfile", "WITH", "FILES"]],
+      "expected_products": [],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    },
+    {
+      "name": "sign-image",
+      "expected_materials": [],
+      "expected_products": [],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    },
+    {
+      "name": "sonar-analysis",
+      "expected_materials": [["MATCH", "target/site/jacoco/jacoco.xml", "WITH", "FILES"]],
+      "expected_products": [],
+      "pubkeys": ["<in-toto-public-key-hash>"]
+    }
+  ],
+  "keys": {
+    "<in-toto-public-key-hash>": {
+      "keytype": "rsa",
+      "scheme": "rsassa-pss-sha256",
+      "keyval": {
+        "public": "<public-key>"
+      }
+    }
+  },
+  "expires": "2026-06-12T00:00:00Z"
+}
