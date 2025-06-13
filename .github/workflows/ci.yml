@@ -489,5 +489,8 @@ jobs:
         run: |
           echo "${{ secrets.IN_TOTO_PUBLIC_KEY }}" | tr -d '\r\n' | sed 's/[^[:print:]]//g' > in-toto.pub
           cat in-toto.pub
+      - name: Verify layout signature
+        run: |
+          in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub --verbose || echo "ERROR: Layout verification failed"
       - name: Verify in-toto pipeline
         run: in-toto-verify --layout .in-toto/root.layout --verification-keys in-toto.pub --verbose
