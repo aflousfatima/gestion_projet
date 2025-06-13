@@ -355,11 +355,30 @@ jobs:
             --run-timeout 300 \
             --verbose \
             -- cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+
+      - name: Generate SLSA provenance predicate
+        run: |
+          echo '{
+            "_type": "https://in-toto.io/Statement/v0.1",
+            "subject": [{"name": "ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}", "digest": {"sha256": "${{ steps.get-digest.outputs.image_digest }}"}}],
+            "predicateType": "https://slsa.dev/provenance/v1",
+            "predicate": {
+              "buildDefinition": {
+                "buildType": "https://slsa.dev/container/v1",
+                "externalParameters": {"repository": "${{ github.repository }}", "ref": "${{ github.sha }}"},
+                "resolvedDependencies": []
+              },
+              "runDetails": {
+                "builder": {"id": "https://github.com/actions/runner"},
+                "metadata": {"invocationId": "${{ github.run_id }}"}
+              }
+            }
+          }' > slsa-provenance.json
       - name: Generate SLSA provenance attestation
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign attest --yes --key cosign.key --tlog-upload=false --type=slsa ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+          cosign attest --yes --key cosign.key --tlog-upload=false --type=slsa --predicate slsa-provenance.json ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}          
       - name: Verify SLSA provenance attestation
         run: cosign verify-attestation --key cosign.pub --no-tlog --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
       - name: Upload in-toto link
@@ -397,18 +416,17 @@ jobs:
         run: |
           ls -R ${{ inputs.service_path }}/src/main/java
           ls -R ${{ inputs.service_path }}/target/classes || echo "ERROR: target/classes not found"
-      - name: SonarQube Scan and generate in-toto link
+            - name: SonarQube Scan and generate in-toto link
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: |
-          cd ${{ inputs.service_path }}
-          in-toto-run --step-name sonar-analysis \
-            --materials target/site/jacoco/jacoco.xml \
+          run: |
+            in-toto-run --step-name sonar-analysis \
+            --materials ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
             --signing-key in-toto.key \
             --run-timeout 300 \
             --verbose \
-            -- sh -c 'mvn -B clean verify; mvn -B sonar:sonar -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=fatimaaflous -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
+            -- sh -c 'cd ${{ inputs.service_path }} && mvn -B clean verify && mvn -B sonar:sonar -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=fatimaaflous -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
