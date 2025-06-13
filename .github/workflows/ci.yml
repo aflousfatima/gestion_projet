@@ -29,8 +29,17 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Build with Maven
-        run: bash .shared/scripts/build.sh ${{ inputs.service_path }}
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Build with Maven and generate in-toto link
+        run: |
+          in-toto-run --step-name maven-build \
+            --materials ${{ inputs.service_path }}/pom.xml \
+            --products ${{ inputs.service_path }}/target/*.jar \
+            --key in-toto.key \
+            -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
@@ -60,8 +69,17 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Run unit and integration tests
-        run: bash .shared/scripts/test.sh ${{ inputs.service_path }}
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Run unit and integration tests and generate in-toto link
+        run: |
+          in-toto-run --step-name tests \
+            --materials ${{ inputs.service_path }}/target/*.jar \
+            --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
+            --key in-toto.key \
+            -- bash .shared/scripts/test.sh ${{ inputs.service_path }}
       - name: Upload JaCoCo report
         uses: actions/upload-artifact@v4
         with:
@@ -96,6 +114,10 @@ jobs:
           node-version: '20'
       - name: Install Snyk CLI
         run: npm install -g snyk
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Debug directory contents
         run: |
           ls -R ${{ inputs.service_path }}
@@ -110,16 +132,14 @@ jobs:
         run: |
           cd ${{ inputs.service_path }}
           ./mvnw --version || echo "ERROR: mvnw failed to run"
-      - name: Run Snyk to scan dependencies
+      - name: Run Snyk scans and generate in-toto link
         run: |
           cd ${{ inputs.service_path }}
-          snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      - name: Run Snyk code scan
-        run: |
-          cd ${{ inputs.service_path }}
-          snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true
+          in-toto-run --step-name snyk-scan \
+            --materials pom.xml \
+            --products snyk_test_${{ inputs.service_name }}.sarif snyk_code_test_${{ inputs.service_name }}.sarif \
+            --key in-toto.key \
+            -- sh -c 'snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       - name: Monitor with Snyk
@@ -158,6 +178,10 @@ jobs:
         run: |
           ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR found in target/"
           ls -l ${{ inputs.service_path }}/Dockerfile || echo "ERROR: Dockerfile not found"
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Convert service name to lowercase
@@ -169,24 +193,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ${{ inputs.service_path }}
-          file: ${{ inputs.service_path }}/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
-            ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: --progress=plain
+      - name: Build and push Docker image and generate in-toto link
+        run: |
+          in-toto-run --step-name docker-build-push \
+            --materials ${{ inputs.service_path }}/target/*.jar ${{ inputs.service_path }}/Dockerfile \
+            --key in-toto.key \
+            -- docker buildx build \
+              --file ${{ inputs.service_path }}/Dockerfile \
+              --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest \
+              --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }} \
+              --cache-from=type=gha \
+              --cache-to=type=gha,mode=max \
+              --progress=plain \
+              --push \
+              ${{ inputs.service_path }}
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
           name: in-toto-link-docker-build-push-${{ inputs.service_name }}
           path: docker-build-push.*.link
-          
+
   trivy-scan:
     runs-on: ubuntu-latest
     needs: docker-build-push
@@ -208,6 +234,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Debug image existence
         run: |
           echo "Attempting to pull image from GHCR"
@@ -219,39 +249,12 @@ jobs:
           key: trivy-db-${{ runner.os }}-${{ hashFiles('**/trivy.yaml') }}
           restore-keys: |
             trivy-db-${{ runner.os }}-
-      - name: Scan Docker image with Trivy (Table)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
-          scan-type: image
-          format: table
-          severity: CRITICAL,HIGH
-          vuln-type: os,library
-          scanners: vuln,secret,misconfig
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Scan Docker image with Trivy (JSON)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
-          scan-type: image
-          format: json
-          output: trivy-image-scan-${{ inputs.service_name }}.json
-          severity: CRITICAL,HIGH
-          vuln-type: os,library
-          scanners: vuln,secret,misconfig
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Scan Docker image with Trivy (SARIF)
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
-          scan-type: image
-          format: sarif
-          output: trivy-image-scan-${{ inputs.service_name }}.sarif
-          severity: CRITICAL,HIGH
-          vuln-type: os,library
-          scanners: vuln,secret,misconfig
+      - name: Scan Docker image with Trivy and generate in-toto link
+        run: |
+          in-toto-run --step-name trivy-scan \
+            --products trivy-image-scan-${{ inputs.service_name }}.sarif trivy-image-scan-${{ inputs.service_name }}.json \
+            --key in-toto.key \
+            -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Trivy SARIF results
@@ -264,7 +267,6 @@ jobs:
         with:
           name: trivy-scan-json-${{ inputs.service_name }}
           path: trivy-image-scan-${{ inputs.service_name }}.json
-
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
@@ -291,6 +293,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.1
         with:
@@ -350,7 +356,7 @@ jobs:
           path: sign-image.*.link
       - name: Confirm signature and attestation success
         run: echo "Signature, attestation, and in-toto links succeeded!"
-      
+
   sonar-analysis:
     runs-on: ubuntu-latest
     needs: [tests, snyk-scan, docker-build-push]
@@ -370,24 +376,24 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Load in-toto private key
+        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
       - name: Verify project structure
         run: |
           ls -R ${{ inputs.service_path }}/src/main/java
           ls -R ${{ inputs.service_path }}/target/classes || echo "ERROR: target/classes not found"
-      - name: SonarQube Scan
+      - name: SonarQube Scan and generate in-toto link
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
           cd ${{ inputs.service_path }}
-          mvn -B clean verify
-          ls -R target/classes || echo "ERROR: target/classes not found"
-          ls -R target/site/jacoco || echo "ERROR: jacoco.xml not found"
-          mvn -B sonar:sonar \
-            -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} \
-            -Dsonar.organization=fatimaaflous \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          in-toto-run --step-name sonar-analysis \
+            --materials target/site/jacoco/jacoco.xml \
+            --key in-toto.key \
+            -- sh -c 'mvn -B clean verify; mvn -B sonar:sonar -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=fatimaaflous -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
