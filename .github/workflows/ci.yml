@@ -378,7 +378,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign attest --yes --key cosign.key --tlog-upload=false --type=slsa --predicate slsa-provenance.json ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}          
+          cosign attest --yes --key cosign.key --tlog-upload=false --type=https://slsa.dev/provenance/v1 --predicate slsa-provenance.json ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}         
       - name: Verify SLSA provenance attestation
         run: cosign verify-attestation --key cosign.pub --no-tlog --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
       - name: Upload in-toto link
@@ -412,21 +412,17 @@ jobs:
         run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
-      - name: Verify project structure
-        run: |
-          ls -R ${{ inputs.service_path }}/src/main/java
-          ls -R ${{ inputs.service_path }}/target/classes || echo "ERROR: target/classes not found"
-            - name: SonarQube Scan and generate in-toto link
+      - name: SonarQube Scan and generate in-toto link
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          run: |
-            in-toto-run --step-name sonar-analysis \
+        run: |
+          in-toto-run --step-name sonar-analysis \
             --materials ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
             --signing-key in-toto.key \
             --run-timeout 300 \
             --verbose \
-            -- sh -c 'cd ${{ inputs.service_path }} && mvn -B clean verify && mvn -B sonar:sonar -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=fatimaaflous -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
+            -- sh -c 'cd ${{ inputs.service_path }} && mvn -B clean verify && ls -R src/main/java && ls -R target/classes || echo "ERROR: target/classes not found" && mvn -B sonar:sonar -Dsonar.projectKey=fatimaaflous_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=fatimaaflous -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
