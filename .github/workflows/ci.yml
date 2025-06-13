@@ -37,6 +37,11 @@ jobs:
           name: jar-${{ inputs.service_name }}
           path: ${{ inputs.service_path }}/target/*.jar
           if-no-files-found: error
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-maven-build-${{ inputs.service_name }}
+          path: maven-build.*.link
 
   tests:
     runs-on: ubuntu-latest
@@ -62,7 +67,11 @@ jobs:
         with:
           name: jacoco-report-${{ inputs.service_name }}
           path: ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
-
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-tests-${{ inputs.service_name }}
+          path: tests.*.link
 
   snyk-scan:
     runs-on: ubuntu-latest
@@ -126,6 +135,11 @@ jobs:
           path: |
             ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif
             ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-snyk-scan-${{ inputs.service_name }}
+          path: snyk-scan.*.link
 
   docker-build-push:
     runs-on: ubuntu-latest
@@ -167,7 +181,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: --progress=plain
-
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-docker-build-push-${{ inputs.service_name }}
+          path: docker-build-push.*.link
+          
   trivy-scan:
     runs-on: ubuntu-latest
     needs: docker-build-push
@@ -246,6 +265,12 @@ jobs:
           name: trivy-scan-json-${{ inputs.service_name }}
           path: trivy-image-scan-${{ inputs.service_name }}.json
 
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-trivy-scan-${{ inputs.service_name }}
+          path: trivy-scan.*.link
+
   sign_and_verify:
     runs-on: ubuntu-latest
     needs: docker-build-push
@@ -301,16 +326,30 @@ jobs:
           else
             echo "signature_exists=false" >> $GITHUB_OUTPUT
           fi
-      - name: Sign the Docker image with Cosign
+      - name: Sign the Docker image with Cosign and generate in-toto link
         if: steps.check-signature.outputs.signature_exists == 'false'
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
-        run: cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
-
-      - name: Verify the Docker image signature
-        run: cosign verify --key cosign.pub --no-tlog ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
-      - name: Confirm verification success
-        run: echo "Signature verification succeeded!"
+        run: |
+          in-toto-run --step-name sign-image \
+            --materials cosign.key \
+            --products cosign.pub \
+            --key in-toto.key \
+            -- cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+      - name: Generate SLSA provenance attestation
+        env:
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign attest --yes --key cosign.key --tlog-upload=false --predicate-type=https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+      - name: Verify SLSA provenance attestation
+        run: cosign verify-attestation --key cosign.pub --no-tlog --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-sign-image-${{ inputs.service_name }}
+          path: sign-image.*.link
+      - name: Confirm signature and attestation success
+        run: echo "Signature, attestation, and in-toto links succeeded!"
       
   sonar-analysis:
     runs-on: ubuntu-latest
@@ -349,3 +388,55 @@ jobs:
             -Dsonar.organization=fatimaaflous \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
+          path: sonar-analysis.*.link
+
+  verify_pipeline:
+    runs-on: ubuntu-latest
+    needs: [maven-build, tests, snyk-scan, docker-build-push, trivy-scan, sign_and_verify, sonar-analysis]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install in-toto
+        run: pip install in-toto
+      - name: Download in-toto links
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-maven-build-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto tests link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-tests-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto snyk scan link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-snyk-scan-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto docker build link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-docker-build-push-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto trivy scan link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-trivy-scan-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto sign image link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-sign-image-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto sonar analysis link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
+          path: .
+      - name: Load in-toto public key
+        run: echo "${{ secrets.IN_TOTO_PUBLIC_KEY }}" | tr -d '\r' > in-toto.pub
+      - name: Verify in-toto pipeline
+        run: in-toto-verify --layout .in-toto/root.layout --layout-key in-toto.pub
