@@ -1,55 +1,60 @@
 {
   "_type": "layout",
+  "signatures": [],
+  "inspect": [],
   "steps": [
     {
       "name": "maven-build",
-      "expected_materials": [["MATCH", "pom.xml", "WITH", "FILES"]],
+      "expected_materials": [],
       "expected_products": [["CREATE", "target/*.jar"]],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     },
     {
       "name": "tests",
-      "expected_materials": [["MATCH", "target/*.jar", "WITH", "FILES"]],
+      "expected_materials": [["MATCH", "target/*.jar", "WITH", "PRODUCTS", "FROM", "maven-build"]],
       "expected_products": [["CREATE", "target/site/jacoco/jacoco.xml"]],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     },
     {
       "name": "snyk-scan",
-      "expected_materials": [["MATCH", "pom.xml", "WITH", "FILES"]],
+      "expected_materials": [],
       "expected_products": [["CREATE", "snyk_test_*.sarif"], ["CREATE", "snyk_code_test_*.sarif"]],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     },
     {
       "name": "trivy-scan",
       "expected_materials": [],
       "expected_products": [["CREATE", "trivy-image-scan-*.sarif"], ["CREATE", "trivy-image-scan-*.json"]],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     },
     {
       "name": "docker-build-push",
-      "expected_materials": [["MATCH", "target/*.jar", "WITH", "FILES"], ["MATCH", "Dockerfile", "WITH", "FILES"]],
+      "expected_materials": [
+        ["MATCH", "target/*.jar", "WITH", "PRODUCTS", "FROM", "maven-build"],
+        ["MATCH", "Dockerfile", "WITH", "MATERIALS", "FROM", "maven-build"]
+      ],
       "expected_products": [],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     },
     {
       "name": "sign-image",
       "expected_materials": [],
       "expected_products": [],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     },
     {
       "name": "sonar-analysis",
-      "expected_materials": [["MATCH", "target/site/jacoco/jacoco.xml", "WITH", "FILES"]],
+      "expected_materials": [["MATCH", "target/site/jacoco/jacoco.xml", "WITH", "PRODUCTS", "FROM", "tests"]],
       "expected_products": [],
-      "pubkeys": ["7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e"]
+      "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"]
     }
   ],
   "keys": {
-    "7460d0230d70d1f99405c89fb51d34ab8bbeec0368ef46321c3263dc4e54134e": {
+    "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14": {
       "keytype": "rsa",
       "scheme": "rsassa-pss-sha256",
       "keyval": {
-        "public": "-----BEGIN PUBLIC KEY-----MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAve0suE1riuJtafZvkJGhebsj0drwfXITrI9+tuUKX2TzS+mIcxeVP7oxPGY7forkz0X8Els9gGc/jE8sHXuA3AjLWYi8om+6AL1JvAFgY9GBQ46FUV1nSgC0eH50rrbPB5yYqaq7VGEz7Rd4RcOtECuiTpsAXXBZSacT99YvaufZizvzCi0y31d0ufQExiy30agtUeJJ8TF2skJ83s76PhZ9g79I6xG7cmLLizRBhozmAIRwQyRRI7aro7yaLf8VuFZhur8NHgU5n9h0ymF3JQLq578bcv/eig7x1IhqGaUMOdfa56H2i5Bx5/XnG39a9yvpLO/zFwuBV3hHOXB9UvdtUP7Z8kNgmxmB0qrjazDjQUFNZ/gL1OBhYTlcQe16v+RTeN9L1zwNJzg/ML1ntI9KzrQlalaaIT+HPi1dIZV5lk/oCkiDlV7xgL+c2FHzq6HaXV45Het6mCiq65iHcklriEvzPJj2N/9KQ0fHOqF5OnfD5QPRmv64UU86Qib1AgMBAAE=-----END PUBLIC KEY-----"
+        "public": "-----BEGIN PUBLIC KEY-----MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsI3Avx9RijBUDeMhydvUjyPe3wQpNPueZTY1/tsxHk0M2cDrmRwBovXUjNIumqu+8KSglglwijwJOUUjuOu9HeCKyRDyTUNrd50eTkJQrxWIoKg85CDI8TnoOLmMx8Czmxg9uFV6PSpGB+8pk8ru1tmB/1RtHf/dm09MxH3PZj49pMQsOXtxIZhqEQFaqqOAAU02eoUOYyIm/pqJjFPFCr8tMPHXQwAR2PhZoJse2gGYTNiNh17z1bY9JkN7BEh5dGpJRHkk0LSoUiJ5Vaxq+jZfuq4oZFPK6BYfK1zfLC/EocRrenT02spl1JYYjAm6F7V60TH6rgF1Kj3CSai8AbKpcmrkxPGZcIKpVBsxZw0xL7m00rUTDfcNOxwZhA18kAftM/UUKzxral4InTgUDP/kfhKHPZm+DTEEHZ/dJxv7Zt/Vnhg/G3gvsFHDFg4l4vn2gcTOAgVer1maS9AjFc03T9JAkbkSNS6pAQqPdo6SBto6h0nNLFCbsQqooRixAgMBAAE=-----END PUBLIC KEY-----"
       }
     }
   },
