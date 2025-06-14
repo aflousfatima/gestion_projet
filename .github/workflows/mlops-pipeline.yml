@@ -19,8 +19,6 @@ on:
       - 'AI_Service/app/chatbot/data/*.dvc'
       - 'AI_Service/app/**.py'
       - 'AI_Service/tests/**.py'
-  schedule:
-    - cron: '0 14 * * *'
 
 permissions:
   contents: write
