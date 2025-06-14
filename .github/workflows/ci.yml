@@ -77,6 +77,13 @@ jobs:
         run: pip install in-toto --upgrade
       - name: Load in-toto private key
         run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Debug in-toto private key
+        run: |
+          echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+          cat in-toto.key
+          in-toto-run --step-name debug-key --signing-key in-toto.key -- bash -c "echo test"
+          ls -l *.link
+          cat debug-key.*.link
       - name: Run unit and integration tests and generate in-toto link
         run: |
           in-toto-run --step-name tests \
