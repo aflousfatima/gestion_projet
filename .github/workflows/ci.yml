@@ -57,7 +57,7 @@ jobs:
           # Nettoyer l'environnement
           rm -rf ~/.in-toto *.key *.pub *.link
           ls -l || echo "Directory is empty"
-          # Déchiffrer à nouveau pour être sûr
+          # Déchiffrer à nouveau
           openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
           chmod 600 in-toto.key
           # Vérifier les fichiers
@@ -70,8 +70,16 @@ jobs:
           # Vérifier l'environnement Python
           pip cache purge || echo "No pip cache to purge"
           pip list | grep in-toto || echo "in-toto not installed"
-          # Tester la clé avec un script Python
-          python3 -c "from securesystemslib.keys import import_rsakey_from_pem; with open('in-toto.key', 'rb') as f: pem = f.read(); key = import_rsakey_from_pem(pem); print('Key ID: {}'.format(key['keyid']))"
+          # Créer un script Python temporaire
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+          pem = f.read()
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          # Exécuter le script
+          python3 check_keyid.py
           # Générer un fichier .link
           in-toto-run --step-name debug-keyid-$(date +%s) --signing-key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
