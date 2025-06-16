@@ -1,165 +1,105 @@
 {
- "signatures": [
-  {
-   "keyid": "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14",
-   "sig": "084ce16ea07e4f1a4438c67fd8ab72424599b742e13a0a6523776e81d1f672b8a5e7dce8cd2a919bf0549be53cf775cf6ed5c7be6c2e019926b8f8d4ed29261c3567d36e73fea4e4ed20f9493fe22ca32ee7fc55858b1acf1fdb4cdf023632c47d72572945f1e7d81aac030224e58ec929a01924058f2261cc6d9550042cd9348d9fa14f50e46c7a1c1047b75f254074e2c6b84224b230a052341e702855ee70cad5ab3272f0561759f7f70a13523b3cf91494b9a3db7c89db8520d30869214e409f3cbab7dd0d907ff67eee8f6d45e1398f3721b8b11a1b4054a297574fdeb7ac3d2e8acdbadde0855a40d00a0773340058a961e3a03f40ffc342bdcd58d35a8d7d743156eafd9f73293bd06c04c789a8e7eddb6a91745519a7f874d2adb074af6785e55529b71370ae6bba27d4e8b1b6f6e478d86d0c1c1a144149e9a51a6742a84977b2293ebde667d22d5d6b629d9e8b4e3394d69178a6296d7980986ace174b0cc33a219c39f3d4b73b883d4dedd88f6d3167606370ef79387cfb7a3130"
-  }
- ],
- "signed": {
-  "_type": "layout",
-  "expires": "2026-06-12T00:00:00Z",
-  "inspect": [],
-  "keys": {
-   "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14": {
-    "keytype": "rsa",
-    "keyval": {
-     "public": "-----BEGIN PUBLIC KEY-----MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsI3Avx9RijBUDeMhydvUjyPe3wQpNPueZTY1/tsxHk0M2cDrmRwBovXUjNIumqu+8KSglglwijwJOUUjuOu9HeCKyRDyTUNrd50eTkJQrxWIoKg85CDI8TnoOLmMx8Czmxg9uFV6PSpGB+8pk8ru1tmB/1RtHf/dm09MxH3PZj49pMQsOXtxIZhqEQFaqqOAAU02eoUOYyIm/pqJjFPFCr8tMPHXQwAR2PhZoJse2gGYTNiNh17z1bY9JkN7BEh5dGpJRHkk0LSoUiJ5Vaxq+jZfuq4oZFPK6BYfK1zfLC/EocRrenT02spl1JYYjAm6F7V60TH6rgF1Kj3CSai8AbKpcmrkxPGZcIKpVBsxZw0xL7m00rUTDfcNOxwZhA18kAftM/UUKzxral4InTgUDP/kfhKHPZm+DTEEHZ/dJxv7Zt/Vnhg/G3gvsFHDFg4l4vn2gcTOAgVer1maS9AjFc03T9JAkbkSNS6pAQqPdo6SBto6h0nNLFCbsQqooRixAgMBAAE=-----END PUBLIC KEY-----"
+  "signatures": [
+    {
+      "keyid": "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14",
+      "sig": "084ce16ea07e4f1a4438c67fd8ab72424599b742e13a0a6523776e81d1f672b8a5e7dce8cd2a919bf0549be53cf775cf6ed5c7be6c2e019926b8f8d4ed29261c3567d36e73fea4e4ed20f9493fe22ca32ee7fc55858b1acf1fdb4cdf023632c47d72572945f1e7d81aac030224e58ec929a01924058f2261cc6d9550042cd9348d9fa14f50e46c7a1c1047b75f254074e2c6b84224b230a052341e702855ee70cad5ab3272f0561759f7f70a13523b3cf91494b9a3db7c89db8520d30869214e409f3cbab7dd0d907ff67eee8f6d45e1398f3721b8b11a1b4054a297574fdeb7ac3d2e8acdbadde0855a40d00a0773340058a961e3a03f40ffc342bdcd58d35a8d7d743156eafd9f73293bd06c04c789a8e7eddb6a91745519a7f874d2adb074af6785e55529b71370ae6bba27d4e8b1b6f6e478d86d0c1c1a144149e9a51a6742a84977b2293ebde667d22d5d6b629d9e8b4e3394d69178a6296d7980986ace174b0cc33a219c39f3d4b73b883d4dedd88f6d3167606370ef79387cfb7a3130"
+    }
+  ],
+  "signed": {
+    "_type": "layout",
+    "expires": "2026-06-12T00:00:00Z",
+    "inspect": [],
+    "keys": {
+      "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14": {
+        "keytype": "rsa",
+        "keyval": {
+          "public": "-----BEGIN PUBLIC KEY-----MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAsI3Avx9RijBUDeMhydvUjyPe3wQpNPueZTY1/tsxHk0M2cDrmRwBovXUjNIumqu+8KSglglwijwJOUUjuOu9HeCKyRDyTUNrd50eTkJQrxWIoKg85CDI8TnoOLmMx8Czmxg9uFV6PSpGB+8pk8ru1tmB/1RtHf/dm09MxH3PZj49pMQsOXtxIZhqEQFaqqOAAU02eoUOYyIm/pqJjFPFCr8tMPHXQwAR2PhZoJse2gGYTNiNh17z1bY9JkN7BEh5dGpJRHkk0LSoUiJ5Vaxq+jZfuq4oZFPK6BYfK1zfLC/EocRrenT02spl1JYYjAm6F7V60TH6rgF1Kj3CSai8AbKpcmrkxPGZcIKpVBsxZw0xL7m00rUTDfcNOxwZhA18kAftM/UUKzxral4InTgUDP/kfhKHPZm+DTEEHZ/dJxv7Zt/Vnhg/G3gvsFHDFg4l4vn2gcTOAgVer1maS9AjFc03T9JAkbkSNS6pAQqPdo6SBto6h0nNLFCbsQqooRixAgMBAAE=-----END PUBLIC KEY-----"
+        },
+        "scheme": "rsassa-pss-sha256"
+      }
     },
-    "scheme": "rsassa-pss-sha256"
-   }
-  },
-  "readme": "",
-  "steps": [
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [],
-    "expected_products": [
-     [
-      "CREATE",
-      "target/*.jar"
-     ]
-    ],
-    "name": "maven-build",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   },
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [
-     [
-      "MATCH",
-      "target/*.jar",
-      "WITH",
-      "PRODUCTS",
-      "FROM",
-      "maven-build"
-     ]
-    ],
-    "expected_products": [
-     [
-      "CREATE",
-      "target/site/jacoco/jacoco.xml"
-     ]
-    ],
-    "name": "tests",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   },
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [],
-    "expected_products": [
-     [
-      "CREATE",
-      "snyk_test_*.sarif"
-     ],
-     [
-      "CREATE",
-      "snyk_code_test_*.sarif"
-     ]
-    ],
-    "name": "snyk-scan",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   },
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [],
-    "expected_products": [
-     [
-      "CREATE",
-      "trivy-image-scan-*.sarif"
-     ],
-     [
-      "CREATE",
-      "trivy-image-scan-*.json"
-     ]
-    ],
-    "name": "trivy-scan",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   },
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [
-     [
-      "MATCH",
-      "target/*.jar",
-      "WITH",
-      "PRODUCTS",
-      "FROM",
-      "maven-build"
-     ],
-     [
-      "MATCH",
-      "Dockerfile",
-      "WITH",
-      "MATERIALS",
-      "FROM",
-      "maven-build"
-     ]
-    ],
-    "expected_products": [],
-    "name": "docker-build-push",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   },
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [],
-    "expected_products": [],
-    "name": "sign-image",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   },
-   {
-    "_type": "step",
-    "expected_command": [],
-    "expected_materials": [
-     [
-      "MATCH",
-      "target/site/jacoco/jacoco.xml",
-      "WITH",
-      "PRODUCTS",
-      "FROM",
-      "tests"
-     ]
-    ],
-    "expected_products": [],
-    "name": "sonar-analysis",
-    "pubkeys": [
-     "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"
-    ],
-    "threshold": 1
-   }
-  ]
- }
+    "readme": "",
+    "steps": [
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [],
+        "expected_products": [
+          ["CREATE", "target/*.jar"]
+        ],
+        "name": "maven-build",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      },
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [
+          ["MATCH", "target/*.jar", "WITH", "PRODUCTS", "FROM", "maven-build"]
+        ],
+        "expected_products": [
+          ["CREATE", "target/site/jacoco/jacoco.xml"]
+        ],
+        "name": "tests",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      },
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [],
+        "expected_products": [
+          ["CREATE", "snyk_test_*.sarif"],
+          ["CREATE", "snyk_code_test_*.sarif"]
+        ],
+        "name": "snyk-scan",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      },
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [],
+        "expected_products": [
+          ["CREATE", "trivy-image-scan-*.sarif"],
+          ["CREATE", "trivy-image-scan-*.json"]
+        ],
+        "name": "trivy-scan",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      },
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [
+          ["MATCH", "target/*.jar", "WITH", "PRODUCTS", "FROM", "maven-build"],
+          ["MATCH", "Dockerfile", "WITH", "MATERIALS", "FROM", "maven-build"]
+        ],
+        "expected_products": [],
+        "name": "docker-build-push",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      },
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [],
+        "expected_products": [],
+        "name": "sign-image",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      },
+      {
+        "_type": "step",
+        "expected_command": [],
+        "expected_materials": [
+          ["MATCH", "target/site/jacoco/jacoco.xml", "WITH", "PRODUCTS", "FROM", "tests"]
+        ],
+        "expected_products": [],
+        "name": "sonar-analysis",
+        "pubkeys": ["d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"],
+        "threshold": 1
+      }
+    ]
+  }
 }
