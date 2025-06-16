@@ -717,72 +717,72 @@ jobs:
     runs-on: ubuntu-latest
     needs: [maven-build, tests, snyk-scan, docker-build-push, trivy-scan, sign_and_verify, sonar-analysis]
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.8'
-    - name: Clean environment
-      run: |
-        rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
-        ls -l || echo "Directory is empty"
-    - name: Install in-toto and securesystemslib
-      run: |
-        pip uninstall -y in-toto securesystemslib || true
-        pip install in-toto==2.1.0 securesystemslib==0.31.0
-        pip list | grep -E 'in-toto|securesystemslib'
-    - name: Download in-toto links
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-maven-build-${{ inputs.service_name }}
-        path: .
-    - name: Download in-toto tests link
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-tests-${{ inputs.service_name }}
-        path: .
-    - name: Download in-toto snyk scan link
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-snyk-scan-${{ inputs.service_name }}
-        path: .
-    - name: Download in-toto docker build link
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-docker-build-push-${{ inputs.service_name }}
-        path: .
-    - name: Download in-toto trivy scan link
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-trivy-scan-${{ inputs.service_name }}
-        path: .
-    - name: Download in-toto sign image link
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-sign-image-${{ inputs.service_name }}
-        path: .
-    - name: Download in-toto sonar analysis link
-      uses: actions/download-artifact@v4
-      with:
-        name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
-        path: .
-    - name: Debug directory contents
-      run: |
-        ls -l .in-toto/root.layout || echo "ERROR: root.layout not found"
-        ls -l *.link || echo "ERROR: No link files found"
-        ls -l .in-toto/in-toto.pub || echo "ERROR: in-toto.pub not found"
-    - name: Validate layout file
-      run: |
-        cat .in-toto/root.layout
-        python3 -m json.tool .in-toto/root.layout || echo "ERROR: Invalid JSON in root.layout"
-        grep '"signatures"' .in-toto/root.layout || echo "ERROR: No signatures found in root.layout"
-    - name: Validate link files
-      run: |
-        for link in *.link; do
-          echo "Validating $link"
-          python3 -m json.tool "$link" || echo "ERROR: Invalid JSON in $link"
-          grep '"keyid": "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"' "$link" || echo "ERROR: Incorrect keyid in $link"
-        done
-    - name: Verify in-toto pipeline
-      run: |
-        in-toto-verify --layout .in-toto/root.layout --verification-keys .in-toto/in-toto.pub --verbose
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Download in-toto links
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-maven-build-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto tests link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-tests-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto snyk scan link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-snyk-scan-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto docker build link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-docker-build-push-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto trivy scan link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-trivy-scan-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto sign image link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-sign-image-${{ inputs.service_name }}
+          path: .
+      - name: Download in-toto sonar analysis link
+        uses: actions/download-artifact@v4
+        with:
+          name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
+          path: .
+      - name: Debug directory contents
+        run: |
+          ls -l .in-toto/root.layout || echo "ERROR: root.layout not found"
+          ls -l *.link || echo "ERROR: No link files found"
+          ls -l .in-toto/in-toto.pub || echo "ERROR: in-toto.pub not found"
+      - name: Validate layout file
+        run: |
+          cat .in-toto/root.layout
+          python3 -m json.tool .in-toto/root.layout || echo "ERROR: Invalid JSON in root.layout"
+          grep '"signatures"' .in-toto/root.layout || echo "ERROR: No signatures found in root.layout"
+      - name: Validate link files
+        run: |
+          for link in *.link; do
+            echo "Validating $link"
+            python3 -m json.tool "$link" || echo "ERROR: Invalid JSON in $link"
+            grep '"keyid": "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"' "$link" || echo "ERROR: Incorrect keyid in $link"
+          done
+      - name: Verify in-toto pipeline
+        run: |
+          in-toto-verify --layout .in-toto/root.layout --layout-key .in-toto/in-toto.pub --verbose
