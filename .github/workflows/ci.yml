@@ -446,9 +446,18 @@ jobs:
             trivy-db-${{ runner.os }}-
       - name: Scan Docker image with Trivy
         run: |
+          echo " Installing Trivy..."
+          sudo apt-get update
+          sudo apt-get install wget -y
+          wget https://github.com/aquasecurity/trivy/releases/latest/download/trivy_0.50.2_Linux-64bit.deb
+          sudo dpkg -i trivy_0.50.2_Linux-64bit.deb
+          echo " Running Trivy scan..."
           IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
+          echo " Table format:"
           trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+          echo " JSON format:"
           trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+          echo " SARIF format:"
           trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
 
       - name: Generate in-toto link for Trivy scan
