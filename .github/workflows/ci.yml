@@ -86,12 +86,13 @@ jobs:
           ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
       - name: Build with Maven and generate in-toto link
         run: |
+          bash .shared/scripts/build.sh ${{ inputs.service_path }}
           in-toto-run --step-name maven-build \
             --materials ${{ inputs.service_path }}/pom.xml \
             --products ${{ inputs.service_path }}/target/*.jar \
             --key in-toto.key \
-            --verbose \
-            -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
+            --no-command \
+            --verbose
           echo "Listing generated link files:"
           ls -l maven-build.*.link || echo "ERROR: No maven-build link file found"
           echo "Content of maven-build link file:"
