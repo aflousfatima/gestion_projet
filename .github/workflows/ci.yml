@@ -74,7 +74,7 @@ jobs:
           cat << 'EOF' > check_keyid.py
           from securesystemslib.keys import import_rsakey_from_pem
           with open('in-toto.key', 'rb') as f:
-          pem = f.read()
+            pem = f.read()
           key = import_rsakey_from_pem(pem)
           print('Key ID: {}'.format(key['keyid']))
           EOF
