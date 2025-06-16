@@ -256,7 +256,6 @@ jobs:
             --materials ${{ inputs.service_path }}/pom.xml \
             --products ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif \
             --key in-toto.key \
-            --run-timeout 300 \
             --verbose \
             -- sh -c 'cd ${{ inputs.service_path }} && snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; cd ${{ inputs.service_path }} && snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
         env:
@@ -348,7 +347,6 @@ jobs:
           in-toto-run --step-name docker-build-push \
             --materials ${{ inputs.service_path }}/target/*.jar ${{ inputs.service_path }}/Dockerfile \
             --key in-toto.key \
-            --run-timeout 300 \
             --verbose \
             -- docker buildx build \
               --file ${{ inputs.service_path }}/Dockerfile \
@@ -437,7 +435,6 @@ jobs:
           in-toto-run --step-name trivy-scan \
             --products trivy-image-scan-${{ inputs.service_name }}.sarif trivy-image-scan-${{ inputs.service_name }}.json \
             --key in-toto.key \
-            --run-timeout 300 \
             --verbose \
             -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
         env:
@@ -557,7 +554,6 @@ jobs:
             --materials cosign.key \
             --products cosign.pub \
             --key in-toto.key \
-            --run-timeout 300 \
             --verbose \
             -- cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Generate SLSA provenance predicate
@@ -655,7 +651,6 @@ jobs:
           in-toto-run --step-name sonar-analysis \
             --materials ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
             --key in-toto.key \
-            --run-timeout 300 \
             --verbose \
             -- sh -c 'cd ${{ inputs.service_path }} && mvn -B clean verify && ls -R src/main/java && ls -R target/classes || echo "ERROR: target/classes not found" && mvn -B sonar:sonar -Dsonar.projectKey=aflousfatima_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=aflousfatima -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
       - name: Upload in-toto link
