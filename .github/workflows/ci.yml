@@ -36,8 +36,7 @@ jobs:
       - name: Install in-toto
         run: |
           pip uninstall -y in-toto || true
-          pip install in-toto==2.1.0
-          pip list | grep in-toto
+          pip install in-toto --upgrade
       - name: Check in-toto version
         run: in-toto-run --version
       - name: Debug environment and inputs
