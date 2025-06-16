@@ -71,7 +71,7 @@ jobs:
           pip cache purge || echo "No pip cache to purge"
           pip list | grep in-toto || echo "in-toto not installed"
           # Tester la clé avec un script Python
-          python3 -c "from securesystemslib.keys import import_rsakey_from_pem; with open('in-toto.key', 'rb') as f: pem = f.read(); key = import_rsakey_from_pem(pem); print(f'Key ID: {key[\"keyid\"]}')"
+          python3 -c "from securesystemslib.keys import import_rsakey_from_pem; with open('in-toto.key', 'rb') as f: pem = f.read(); key = import_rsakey_from_pem(pem); print('Key ID: {}'.format(key['keyid']))"
           # Générer un fichier .link
           in-toto-run --step-name debug-keyid-$(date +%s) --signing-key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
