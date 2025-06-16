@@ -250,16 +250,29 @@ jobs:
         run: |
           cd ${{ inputs.service_path }}
           ./mvnw --version || echo "ERROR: mvnw failed to run"
-      - name: Run Snyk scans and generate in-toto link
+      - name: Run Snyk scans
         run: |
-          in-toto-run --step-name snyk-scan \
-            --materials ${{ inputs.service_path }}/pom.xml \
-            --products ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif \
-            --key in-toto.key \
-            --verbose \
-            -- sh -c 'cd ${{ inputs.service_path }} && snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; cd ${{ inputs.service_path }} && snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
+          cd ${{ inputs.service_path }}
+          snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true
+          snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Generate in-toto link for Snyk scans
+        run: |
+          in-toto-run --step-name snyk-scan \
+          --materials ${{ inputs.service_path }}/pom.xml \
+          --products ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif \
+          --key in-toto.key \
+          --no-command \
+          --verbose
+
+          echo "Listing generated snyk link files:"
+          ls -l snyk-scan.*.link || echo "ERROR: No link file found"
+
+          echo "Content of snyk link file:"
+          cat snyk-scan.*.link | grep keyid || echo "ERROR: No keyid found"
+
       - name: Monitor with Snyk
         run: |
           cd ${{ inputs.service_path }}
@@ -342,21 +355,22 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Build and push Docker image and generate in-toto link
+      - name: Build and push Docker image
+        run: |
+          docker buildx build \
+          --file ${{ inputs.service_path }}/Dockerfile --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }} --cache-from=type=gha --cache-to=type=gha,mode=max --progress=plain --push ${{ inputs.service_path }}
+      - name: Generate in-toto link for Docker build and push
         run: |
           in-toto-run --step-name docker-build-push \
             --materials ${{ inputs.service_path }}/target/*.jar ${{ inputs.service_path }}/Dockerfile \
+            --products /tmp/in-toto-placeholder.txt \
             --key in-toto.key \
-            --verbose \
-            -- docker buildx build \
-              --file ${{ inputs.service_path }}/Dockerfile \
-              --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest \
-              --tag ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:sha-${{ github.sha }} \
-              --cache-from=type=gha \
-              --cache-to=type=gha,mode=max \
-              --progress=plain \
-              --push \
-              ${{ inputs.service_path }}
+            --no-command \
+            --verbose
+          echo "Listing generated Docker link files:"
+          ls -l docker-build-push.*.link || echo "ERROR: No link file found"
+          echo "Content of Docker link file:"
+          cat docker-build-push.*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
@@ -430,15 +444,23 @@ jobs:
           key: trivy-db-${{ runner.os }}-${{ hashFiles('**/trivy.yaml') }}
           restore-keys: |
             trivy-db-${{ runner.os }}-
-      - name: Scan Docker image with Trivy and generate in-toto link
+      - name: Scan Docker image with Trivy
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
+          trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+          trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+          trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+      - name: Generate in-toto link for Trivy scan
         run: |
           in-toto-run --step-name trivy-scan \
             --products trivy-image-scan-${{ inputs.service_name }}.sarif trivy-image-scan-${{ inputs.service_name }}.json \
             --key in-toto.key \
-            --verbose \
-            -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            --no-command \
+            --verbose
+        echo "Listing generated Trivy link files:"
+        ls -l trivy-scan.*.link || echo "ERROR: No link file found"
+        echo "Content of Trivy link file:"
+        cat trivy-scan.*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Upload Trivy SARIF results
         uses: actions/upload-artifact@v4
         with:
@@ -545,17 +567,26 @@ jobs:
           else
             echo "signature_exists=false" >> $GITHUB_OUTPUT
           fi
-      - name: Sign the Docker image with Cosign and generate in-toto link
+
+      - name: Sign the Docker image with Cosign
         if: steps.check-signature.outputs.signature_exists == 'false'
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}  
+          cosign sign --yes --key cosign.key --tlog-upload=false $IMAGE
+      - name: Generate in-toto link for Cosign signature
+        if: steps.check-signature.outputs.signature_exists == 'false'
         run: |
           in-toto-run --step-name sign-image \
             --materials cosign.key \
             --products cosign.pub \
             --key in-toto.key \
-            --verbose \
-            -- cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
+            --no-command \
+            --verbose
+        echo "Cosign in-toto link file:"
+        ls -l sign-image.*.link || echo "ERROR: No link file found"
+        cat sign-image.*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Generate SLSA provenance predicate
         run: |
           echo '{
@@ -643,16 +674,29 @@ jobs:
           in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
-      - name: SonarQube Scan and generate in-toto link
+
+      - name: Run SonarQube analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         run: |
+          cd ${{ inputs.service_path }}
+          mvn -B clean verify
+          mvn -B sonar:sonar \
+            -Dsonar.projectKey=aflousfatima_gestion_projet_${{ inputs.service_name }} \
+            -Dsonar.organization=aflousfatima \
+            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+      - name: Generate in-toto link for SonarQube scan
+        run: |
           in-toto-run --step-name sonar-analysis \
-            --materials ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
-            --key in-toto.key \
-            --verbose \
-            -- sh -c 'cd ${{ inputs.service_path }} && mvn -B clean verify && ls -R src/main/java && ls -R target/classes || echo "ERROR: target/classes not found" && mvn -B sonar:sonar -Dsonar.projectKey=aflousfatima_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=aflousfatima -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
+              --materials ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
+              --key in-toto.key \
+              --no-command \
+              --verbose
+          echo "SonarQube in-toto link file:"
+          ls -l sonar-analysis.*.link || echo "ERROR: No link file found"
+          cat sonar-analysis.*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
