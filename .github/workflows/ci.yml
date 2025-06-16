@@ -73,7 +73,7 @@ jobs:
           print('Key ID: {}'.format(key['keyid']))
           EOF
           python3 check_keyid.py
-          in-toto-run --step-name debug-keyid-$(date +%s) --signing-key in-toto.key --verbose -- bash -c "echo test" || true
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
         
