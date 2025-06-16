@@ -42,8 +42,6 @@ jobs:
           pip uninstall -y in-toto securesystemslib || true
           pip install in-toto==2.1.0 securesystemslib==0.31.0
           pip list | grep -E 'in-toto|securesystemslib'
-      - name: Check in-toto version
-        run: in-toto-run --version
       - name: Debug environment and inputs
         run: |
           echo "Service Name: ${{ inputs.service_name }}"
@@ -76,7 +74,6 @@ jobs:
           in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
-        
       - name: Debug Maven build process
         run: |
           echo "Running build.sh script..."
@@ -114,6 +111,10 @@ jobs:
     needs: maven-build
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Set up JDK ${{ inputs.java_version }}
         uses: actions/setup-java@v4
         with:
@@ -126,26 +127,46 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Load in-toto private key
-        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
-      - name: Debug in-toto private key
+      - name: Clean environment
         run: |
-          echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
-          cat in-toto.key
-          in-toto-run --step-name debug-key --signing-key in-toto.key -- bash -c "echo test"
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
-          cat debug-key.*.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Run unit and integration tests and generate in-toto link
         run: |
+          bash .shared/scripts/test.sh ${{ inputs.service_path }}
           in-toto-run --step-name tests \
             --materials ${{ inputs.service_path }}/target/*.jar \
             --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
-            --signing-key in-toto.key \
-            --run-timeout 300 \
-            --verbose \
-            -- bash .shared/scripts/test.sh ${{ inputs.service_path }}
+            --key in-toto.key \
+            --no-command \
+            --verbose
       - name: Upload JaCoCo report
         uses: actions/upload-artifact@v4
         with:
@@ -162,6 +183,10 @@ jobs:
     needs: tests
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Set up JDK ${{ inputs.java_version }}
         uses: actions/setup-java@v4
         with:
@@ -180,10 +205,37 @@ jobs:
           node-version: '20'
       - name: Install Snyk CLI
         run: npm install -g snyk
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Load in-toto private key
-        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Debug directory contents
         run: |
           ls -R ${{ inputs.service_path }}
@@ -200,10 +252,10 @@ jobs:
           ./mvnw --version || echo "ERROR: mvnw failed to run"
       - name: Run Snyk scans and generate in-toto link
         run: |
-            in-toto-run --step-name snyk-scan \
+          in-toto-run --step-name snyk-scan \
             --materials ${{ inputs.service_path }}/pom.xml \
             --products ${{ inputs.service_path }}/snyk_test_${{ inputs.service_name }}.sarif ${{ inputs.service_path }}/snyk_code_test_${{ inputs.service_name }}.sarif \
-            --signing-key in-toto.key \
+            --key in-toto.key \
             --run-timeout 300 \
             --verbose \
             -- sh -c 'cd ${{ inputs.service_path }} && snyk test --sarif-file-output=snyk_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true; cd ${{ inputs.service_path }} && snyk code test --sarif-file-output=snyk_code_test_${{ inputs.service_name }}.sarif --severity-threshold=high || true'
@@ -236,6 +288,10 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Download JAR artifact
         uses: actions/download-artifact@v4
         with:
@@ -245,10 +301,37 @@ jobs:
         run: |
           ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR found in target/"
           ls -l ${{ inputs.service_path }}/Dockerfile || echo "ERROR: Dockerfile not found"
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Load in-toto private key
-        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Convert service name to lowercase
@@ -264,7 +347,7 @@ jobs:
         run: |
           in-toto-run --step-name docker-build-push \
             --materials ${{ inputs.service_path }}/target/*.jar ${{ inputs.service_path }}/Dockerfile \
-            --signing-key in-toto.key \
+            --key in-toto.key \
             --run-timeout 300 \
             --verbose \
             -- docker buildx build \
@@ -294,6 +377,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Convert service name to lowercase
         id: lowercase
         run: echo "service_name_lower=$(echo ${{ inputs.service_name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
@@ -303,10 +390,37 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Load in-toto private key
-        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Debug image existence
         run: |
           echo "Attempting to pull image from GHCR"
@@ -322,10 +436,10 @@ jobs:
         run: |
           in-toto-run --step-name trivy-scan \
             --products trivy-image-scan-${{ inputs.service_name }}.sarif trivy-image-scan-${{ inputs.service_name }}.json \
-            --signing-key in-toto.key \
+            --key in-toto.key \
             --run-timeout 300 \
             --verbose \
-            -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library ---IN_TOTO_PRIVATE_KEY scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
+            -- sh -c 'trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest; trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload Trivy SARIF results
@@ -355,6 +469,10 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Convert service name to lowercase
         id: lowercase
         run: echo "service_name_lower=$(echo ${{ inputs.service_name }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
@@ -364,10 +482,37 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Load in-toto private key
-        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.1
         with:
@@ -411,11 +556,10 @@ jobs:
           in-toto-run --step-name sign-image \
             --materials cosign.key \
             --products cosign.pub \
-            --signing-key in-toto.key \
+            --key in-toto.key \
             --run-timeout 300 \
             --verbose \
             -- cosign sign --yes --key cosign.key --tlog-upload=false ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
-
       - name: Generate SLSA provenance predicate
         run: |
           echo '{
@@ -438,7 +582,7 @@ jobs:
         env:
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign attest --yes --key cosign.key --tlog-upload=false --type=https://slsa.dev/provenance/v1 --predicate slsa-provenance.json ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}         
+          cosign attest --yes --key cosign.key --tlog-upload=false --type=https://slsa.dev/provenance/v1 --predicate slsa-provenance.json ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Verify SLSA provenance attestation
         run: cosign verify-attestation --key cosign.pub --no-tlog --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
       - name: Upload in-toto link
@@ -456,6 +600,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Set up JDK ${{ inputs.java_version }}
         uses: actions/setup-java@v4
         with:
@@ -468,10 +616,37 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Load in-toto private key
-        run: echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: SonarQube Scan and generate in-toto link
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -479,7 +654,7 @@ jobs:
         run: |
           in-toto-run --step-name sonar-analysis \
             --materials ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
-            --signing-key in-toto.key \
+            --key in-toto.key \
             --run-timeout 300 \
             --verbose \
             -- sh -c 'cd ${{ inputs.service_path }} && mvn -B clean verify && ls -R src/main/java && ls -R target/classes || echo "ERROR: target/classes not found" && mvn -B sonar:sonar -Dsonar.projectKey=aflousfatima_gestion_projet_${{ inputs.service_name }} -Dsonar.organization=aflousfatima -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} -Dsonar.login=${{ secrets.SONAR_TOKEN }}'
