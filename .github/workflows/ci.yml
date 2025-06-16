@@ -52,6 +52,10 @@ jobs:
           openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
           chmod 600 in-toto.key
           ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+
+      - name: Install required Python dependencies
+        run: |
+          pip install securesystemslib
       - name: Debug in-toto private key ID
         run: |
           # Nettoyer l'environnement
