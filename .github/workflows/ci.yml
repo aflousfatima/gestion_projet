@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
       - name: Set up JDK ${{ inputs.java_version }}
         uses: actions/setup-java@v4
         with:
@@ -31,12 +35,13 @@ jobs:
             ${{ runner.os }}-maven-
       - name: Clean environment
         run: |
-          rm -rf ~/.in-toto *.key *.pub *.link
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
           ls -l || echo "Directory is empty"
-      - name: Install in-toto
+      - name: Install in-toto and securesystemslib
         run: |
-          pip uninstall -y in-toto || true
-          pip install in-toto --upgrade
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
       - name: Check in-toto version
         run: in-toto-run --version
       - name: Debug environment and inputs
@@ -52,42 +57,26 @@ jobs:
           openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
           chmod 600 in-toto.key
           ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
-
-      - name: Install required Python dependencies
-        run: |
-          pip install securesystemslib
       - name: Debug in-toto private key ID
         run: |
-          # Nettoyer l'environnement
-          rm -rf ~/.in-toto *.key *.pub *.link
-          ls -l || echo "Directory is empty"
-          # Déchiffrer à nouveau
-          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
-          chmod 600 in-toto.key
-          # Vérifier les fichiers
           ls -l
-          # Afficher le hash
           sha256sum in-toto.key || shasum -a 256 in-toto.key
-          # Vérifier le format
           head -n 1 in-toto.key
           tail -n 1 in-toto.key
-          # Vérifier l'environnement Python
           pip cache purge || echo "No pip cache to purge"
-          pip list | grep in-toto || echo "in-toto not installed"
-          # Créer un script Python temporaire
+          pip list | grep -E 'in-toto|securesystemslib'
           cat << 'EOF' > check_keyid.py
           from securesystemslib.keys import import_rsakey_from_pem
           with open('in-toto.key', 'rb') as f:
-            pem = f.read()
+              pem = f.read()
           key = import_rsakey_from_pem(pem)
           print('Key ID: {}'.format(key['keyid']))
           EOF
-          # Exécuter le script
           python3 check_keyid.py
-          # Générer un fichier .link
           in-toto-run --step-name debug-keyid-$(date +%s) --signing-key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
+        
       - name: Debug Maven build process
         run: |
           echo "Running build.sh script..."
