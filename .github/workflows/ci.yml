@@ -16,88 +16,74 @@ jobs:
   maven-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK ${{ inputs.java_version }}
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ inputs.java_version }}
-          distribution: 'temurin'
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
-      - name: Install in-toto
-        run: pip install in-toto --upgrade
-      - name: Check in-toto version
-        run: in-toto-run --version
-      - name: Debug environment and inputs
-        run: |
-          echo "Service Name: ${{ inputs.service_name }}"
-          echo "Service Path: ${{ inputs.service_path }}"
-          echo "Java Version: ${{ inputs.java_version }}"
-          ls -l ${{ inputs.service_path }}
-          cat ${{ inputs.service_path }}/pom.xml || echo "ERROR: pom.xml not found"
-          ls -l .shared/scripts/build.sh || echo "ERROR: build.sh not found"
-      - name: Load and debug in-toto private key
-        run: |
-          echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
-          echo "Content of in-toto.key:"
-          cat in-toto.key
-          echo "Generating test link to check keyid..."
-          in-toto-run --step-name debug-key --signing-key in-toto.key --verbose -- bash -c "echo test"
-          echo "Listing link files:"
-          ls -l *.link
-          echo "Content of debug-key link file:"
-          cat debug-key.*.link || echo "ERROR: debug-key link file not found"
-      - name: Debug in-toto private key ID
-        run: |
-          # Écrire la clé privée dans un fichier
-          echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
-          # Afficher le hash de la clé pour débogage (sans révéler la clé)
-          sha256sum in-toto.key || shasum -a 256 in-toto.key
-          # Vérifier que la clé est au bon format
-          head -n 1 in-toto.key
-          tail -n 1 in-toto.key
-          # Générer un fichier .link pour obtenir le keyid
-          in-toto-run --step-name debug-keyid --signing-key in-toto.key --verbose -- bash -c "echo test" || true
-          ls -l *.link
-          # Afficher le keyid du fichier .link
-          cat debug-keyid.*.link | grep keyid || echo "ERROR: No keyid found"
-  
-      - name: Debug Maven build process
-        run: |
-          echo "Running build.sh script..."
-          bash .shared/scripts/build.sh ${{ inputs.service_path }} || echo "ERROR: build.sh failed"
-          echo "Listing target directory:"
-          ls -l ${{ inputs.service_path }}/target/ || echo "ERROR: target directory not found"
-          ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
-      - name: Build with Maven and generate in-toto link
-        run: |
-          in-toto-run --step-name maven-build \
-            --materials ${{ inputs.service_path }}/pom.xml \
-            --products ${{ inputs.service_path }}/target/*.jar \
-            --signing-key in-toto.key \
-            --run-timeout 300 \
-            --verbose \
-            -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
-            echo "Listing generated link files:"
-            ls -l maven-build.*.link || echo "ERROR: No maven-build link file found"
-            echo "Content of maven-build link file:"
-            cat maven-build.*.link || echo "ERROR: maven-build link file not found"
-      - name: Upload JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: jar-${{ inputs.service_name }}
-          path: ${{ inputs.service_path }}/target/*.jar
-          if-no-files-found: error
-      - name: Upload in-toto link
-        uses: actions/upload-artifact@v4
-        with:
-          name: in-toto-link-maven-build-${{ inputs.service_name }}
-          path: maven-build.*.link
+    - uses: actions/checkout@v4
+    - name: Set up JDK ${{ inputs.java_version }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ inputs.java_version }}
+        distribution: 'temurin'
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+    - name: Install in-toto
+      run: pip install in-toto --upgrade
+    - name: Check in-toto version
+      run: in-toto-run --version
+    - name: Debug environment and inputs
+      run: |
+        echo "Service Name: ${{ inputs.service_name }}"
+        echo "Service Path: ${{ inputs.service_path }}"
+        echo "Java Version: ${{ inputs.java_version }}"
+        ls -l ${{ inputs.service_path }}
+        cat ${{ inputs.service_path }}/pom.xml || echo "ERROR: pom.xml not found"
+        ls -l .shared/scripts/build.sh || echo "ERROR: build.sh not found"
+    - name: Decrypt in-toto private key
+      run: |
+        openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+        ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+    - name: Debug in-toto private key ID
+      run: |
+        sha256sum in-toto.key || shasum -a 256 in-toto.key
+        head -n 1 in-toto.key
+        tail -n 1 in-toto.key
+        in-toto-run --step-name debug-keyid --signing-key in-toto.key --verbose -- bash -c "echo test" || true
+        ls -l *.link
+        cat debug-keyid.*.link | grep keyid || echo "ERROR: No keyid found"
+    - name: Debug Maven build process
+      run: |
+        echo "Running build.sh script..."
+        bash .shared/scripts/build.sh ${{ inputs.service_path }} || echo "ERROR: build.sh failed"
+        echo "Listing target directory:"
+        ls -l ${{ inputs.service_path }}/target/ || echo "ERROR: target directory not found"
+        ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
+    - name: Build with Maven and generate in-toto link
+      run: |
+        in-toto-run --step-name maven-build \
+          --materials ${{ inputs.service_path }}/pom.xml \
+          --products ${{ inputs.service_path }}/target/*.jar \
+          --signing-key in-toto.key \
+          --run-timeout 300 \
+          --verbose \
+          -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
+        echo "Listing generated link files:"
+        ls -l maven-build.*.link || echo "ERROR: No maven-build link file found"
+        echo "Content of maven-build link file:"
+        cat maven-build.*.link || echo "ERROR: maven-build link file not found"
+    - name: Upload JAR artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: jar-${{ inputs.service_name }}
+        path: ${{ inputs.service_path }}/target/*.jar
+        if-no-files-found: error
+    - name: Upload in-toto link
+      uses: actions/upload-artifact@v4
+      with:
+        name: in-toto-link-maven-build-${{ inputs.service_name }}
+        path: maven-build.*.link
 
   tests:
     runs-on: ubuntu-latest
