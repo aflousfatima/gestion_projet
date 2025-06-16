@@ -457,10 +457,10 @@ jobs:
             --key in-toto.key \
             --no-command \
             --verbose
-        echo "Listing generated Trivy link files:"
-        ls -l trivy-scan.*.link || echo "ERROR: No link file found"
-        echo "Content of Trivy link file:"
-        cat trivy-scan.*.link | grep keyid || echo "ERROR: No keyid found"
+            echo "Listing generated Trivy link files:"
+            ls -l trivy-scan.*.link || echo "ERROR: No link file found"
+            echo "Content of Trivy link file:"
+            cat trivy-scan.*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Upload Trivy SARIF results
         uses: actions/upload-artifact@v4
         with:
@@ -584,9 +584,9 @@ jobs:
             --key in-toto.key \
             --no-command \
             --verbose
-        echo "Cosign in-toto link file:"
-        ls -l sign-image.*.link || echo "ERROR: No link file found"
-        cat sign-image.*.link | grep keyid || echo "ERROR: No keyid found"
+            echo "Cosign in-toto link file:"
+            ls -l sign-image.*.link || echo "ERROR: No link file found"
+            cat sign-image.*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Generate SLSA provenance predicate
         run: |
           echo '{
