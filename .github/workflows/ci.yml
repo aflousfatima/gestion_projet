@@ -52,6 +52,13 @@ jobs:
           ls -l *.link
           echo "Content of debug-key link file:"
           cat debug-key.*.link || echo "ERROR: debug-key link file not found"
+      - name: Debug in-toto private key ID
+        run: |
+          echo "${{ secrets.IN_TOTO_PRIVATE_KEY }}" | tr -d '\r' > in-toto.key
+          in-toto-run --step-name debug-keyid --signing-key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid.*.link | grep keyid || echo "ERROR: No keyid found"
+  
       - name: Debug Maven build process
         run: |
           echo "Running build.sh script..."
