@@ -450,6 +450,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install wget -y
           wget -qO- https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo bash
+          sudo mv ./bin/trivy /usr/local/bin/trivy
           echo " Running Trivy scan..."
           IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
           echo " Table format:"
