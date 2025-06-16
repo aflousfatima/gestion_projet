@@ -90,7 +90,6 @@ jobs:
             --materials ${{ inputs.service_path }}/pom.xml \
             --products ${{ inputs.service_path }}/target/*.jar \
             --key in-toto.key \
-            --run-timeout 300 \
             --verbose \
             -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
           echo "Listing generated link files:"
