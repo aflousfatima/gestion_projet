@@ -776,9 +776,12 @@ jobs:
         for file in *.link .in-toto/root.layout; do
           if [ -f "$file" ]; then
             echo "Cleaning $file"
-            # Extract first JSON object
-            python3 -c "import json; data=json.load(open('$file')); json.dump(data, open('$file.tmp', 'w'))"
-            mv "$file.tmp" "$file"
+            jq -c '.[0]' < "$file" > "$file.tmp" || echo "Error parsing JSON in $file"
+            if [ -f "$file.tmp" ]; then
+              mv "$file.tmp" "$file" && echo "Successfully cleaned $file" || echo "Failed to clean $file"
+            else
+              echo "No valid JSON found in $file"
+            fi
           fi
         done
     - name: Validate layout file
@@ -796,7 +799,7 @@ jobs:
     - name: Validate link files
       run: |
         for link in *.link; do
-          echo "Validating $link"
+          echo "Validating $file"
           python3 -m json.tool "$link" || echo "ERROR: Invalid JSON in $link"
           grep '"keyid": "d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14"' "$link" || echo "ERROR: Incorrect keyid in $link"
         done
