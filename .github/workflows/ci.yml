@@ -713,7 +713,7 @@ jobs:
           name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
           path: sonar-analysis.*.link
 
-  verify_pipeline:
+  verify_pipeline_with_In-toto:
     runs-on: ubuntu-latest
     needs: [maven-build, tests, snyk-scan, docker-build-push, trivy-scan, sign_and_verify, sonar-analysis]
     steps:
@@ -771,6 +771,16 @@ jobs:
         ls -l .in-toto/root.layout || echo "ERROR: root.layout not found"
         ls -l *.link || echo "ERROR: No link files found"
         ls -l .in-toto/in-toto.pub || echo "ERROR: in-toto.pub not found"
+    - name: Clean JSON files
+      run: |
+        for file in *.link .in-toto/root.layout; do
+          if [ -f "$file" ]; then
+            echo "Cleaning $file"
+            # Extract first JSON object
+            python3 -c "import json; data=json.load(open('$file')); json.dump(data, open('$file.tmp', 'w'))"
+            mv "$file.tmp" "$file"
+          fi
+        done
     - name: Validate layout file
       run: |
         cat .in-toto/root.layout
