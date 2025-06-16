@@ -445,14 +445,11 @@ jobs:
           restore-keys: |
             trivy-db-${{ runner.os }}-
       - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
-          format: table,json,sarif
-          output: trivy-image-scan-${{ inputs.service_name }}.json
-          severity: CRITICAL,HIGH
-          vuln-type: os,library
-          scanners: vuln,secret,misconfig
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
+          trivy image --format table --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+          trivy image --format json --output trivy-image-scan-${{ inputs.service_name }}.json --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
+          trivy image --format sarif --output trivy-image-scan-${{ inputs.service_name }}.sarif --severity CRITICAL,HIGH --vuln-type os,library --scanners vuln,secret,misconfig $IMAGE
 
       - name: Generate in-toto link for Trivy scan
         run: |
