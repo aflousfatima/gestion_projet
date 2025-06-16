@@ -13,9 +13,9 @@ on:
         type: string
 
 jobs:
-  maven-build:
-    runs-on: ubuntu-latest
-    steps:
+maven-build:
+  runs-on: ubuntu-latest
+  steps:
     - uses: actions/checkout@v4
     - name: Set up JDK ${{ inputs.java_version }}
       uses: actions/setup-java@v4
@@ -29,8 +29,14 @@ jobs:
         key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
         restore-keys: |
           ${{ runner.os }}-maven-
+    - name: Clean environment
+      run: |
+        rm -rf ~/.in-toto *.key *.pub *.link
+        ls -l || echo "Directory is empty"
     - name: Install in-toto
-      run: pip install in-toto --upgrade
+      run: |
+        pip uninstall -y in-toto || true
+        pip install in-toto --upgrade
     - name: Check in-toto version
       run: in-toto-run --version
     - name: Debug environment and inputs
@@ -44,15 +50,27 @@ jobs:
     - name: Decrypt in-toto private key
       run: |
         openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+        chmod 600 in-toto.key
         ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
     - name: Debug in-toto private key ID
       run: |
+        # Vérifier les fichiers dans le répertoire
+        ls -l
+        # Vérifier les permissions
+        ls -l in-toto.key
+        # Afficher le hash
         sha256sum in-toto.key || shasum -a 256 in-toto.key
+        # Vérifier le format
         head -n 1 in-toto.key
         tail -n 1 in-toto.key
-        in-toto-run --step-name debug-keyid --signing-key in-toto.key --verbose -- bash -c "echo test" || true
+        # Vérifier les clés dans ~/.in-toto
+        ls -l ~/.in-toto || echo "No ~/.in-toto directory"
+        # Générer un fichier .link avec un nom unique
+        in-toto-run --step-name debug-keyid-$(date +%s) --signing-key in-toto.key --verbose -- bash -c "echo test" || true
+        # Lister tous les fichiers .link
         ls -l *.link
-        cat debug-keyid.*.link | grep keyid || echo "ERROR: No keyid found"
+        # Afficher le keyid
+        cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
     - name: Debug Maven build process
       run: |
         echo "Running build.sh script..."
@@ -65,14 +83,14 @@ jobs:
         in-toto-run --step-name maven-build \
           --materials ${{ inputs.service_path }}/pom.xml \
           --products ${{ inputs.service_path }}/target/*.jar \
-          --signing-key in-toto.key \
+          --key in-toto.key \
           --run-timeout 300 \
           --verbose \
           -- bash .shared/scripts/build.sh ${{ inputs.service_path }}
         echo "Listing generated link files:"
         ls -l maven-build.*.link || echo "ERROR: No maven-build link file found"
         echo "Content of maven-build link file:"
-        cat maven-build.*.link || echo "ERROR: maven-build link file not found"
+        cat maven-build.*.link | grep keyid || echo "ERROR: No keyid found"
     - name: Upload JAR artifact
       uses: actions/upload-artifact@v4
       with:
