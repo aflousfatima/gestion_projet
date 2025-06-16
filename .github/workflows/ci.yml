@@ -36,7 +36,8 @@ jobs:
       - name: Install in-toto
         run: |
           pip uninstall -y in-toto || true
-          pip install in-toto --upgrade
+          pip install in-toto==2.1.0
+          pip list | grep in-toto
       - name: Check in-toto version
         run: in-toto-run --version
       - name: Debug environment and inputs
@@ -54,22 +55,27 @@ jobs:
           ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
       - name: Debug in-toto private key ID
         run: |
-          # Vérifier les fichiers dans le répertoire
+          # Nettoyer l'environnement
+          rm -rf ~/.in-toto *.key *.pub *.link
+          ls -l || echo "Directory is empty"
+          # Déchiffrer à nouveau pour être sûr
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          # Vérifier les fichiers
           ls -l
-          # Vérifier les permissions
-          ls -l in-toto.key
           # Afficher le hash
           sha256sum in-toto.key || shasum -a 256 in-toto.key
           # Vérifier le format
           head -n 1 in-toto.key
           tail -n 1 in-toto.key
-          # Vérifier les clés dans ~/.in-toto
-          ls -l ~/.in-toto || echo "No ~/.in-toto directory"
-          # Générer un fichier .link avec un nom unique
+          # Vérifier l'environnement Python
+          pip cache purge || echo "No pip cache to purge"
+          pip list | grep in-toto || echo "in-toto not installed"
+          # Tester la clé avec un script Python
+          python3 -c "from securesystemslib.keys import import_rsakey_from_pem; with open('in-toto.key', 'rb') as f: pem = f.read(); key = import_rsakey_from_pem(pem); print(f'Key ID: {key[\"keyid\"]}')"
+          # Générer un fichier .link
           in-toto-run --step-name debug-keyid-$(date +%s) --signing-key in-toto.key --verbose -- bash -c "echo test" || true
-          # Lister tous les fichiers .link
           ls -l *.link
-          # Afficher le keyid
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Debug Maven build process
         run: |
