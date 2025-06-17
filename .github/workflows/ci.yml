@@ -774,13 +774,10 @@ jobs:
     - name: Clean JSON files
       run: |
         for file in *.link .in-toto/root.layout; do
-          if [ -f "$file" ]; then
-            echo "Cleaning $file"
-            python3 -c "
-                python3 <<EOF
-
-         import json
-         import re
+        if [ -f "$file" ]; then
+        echo "Cleaning $file"
+        python3 <<EOF
+        import json
 
 def extract_first_json(file_path):
     with open(file_path, 'r') as f:
@@ -807,11 +804,12 @@ def extract_first_json(file_path):
                         return
         print(f'No valid JSON found in {file_path}')
 
-extract_first_json('$file')
-mv '$file.tmp' '$file' || echo 'Failed to clean $file'
-"
-          fi
-        done
+extract_first_json("$file")
+EOF
+        mv "$file.tmp" "$file" || echo "Failed to clean $file"
+      fi
+    done
+
     - name: Validate layout file
       run: |
         cat .in-toto/root.layout
