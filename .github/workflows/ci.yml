@@ -786,13 +786,13 @@ verify_pipeline:
 def extract_first_json(file_path):
     with open(file_path, 'r') as f:
         content = f.read()
-    brace_count = 0
-    start_idx = None
+          brace_count = 0
+          start_idx = None
     for i, char in enumerate(content):
         if char == '{':
             if brace_count == 0:
                 start_idx = i
-            brace_count += 1
+                brace_count += 1
         elif char == '}':
             brace_count -= 1
             if brace_count == 0 and start_idx is not None:
