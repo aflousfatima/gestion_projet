@@ -160,13 +160,27 @@ jobs:
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Run unit and integration tests and generate in-toto link
         run: |
-          bash .shared/scripts/test.sh ${{ inputs.service_path }}
+          cd ${{ inputs.service_path }}
+          # Exécuter les tests avec JaCoCo pour générer jacoco.xml
+          mvn clean test jacoco:report -DskipTests=false -DskipSurefire=false
+          echo "Checking for jacoco.xml:"
+          ls -l target/site/jacoco/jacoco.xml || echo "ERROR: jacoco.xml not found"
+          echo "Checking for in-toto.key:"
+          ls -l ../in-toto.key || echo "ERROR: in-toto.key not found"
+          rm -f ../tests.*.link
           in-toto-run --step-name tests \
-            --materials ${{ inputs.service_path }}/target/*.jar \
-            --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
-            --key in-toto.key \
+            --materials target/*.jar \
+            --products target/site/jacoco/jacoco.xml \
+            --key ../in-toto.key \
             --no-command \
-            --verbose
+            --verbose \
+            --base-path .
+          mv ../tests.d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14.link ../tests.d6982dd8.link || echo "ERROR: Failed to rename link file"
+          echo "Content of tests link file:"
+          cat ../tests.d6982dd8.link
+          python3 -m json.tool ../tests.d6982dd8.link || echo "ERROR: Invalid JSON in tests.d6982dd8.link"
+          echo "Verifying JAR hash in tests link:"
+          grep '"sha256": "55af3b26569a0d5406209de22253e7e87bd8a8f600e64a34020a3c32c832e857"' ../tests.d6982dd8.link || echo "ERROR: Incorrect JAR hash in tests link"
       - name: Upload JaCoCo report
         uses: actions/upload-artifact@v4
         with:
