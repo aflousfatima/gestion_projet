@@ -539,7 +539,77 @@ jobs:
         with:
           name: in-toto-link-trivy-scan-${{ inputs.service_name }}
           path: trivy-scan.*.link
+      - name: Install Google Cloud Container Analysis client
+        run: pip install google-cloud-container-analysis
+      - name: Create Grafeas note for Trivy scan
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          cat << 'EOF' > create_trivy_note.py
+          from google.cloud import containeranalysis_v1
+          import json
+          import os
+          with open('gcp_sa_key.json', 'w') as f:
+            f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+          os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
+          client = containeranalysis_v1.ContainerAnalysisClient()
+          project_id = "${{ github.repository_owner }}"
+          note_id = "trivy-vulnerability-${{ inputs.service_name }}"
+          note = {
+            "vulnerability": {
+                  "severity": containeranalysis_v1.Severity.HIGH,
+                  "short_description": "Trivy scan results for ${{ inputs.service_name }}"
+            }
+          }
+          parent = f"projects/{project_id}/notes"
+          client.create_note(parent=parent, note_id=note_id, note=note)
+          print(f"Created note: {note_id}")
+          EOF
+          python3 create_trivy_note.py
+
+      - name: Get image digest
+        id: get-digest
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE 2>/dev/null | cut -d'@' -f2 || echo "")
+          if [ -z "$DIGEST" ]; then
+              docker pull $IMAGE
+              DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
+          fi
+          echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Create Grafeas occurrence for Trivy scan
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+          IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
+        run: |
+          cat << 'EOF' > create_trivy_occurrence.py
+          from google.cloud import containeranalysis_v1
+          import json
+          import os
+
+          with open('gcp_sa_key.json', 'w') as f:
+            f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+          os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
+
+          client = containeranalysis_v1.ContainerAnalysisClient()
+          project_id = "${{ github.repository_owner }}"
+          note_id = "trivy-vulnerability-${{ inputs.service_name }}"
+          occurrence = {
+              "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
+              "note_name": f"projects/{project_id}/notes/{note_id}",
+              "vulnerability": {
+                    "severity": containeranalysis_v1.Severity.HIGH,
+                    "package_issue": []
+              }
+            }
+          parent = f"projects/{project_id}/occurrences"
+          client.create_occurrence(parent=parent, occurrence=occurrence)
+          print(f"Created occurrence for Trivy scan")
+          EOF
+          python3 create_trivy_occurrence.py
+    
   sign_and_verify:
     runs-on: ubuntu-latest
     needs: docker-build-push
@@ -862,3 +932,29 @@ jobs:
       run: |
         in-toto-verify --layout .in-toto/root.layout --layout-key .in-toto/in-toto.pub --verbose > in-toto-verify.log 2>&1 || true
         cat in-toto-verify.log
+    - name: Verify Grafeas metadata
+      env:
+        GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+        IMAGE_DIGEST: ${{ needs.docker-build-push.outputs.image_digest }} # Suppose que le digest est passé depuis docker-build-push
+      run: |
+        cat << 'EOF' > verify_grafeas.py
+        from google.cloud import containeranalysis_v1
+        import os
+        with open('gcp_sa_key.json', 'w') as f:
+          f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
+
+        client = containeranalysis_v1.ContainerAnalysisClient()
+        project_id = "${{ github.repository_owner }}"
+        resource_uri = f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}"
+        filter_str = f'resourceUri="{resource_uri}" kind="VULNERABILITY"'
+        parent = f"projects/{project_id}/occurrences"
+    
+        for occurrence in client.list_occurrences(parent=parent, filter=filter_str):
+            severity = occurrence.vulnerability.severity
+            if severity in [containeranalysis_v1.Severity.CRITICAL, containeranalysis_v1.Severity.HIGH]:
+              print(f"Critical or High vulnerability found: {occurrence.name}")
+              exit(1)
+        print("No critical or high vulnerabilities found")
+        EOF
+        python3 verify_grafeas.py
