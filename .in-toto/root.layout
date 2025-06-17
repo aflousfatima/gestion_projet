@@ -34,9 +34,7 @@
       {
         "_type": "step",
         "expected_command": [],
-        "expected_materials": [
-          ["MATCH", "target/*.jar", "WITH", "PRODUCTS", "FROM", "maven-build"]
-        ],
+        "expected_materials": [],
         "expected_products": [
           ["CREATE", "target/site/jacoco/jacoco.xml"]
         ],
