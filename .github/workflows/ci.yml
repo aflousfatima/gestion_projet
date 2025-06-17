@@ -84,16 +84,27 @@ jobs:
       - name: Build with Maven and generate in-toto link
         run: |
           bash .shared/scripts/build.sh ${{ inputs.service_path }}
+          rm -f maven-build.*.link
           in-toto-run --step-name maven-build \
-            --materials ${{ inputs.service_path }}/pom.xml \
-            --products ${{ inputs.service_path }}/target/*.jar \
+              --materials ${{ inputs.service_path }}/pom.xml \
+              --products ${{ inputs.service_path }}/target/*.jar \
             --key in-toto.key \
             --no-command \
-            --verbose
-          echo "Listing generated link files:"
-          ls -l maven-build.*.link || echo "ERROR: No maven-build link file found"
+            --verbose \
+            --base-path $GITHUB_WORKSPACE
+          mv maven-build.d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14.link maven-build.d6982dd8.link || echo "ERROR: Failed to rename link file"
           echo "Content of maven-build link file:"
-          cat maven-build.*.link | grep keyid || echo "ERROR: No keyid found"
+          cat maven-build.d6982dd8.link
+          python3 -m json.tool maven-build.d6982dd8.link || echo "ERROR: Invalid JSON in maven-build.d6982dd8.link"
+      - name: Debug JAR before upload
+        run: |
+            echo "Current directory: $PWD"
+            echo "Service Name: ${{ inputs.service_name }}"
+            echo "Service Path: ${{ inputs.service_path }}"
+            echo "Listing all files in ${{ inputs.service_path }}/target:"
+            find ${{ inputs.service_path }}/target -type f || echo "ERROR: No files found in target"
+            ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
+            sha256sum ${{ inputs.service_path }}/target/*.jar || echo "ERROR: Failed to compute SHA256"
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
@@ -104,7 +115,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: in-toto-link-maven-build-${{ inputs.service_name }}
-          path: maven-build.*.link
+          path: maven-build.d6982dd8.link
 
   tests:
     runs-on: ubuntu-latest
@@ -158,6 +169,20 @@ jobs:
           in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
           ls -l *.link
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-${{ inputs.service_name }}
+          path: ${{ inputs.service_path }}/target
+      - name: Debug downloaded JAR
+        run: |
+          echo "Current directory: $PWD"
+          echo "Service Name: ${{ inputs.service_name }}"
+          echo "Service Path: ${{ inputs.service_path }}"
+          echo "Listing all files in ${{ inputs.service_path }}/target:"
+          find ${{ inputs.service_path }}/target -type f || echo "ERROR: No files found in target"
+          ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
+          sha256sum ${{ inputs.service_path }}/target/*.jar || echo "ERROR: Failed to compute SHA256"
       - name: Run unit and integration tests and generate in-toto link
         run: |
           echo "Current directory: $PWD"
@@ -170,18 +195,18 @@ jobs:
           echo "Checking for JAR file:"
           ls -l target/*.jar || echo "ERROR: No JAR files found"
           sha256sum target/*.jar || echo "ERROR: Failed to compute SHA256"
-          cd /github/workspace
+          cd $GITHUB_WORKSPACE
           echo "Current directory after cd to root: $PWD"
           echo "Checking for in-toto.key:"
           ls -l in-toto.key || echo "ERROR: in-toto.key not found"
           rm -f tests.*.link
           in-toto-run --step-name tests \
-            --materials ${{ inputs.service_path }}/target/*.jar \
-            --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
-            --key in-toto.key \
-            --no-command \
-            --verbose \
-            --base-path /github/workspace
+              --materials ${{ inputs.service_path }}/target/*.jar \
+              --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
+              --key in-toto.key \
+              --no-command \
+              --verbose \
+              --base-path $GITHUB_WORKSPACE
           mv tests.d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14.link tests.d6982dd8.link || echo "ERROR: Failed to rename link file"
           echo "Content of tests link file:"
           cat tests.d6982dd8.link
