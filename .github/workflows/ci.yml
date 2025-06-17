@@ -780,7 +780,7 @@ jobs:
         for file in *.link .in-toto/root.layout; do
           if [ -f "$file" ]; then
             echo "Cleaning $file"
-            python3 .github/scripts/clean_json.py "$file" || echo "Failed to clean $file"
+            python3 .shared/scripts/clean_json.py "$file" || echo "Failed to clean $file"
             if [ -f "$file.tmp" ]; then
               mv "$file.tmp" "$file" || echo "Failed to move temporary file for $file"
             fi
