@@ -799,13 +799,13 @@ def extract_first_json(file_path):
               json_str = content[start_idx:i+1]
         try:
               json_obj = json.loads(json_str)
-                with open(file_path + '.tmp', 'w') as out:
-                    json.dump(json_obj, out, indent=2)
-                    print(f'Successfully cleaned {file_path}')
-                    return
-                except json.JSONDecodeError as e:
-                    print(f'Error parsing JSON in {file_path}: {e}')
-                    return
+        with open(file_path + '.tmp', 'w') as out:
+              json.dump(json_obj, out, indent=2)
+              print(f'Successfully cleaned {file_path}')
+              return
+           except json.JSONDecodeError as e:
+              print(f'Error parsing JSON in {file_path}: {e}')
+              return 
     print(f'No valid JSON found in {file_path}')
 
 extract_first_json('$file')
