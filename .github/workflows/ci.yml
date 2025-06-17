@@ -784,7 +784,7 @@ def extract_first_json(file_path):
         content = f.read()
         brace_count = 0
         start_idx = None
-          for i, char in enumerate(content):
+        for i, char in enumerate(content):
             if char == '{':
                 if brace_count == 0:
                     start_idx = i
