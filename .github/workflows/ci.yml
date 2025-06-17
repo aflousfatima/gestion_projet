@@ -108,97 +108,75 @@ jobs:
 
   tests:
     runs-on: ubuntu-latest
-    needs: [maven-build]
+    needs: maven-build
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.8'
-    - name: Set up JDK ${{ inputs.java_version }}
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ inputs.java_version }}
-        distribution: 'temurin'
-    - name: Cache Maven dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
-    - name: Clean environment
-      run: |
-        rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
-        ls -l || echo "Directory is empty"
-    - name: Install in-toto and securesystemslib
-      run: |
-        pip uninstall -y in-toto securesystemslib || true
-        pip install in-toto==2.1.0 securesystemslib==0.31.0
-        pip list | grep -E 'in-toto|securesystemslib'
-    - name: Download JAR artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: jar-${{ inputs.service_name }}
-        path: ${{ inputs.service_path }}/target
-    - name: Debug downloaded JAR
-      run: |
-        echo "Listing downloaded JAR files:"
-        ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
-        echo "Computing SHA256 of JAR:"
-        sha256sum ${{ inputs.service_path }}/target/*.jar || echo "ERROR: Failed to compute SHA256"
-        grep "55af3b26569a0d5406209de22253e7e87bd8a8f600e64a34020a3c32c832e857" <(sha256sum ${{ inputs.service_path }}/target/*.jar) || echo "ERROR: JAR hash does not match expected hash"
-    - name: Decrypt in-toto private key
-      run: |
-        openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
-        chmod 600 in-toto.key
-        ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
-    - name: Debug in-toto private key ID
-      run: |
-        ls -l
-        sha256sum in-toto.key || shasum -a 256 in-toto.key
-        head -n 1 in-toto.key
-        tail -n 1 in-toto.key
-        cat << 'EOF' > check_keyid.py
-        from securesystemslib.keys import import_rsakey_from_pem
-        with open('in-toto.key', 'rb') as f:
-            pem = f.read().decode('utf-8')
-        key = import_rsakey_from_pem(pem)
-        print('Key ID: {}'.format(key['keyid']))
-        EOF
-        python3 check_keyid.py
-        in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
-        ls -l *.link
-        cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
-    - name: Run unit and integration tests and generate in-toto link
-      run: |
-        cd ${{ inputs.service_path }}
-        mvn test -DskipTests=false -DskipAssembly=true -DskipSurefire=false
-        echo "Checking for in-toto.key:"
-        ls -l ../in-toto.key || echo "ERROR: in-toto.key not found"
-        rm -f ../tests.*.link
-        in-toto-run --step-name tests \
-          --materials target/*.jar \
-          --products target/site/jacoco/jacoco.xml \
-          --key ../in-toto.key \
-          --no-command \
-          --verbose
-        mv ../tests.d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14.link ../tests.d6982dd8.link || echo "ERROR: Failed to rename link file"
-        echo "Content of tests link file:"
-        cat ../tests.d6982dd8.link
-        python3 -m json.tool ../tests.d6982dd8.link || echo "ERROR: Invalid JSON in tests.d6982dd8.link"
-        echo "Verifying JAR hash in tests link:"
-        grep '"sha256": "55af3b26569a0d5406209de22253e7e87bd8a8f600e64a34020a3c32c832e857"' ../tests.d6982dd8.link || echo "ERROR: Incorrect JAR hash in tests link"
-    - name: Upload JaCoCo report
-      uses: actions/upload-artifact@v4
-      with:
-        name: jacoco-report-${{ inputs.service_name }}
-        path: ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
-    - name: Upload in-toto link
-      uses: actions/upload-artifact@v4
-      with:
-        name: in-toto-link-tests-${{ inputs.service_name }}
-        path: tests.d6982dd8.link
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+      - name: Set up JDK ${{ inputs.java_version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ inputs.java_version }}
+          distribution: 'temurin'
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('${{ inputs.service_path }}/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+      - name: Clean environment
+        run: |
+          rm -rf ~/.in-toto *.key *.pub *.link ~/.local/lib/python3*
+          ls -l || echo "Directory is empty"
+      - name: Install in-toto and securesystemslib
+        run: |
+          pip uninstall -y in-toto securesystemslib || true
+          pip install in-toto==2.1.0 securesystemslib==0.31.0
+          pip list | grep -E 'in-toto|securesystemslib'
+      - name: Decrypt in-toto private key
+        run: |
+          openssl enc -aes-256-cbc -d -in .in-toto/private.key.enc -out in-toto.key -pass pass:"${{ secrets.KEY_PASSPHRASE }}"
+          chmod 600 in-toto.key
+          ls -l in-toto.key || echo "ERROR: Failed to decrypt private key"
+      - name: Debug in-toto private key ID
+        run: |
+          ls -l
+          sha256sum in-toto.key || shasum -a 256 in-toto.key
+          head -n 1 in-toto.key
+          tail -n 1 in-toto.key
+          cat << 'EOF' > check_keyid.py
+          from securesystemslib.keys import import_rsakey_from_pem
+          with open('in-toto.key', 'rb') as f:
+              pem = f.read().decode('utf-8')
+          key = import_rsakey_from_pem(pem)
+          print('Key ID: {}'.format(key['keyid']))
+          EOF
+          python3 check_keyid.py
+          in-toto-run --step-name debug-keyid-$(date +%s) --key in-toto.key --verbose -- bash -c "echo test" || true
+          ls -l *.link
+          cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
+      - name: Run unit and integration tests and generate in-toto link
+        run: |
+          bash .shared/scripts/test.sh ${{ inputs.service_path }}
+          in-toto-run --step-name tests \
+            --materials ${{ inputs.service_path }}/target/*.jar \
+            --products ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml \
+            --key in-toto.key \
+            --no-command \
+            --verbose
+      - name: Upload JaCoCo report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report-${{ inputs.service_name }}
+          path: ${{ inputs.service_path }}/target/site/jacoco/jacoco.xml
+      - name: Upload in-toto link
+        uses: actions/upload-artifact@v4
+        with:
+          name: in-toto-link-tests-${{ inputs.service_name }}
+          path: tests.*.link
         
   snyk-scan:
     runs-on: ubuntu-latest
