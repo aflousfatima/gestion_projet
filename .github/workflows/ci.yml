@@ -160,7 +160,9 @@ jobs:
           cat debug-keyid-*.link | grep keyid || echo "ERROR: No keyid found"
       - name: Run unit and integration tests and generate in-toto link
         run: |
+          echo "Current directory: $PWD"
           cd ${{ inputs.service_path }}
+          echo "Current directory after cd: $PWD"
           # Exécuter les tests avec JaCoCo pour générer jacoco.xml
           mvn clean test jacoco:report -DskipTests=false -DskipSurefire=false
           echo "Checking for jacoco.xml:"
@@ -168,7 +170,8 @@ jobs:
           echo "Checking for JAR file:"
           ls -l target/*.jar || echo "ERROR: No JAR files found"
           sha256sum target/*.jar || echo "ERROR: Failed to compute SHA256"
-          cd ../.. # Retour à la racine du dépôt
+          cd /github/workspace
+          echo "Current directory after cd to root: $PWD"
           echo "Checking for in-toto.key:"
           ls -l in-toto.key || echo "ERROR: in-toto.key not found"
           rm -f tests.*.link
@@ -178,7 +181,7 @@ jobs:
             --key in-toto.key \
             --no-command \
             --verbose \
-            --base-path .
+            --base-path /github/workspace
           mv tests.d6982dd865aeacdd6febd1acbea1730a2476ad55c8d387ef33c0ad3066773e14.link tests.d6982dd8.link || echo "ERROR: Failed to rename link file"
           echo "Content of tests link file:"
           cat tests.d6982dd8.link
