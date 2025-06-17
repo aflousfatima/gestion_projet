@@ -713,7 +713,7 @@ jobs:
           name: in-toto-link-sonar-analysis-${{ inputs.service_name }}
           path: sonar-analysis.*.link
 
-  verify_pipeline:
+verify_pipeline:
   runs-on: ubuntu-latest
   needs: [maven-build, tests, snyk-scan, docker-build-push, trivy-scan, sign_and_verify, sonar-analysis]
   steps:
@@ -771,45 +771,48 @@ jobs:
         ls -l .in-toto/root.layout || echo "ERROR: root.layout not found"
         ls -l *.link || echo "ERROR: No link files found"
         ls -l .in-toto/in-toto.pub || echo "ERROR: in-toto.pub not found"
+    - name: Debug raw root.layout
+      run: |
+        echo "Raw content of root.layout:"
+        cat .in-toto/root.layout || echo "ERROR: Cannot read root.layout"
     - name: Clean JSON files
       run: |
         for file in *.link .in-toto/root.layout; do
-        if [ -f "$file" ]; then
-        echo "Cleaning $file"
-        python3 <<EOF
-        import json
+          if [ -f "$file" ]; then
+            echo "Cleaning $file"
+            python3 <<EOF
+          import json
 
 def extract_first_json(file_path):
     with open(file_path, 'r') as f:
         content = f.read()
-        brace_count = 0
-        start_idx = None
-        for i, char in enumerate(content):
-            if char == '{':
-                if brace_count == 0:
-                    start_idx = i
-                brace_count += 1
-            elif char == '}':
-                brace_count -= 1
-                if brace_count == 0 and start_idx is not None:
-                    json_str = content[start_idx:i+1]
-                    try:
-                        json_obj = json.loads(json_str)
-                        with open(file_path + '.tmp', 'w') as out:
-                            json.dump(json_obj, out, indent=2)
-                        print(f'Successfully cleaned {file_path}')
-                        return
-                    except json.JSONDecodeError as e:
-                        print(f'Error parsing JSON in {file_path}: {e}')
-                        return
-        print(f'No valid JSON found in {file_path}')
+    brace_count = 0
+    start_idx = None
+    for i, char in enumerate(content):
+        if char == '{':
+            if brace_count == 0:
+                start_idx = i
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0 and start_idx is not None:
+                json_str = content[start_idx:i+1]
+                try:
+                    json_obj = json.loads(json_str)
+                    with open(file_path + '.tmp', 'w') as out:
+                        json.dump(json_obj, out, indent=2)
+                    print(f'Successfully cleaned {file_path}')
+                    return
+                except json.JSONDecodeError as e:
+                    print(f'Error parsing JSON in {file_path}: {e}')
+                    return
+    print(f'No valid JSON found in {file_path}')
 
-extract_first_json("$file")
+extract_first_json('$file')
 EOF
-        mv "$file.tmp" "$file" || echo "Failed to clean $file"
-      fi
-    done
-
+            mv "$file.tmp" "$file" || echo "Failed to clean $file"
+          fi
+        done
     - name: Validate layout file
       run: |
         cat .in-toto/root.layout
