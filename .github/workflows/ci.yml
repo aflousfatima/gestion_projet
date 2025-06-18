@@ -547,6 +547,46 @@ jobs:
           ping -c 4 containeranalysis.googleapis.com || echo "Ping failed"
           nslookup containeranalysis.googleapis.com || echo "DNS resolution failed"
           curl -I https://containeranalysis.googleapis.com || echo "Curl failed"
+      - name: Debug OAuth credentials and API access
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+        run: |
+          cat << 'EOF' > debug_credentials.py
+          from google.oauth2 import service_account
+          from grafeas.grafeas_v1 import GrafeasClient
+          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
+          import os
+
+          with open('gcp_sa_key.json', 'w') as f:
+          f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+    
+          try:
+            credentials = service_account.Credentials.from_service_account_file(
+                'gcp_sa_key.json',
+                scopes=['https://www.googleapis.com/auth/cloud-platform']
+            )
+          print(f"Scopes: {credentials.scopes}")
+          print(f"Service account email: {credentials.service_account_email}")
+          print("Credentials loaded successfully")
+        
+          client = GrafeasClient(
+              transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"),
+              credentials=credentials
+          )
+          project_id = "${{ github.repository_owner }}"
+          parent = f"projects/{project_id}/notes"
+          # Teste une requête simple pour lister les notes
+          try:
+              for note in client.list_notes(parent=parent):
+                  print(f"Found note: {note.name}")
+              print("Successfully listed notes")
+          except Exception as e:
+              print(f"Failed to list notes: {e}")
+          except Exception as e:
+          print(f"Error loading credentials: {e}")
+          EOF
+          python3 debug_credentials.py
+    
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
