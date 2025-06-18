@@ -581,7 +581,7 @@ jobs:
                   print("Successfully listed notes")
               except Exception as e:
                 print(f"Failed to list notes: {e}")
-          except Exception asclient_error:
+          except Exception as client_error:
                 print(f"Failed to initialize GrafeasClient: {client_error}")
           except Exception as cred_error:
                 print(f"Error loading credentials: {cred_error}")
