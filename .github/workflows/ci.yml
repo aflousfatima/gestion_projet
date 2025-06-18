@@ -538,17 +538,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: in-toto-link-trivy-scan-${{ inputs.service_name }}
-          path: trivy-scan.*.link      
-          
+          path: trivy-scan.*.link                
       - name: Install Google Cloud Container Analysis client
         run: |
           pip install --no-cache-dir google-cloud-containeranalysis==2.18.0
+      - name: Debug network connectivity
+        run: |
+          ping -c 4 containeranalysis.googleapis.com || echo "Ping failed"
+          nslookup containeranalysis.googleapis.com || echo "DNS resolution failed"
+          curl -I https://containeranalysis.googleapis.com || echo "Curl failed"
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
         run: |
           cat << 'EOF' > create_trivy_note.py
-          from grafeas.grafeas_v1 import GrafeasClient, VulnerabilityNote, Severity
+          from grafeas.grafeas_v1 import GrafeasClient, Severity
           from google.api_core.exceptions import AlreadyExists
           import json
           import os
@@ -556,7 +560,7 @@ jobs:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = GrafeasClient()
+          client = GrafeasClient(client_options={"api_endpoint": "containeranalysis.googleapis.com"})
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = {
@@ -564,7 +568,7 @@ jobs:
                 "severity": Severity.HIGH,
                 "details": [
                     {
-                        "description": "Trivy scan results for ${{ inputs.service_name }}"
+                         "description": "Trivy scan results for ${{ inputs.service_name }}"
                     }
                 ]
             }
