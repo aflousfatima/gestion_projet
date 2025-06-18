@@ -560,8 +560,8 @@ jobs:
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = VulnerabilityNote(
-              severity=Severity.HIGH,
-              short_description="Trivy scan results for ${{ inputs.service_name }}"
+                severity=Severity.HIGH,
+                title="Trivy scan results for ${{ inputs.service_name }}"
           )
           parent = f"projects/{project_id}/notes"
           try:
