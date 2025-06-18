@@ -538,10 +538,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: in-toto-link-trivy-scan-${{ inputs.service_name }}
-          path: trivy-scan.*.link
+          path: trivy-scan.*.link      
+          
       - name: Install Google Cloud Container Analysis client
-        run: pip install google-cloud-containeranalysis==2.18.0
-      
+        run: |
+          pip install --no-cache-dir google-cloud-containeranalysis==2.18.0
+          pip show google-cloud-containeranalysis || echo "ERROR: google-cloud-containeranalysis not installed"
+          pip list | grep google-cloud-containeranalysis
+      - name: Debug Google Cloud Container Analysis modules
+        run: |
+          python3 -c "import google.cloud.containeranalysis; print(dir(google.cloud.containeranalysis))"
+          python3 -c "import google.cloud; print(dir(google.cloud))"
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
