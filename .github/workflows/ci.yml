@@ -540,7 +540,7 @@ jobs:
           name: in-toto-link-trivy-scan-${{ inputs.service_name }}
           path: trivy-scan.*.link
       - name: Install Google Cloud Container Analysis client
-        run: pip install google-cloud-container-analysis==2.14.1
+        run: pip install google-cloud-container-analysis==2.18.0
       
       - name: Create Grafeas note for Trivy scan
         env:
