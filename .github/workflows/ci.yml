@@ -562,7 +562,7 @@ jobs:
 
           client = GrafeasClient()
           project_id = "${{ github.repository_owner }}"
-          note_id = "trivy-vulnerability-${{ inputs.service_name }}
+          note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = {
             "vulnerability": {
                 "severity": Severity.HIGH,
