@@ -543,46 +543,35 @@ jobs:
       - name: Install Google Cloud Container Analysis client
         run: |
           pip install --no-cache-dir google-cloud-containeranalysis==2.18.0
-          pip show google-cloud-containeranalysis || echo "ERROR: google-cloud-containeranalysis not installed"
-          pip list | grep google-cloud-containeranalysis
-          find /opt/hostedtoolcache/Python/3.11*/x64/lib/python3.11/site-packages/google/cloud -type f
           
-      - name: Debug Google Cloud Container Analysis modules
-        run: |
-          python3 -c "import google.cloud; print(dir(google.cloud))" || echo "ERROR: google.cloud import failed"
-          python3 -c "import google.cloud.containeranalysis_v1; print(dir(google.cloud.containeranalysis_v1))" || echo "ERROR: containeranalysis_v1 import failed"
-          python3 -c "import grafeas; print(dir(grafeas))" || echo "ERROR: grafeas import failed"
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
         run: |
           cat << 'EOF' > create_trivy_note.py
-          from google.cloud.containeranalysis_v1 import ContainerAnalysisClient
+          from grafeas.grafeas_v1 import GrafeasClient, VulnerabilityNote, Severity
           from google.api_core.exceptions import AlreadyExists
           import json
           import os
           with open('gcp_sa_key.json', 'w') as f:
-            f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+              f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
-
-          client = ContainerAnalysisClient()
+          client = GrafeasClient()
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
-          note = {
-              "vulnerability": {
-                  "severity": "HIGH",
-                  "short_description": "Trivy scan results for ${{ inputs.service_name }}"
-              }
-          }
+          note = VulnerabilityNote(
+              severity=Severity.HIGH,
+              short_description="Trivy scan results for ${{ inputs.service_name }}"
+          )
           parent = f"projects/{project_id}/notes"
           try:
-            client.create_note(parent=parent, note_id=note_id, note=note)
-            print(f"Created note: {note_id}")
+              client.create_note(parent=parent, note_id=note_id, note=note)
+              print(f"Created note: {note_id}")
           except AlreadyExists:
-            print(f"Note {note_id} already exists, skipping creation")
+              print(f"Note {note_id} already exists, skipping creation")
           EOF
           python3 create_trivy_note.py
-
+          
       - name: Get image digest
         id: get-digest
         run: |
@@ -596,29 +585,25 @@ jobs:
 
       - name: Create Grafeas occurrence for Trivy scan
         env:
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
-          IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
+            GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+            IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
         run: |
           cat << 'EOF' > create_trivy_occurrence.py
-          from google.cloud.containeranalysis_v1 import ContainerAnalysisClient
+          from grafeas.grafeas_v1 import GrafeasClient, VulnerabilityOccurrence, Severity
           import json
           import os
-
           with open('gcp_sa_key.json', 'w') as f:
-            f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+              f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = ContainerAnalysisClient()
+          client = GrafeasClient()
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
-          occurrence = {
-              "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
-              "note_name": f"projects/{project_id}/notes/{note_id}",
-              "vulnerability": {
-                    "severity": "HIGH",
-                    "package_issue": []
-              }
-          }
+          occurrence = VulnerabilityOccurrence(
+                resource_uri=f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
+                note_name=f"projects/{project_id}/notes/{note_id}",
+                severity=Severity.HIGH
+          )
           parent = f"projects/{project_id}/occurrences"
           client.create_occurrence(parent=parent, occurrence=occurrence)
           print(f"Created occurrence for Trivy scan")
