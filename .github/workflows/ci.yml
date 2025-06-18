@@ -553,6 +553,7 @@ jobs:
         run: |
           cat << 'EOF' > create_trivy_note.py
           from grafeas.grafeas_v1 import GrafeasClient, Severity
+          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
           from google.api_core.exceptions import AlreadyExists
           import json
           import os
@@ -560,7 +561,7 @@ jobs:
             f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = GrafeasClient()
+          client = GrafeasClient(transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"))
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = {
