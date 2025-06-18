@@ -555,13 +555,21 @@ jobs:
           from grafeas.grafeas_v1 import GrafeasClient, Severity
           from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
           from google.api_core.exceptions import AlreadyExists
+          from google.oauth2 import service_account
           import json
           import os
           with open('gcp_sa_key.json', 'w') as f:
             f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = GrafeasClient(transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"))
+          credentials = service_account.Credentials.from_service_account_file(
+            'gcp_sa_key.json',
+            scopes=['https://www.googleapis.com/auth/cloud-platform']
+          )
+          client = GrafeasClient(
+            transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"),
+            credentials=credentials
+          )
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = {
