@@ -575,15 +575,15 @@ jobs:
               parent = f"projects/{project_id}/notes"
               # Teste une requête simple pour lister les notes
               try:
-                for note in client.list_notes(parent=parent):
-                    print(f"Found note: {note.name}")
-                print("Successfully listed notes")
+                  for note in client.list_notes(parent=parent):
+                      print(f"Found note: {note.name}")
+                  print("Successfully listed notes")
               except Exception as e:
                 print(f"Failed to list notes: {e}")
-              except Exception as e:
-                print(f"Error loading credentials: {e}")
-              EOF
-              python3 debug_credentials.py
+          except Exception as e:
+              print(f"Error loading credentials: {e}")
+          EOF
+          python3 debug_credentials.py
     
       - name: Create Grafeas note for Trivy scan
         env:
@@ -804,7 +804,7 @@ jobs:
         run: |
           cosign attest --yes --key cosign.key --tlog-upload=false --type=https://slsa.dev/provenance/v1 --predicate slsa-provenance.json ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }}
       - name: Verify SLSA provenance attestation
-        run: cosign verify-attestation --key cosign.pub --no-tlog --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
+        run: cosign verify-attestation --key cosign.pub --type https://slsa.dev/provenance/v1 ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@${{ steps.get-digest.outputs.image_digest }} | jq .
       - name: Upload in-toto link
         uses: actions/upload-artifact@v4
         with:
