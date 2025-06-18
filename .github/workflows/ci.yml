@@ -545,10 +545,13 @@ jobs:
           pip install --no-cache-dir google-cloud-containeranalysis==2.18.0
           pip show google-cloud-containeranalysis || echo "ERROR: google-cloud-containeranalysis not installed"
           pip list | grep google-cloud-containeranalysis
+          find /opt/hostedtoolcache/Python/3.11*/x64/lib/python3.11/site-packages/google/cloud -type f
+          
       - name: Debug Google Cloud Container Analysis modules
         run: |
-          python3 -c "import google.cloud.containeranalysis; print(dir(google.cloud.containeranalysis))"
-          python3 -c "import google.cloud; print(dir(google.cloud))"
+          python3 -c "import google.cloud; print(dir(google.cloud))" || echo "ERROR: google.cloud import failed"
+          python3 -c "import google.cloud.containeranalysis_v1; print(dir(google.cloud.containeranalysis_v1))" || echo "ERROR: containeranalysis_v1 import failed"
+          python3 -c "import grafeas; print(dir(grafeas))" || echo "ERROR: grafeas import failed"
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
