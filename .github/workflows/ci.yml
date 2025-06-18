@@ -558,34 +558,32 @@ jobs:
           import os
 
           with open('gcp_sa_key.json', 'w') as f:
-          f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
-    
+              f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])    
           try:
-            credentials = service_account.Credentials.from_service_account_file(
-                'gcp_sa_key.json',
-                scopes=['https://www.googleapis.com/auth/cloud-platform']
-            )
-          print(f"Scopes: {credentials.scopes}")
-          print(f"Service account email: {credentials.service_account_email}")
-          print("Credentials loaded successfully")
-        
-          client = GrafeasClient(
-              transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"),
-              credentials=credentials
-          )
-          project_id = "${{ github.repository_owner }}"
-          parent = f"projects/{project_id}/notes"
-          # Teste une requête simple pour lister les notes
-          try:
-              for note in client.list_notes(parent=parent):
-                  print(f"Found note: {note.name}")
-              print("Successfully listed notes")
-          except Exception as e:
-              print(f"Failed to list notes: {e}")
-          except Exception as e:
-          print(f"Error loading credentials: {e}")
-          EOF
-          python3 debug_credentials.py
+              credentials = service_account.Credentials.from_service_account_file(
+                  'gcp_sa_key.json',
+                  scopes=['https://www.googleapis.com/auth/cloud-platform']
+              )
+              print(f"Scopes: {credentials.scopes}")
+              print(f"Service account email: {credentials.service_account_email}")
+              print("Credentials loaded successfully")        
+              client = GrafeasClient(
+                  transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"),
+                  credentials=credentials
+              )
+              project_id = "${{ github.repository_owner }}"
+              parent = f"projects/{project_id}/notes"
+              # Teste une requête simple pour lister les notes
+              try:
+                for note in client.list_notes(parent=parent):
+                    print(f"Found note: {note.name}")
+                print("Successfully listed notes")
+              except Exception as e:
+                print(f"Failed to list notes: {e}")
+              except Exception as e:
+                print(f"Error loading credentials: {e}")
+              EOF
+              python3 debug_credentials.py
     
       - name: Create Grafeas note for Trivy scan
         env:
