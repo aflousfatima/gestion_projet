@@ -557,12 +557,12 @@ jobs:
           import json
           import os
           with open('gcp_sa_key.json', 'w') as f:
-              f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+            f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = GrafeasClient(client_options={"api_endpoint": "containeranalysis.googleapis.com"})
+          client = GrafeasClient()
           project_id = "${{ github.repository_owner }}"
-          note_id = "trivy-vulnerability-${{ inputs.service_name }}"
+          note_id = "trivy-vulnerability-${{ inputs.service_name }}
           note = {
             "vulnerability": {
                 "severity": Severity.HIGH,
