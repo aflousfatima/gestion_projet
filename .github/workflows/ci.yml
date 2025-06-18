@@ -543,9 +543,11 @@ jobs:
       - name: Install Google Cloud Container Analysis client
         run: |
           pip install --no-cache-dir google-cloud-containeranalysis==2.18.0
-      - name: Debug VulnerabilityNote fields
+      - name: Debug Grafeas structures
         run: |
-          python3 -c "from grafeas.grafeas_v1 import VulnerabilityNote; print(dir(VulnerabilityNote))"    
+          python3 -c "from grafeas.grafeas_v1 import VulnerabilityNote; print(dir(VulnerabilityNote))"
+          python3 -c "from grafeas.grafeas_v1 import VulnerabilityNote; print(dir(VulnerabilityNote.Detail))"
+          python3 -c "from grafeas.grafeas_v1 import VulnerabilityOccurrence; print(dir(VulnerabilityOccurrence))"
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
@@ -558,19 +560,22 @@ jobs:
           with open('gcp_sa_key.json', 'w') as f:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
+
           client = GrafeasClient()
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = VulnerabilityNote(
-            severity=Severity.HIGH,
-            details="Trivy scan results for ${{ inputs.service_name }}"
+              severity=Severity.HIGH,
+              details=[
+                  VulnerabilityNote.Detail(
+                      description="Trivy scan results for ${{ inputs.service_name }}"
+                  )
+              ]
           )
           parent = f"projects/{project_id}/notes"
           try:
-              client.create_note(parent=parent, note_id=note_id, note=note)
-              print(f"Created note: {note_id}")
-          except AlreadyExists:
-              print(f"Note {note_id} already exists, skipping creation")
+            client.create_note(parent=parent, note_id=note_id, note=note)
+            print(f"Created note: {note_id}")
           EOF
           python3 create_trivy_note.py
           
