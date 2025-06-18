@@ -576,6 +576,8 @@ jobs:
           try:
             client.create_note(parent=parent, note_id=note_id, note=note)
             print(f"Created note: {note_id}")
+          except AlreadyExists:
+            print(f"Note {note_id} already exists, skipping creation")
           EOF
           python3 create_trivy_note.py
           
