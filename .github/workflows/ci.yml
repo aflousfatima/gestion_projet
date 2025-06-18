@@ -540,34 +540,36 @@ jobs:
           name: in-toto-link-trivy-scan-${{ inputs.service_name }}
           path: trivy-scan.*.link
       - name: Install Google Cloud Container Analysis client
-        run:  pip install google-cloud-artifact-registry
+        run: pip install google-cloud-container-analysis==2.14.1
       
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
         run: |
           cat << 'EOF' > create_trivy_note.py
-          from google.cloud.artifactregistry_v1 import ArtifactRegistryClient
-          from google.cloud.artifactregistry_v1.types import Note
+          from google.cloud import containeranalysis_v1
+          from google.api_core.exceptions import AlreadyExists
           import json
           import os
           with open('gcp_sa_key.json', 'w') as f:
             f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = ArtifactRegistryClient()
+          client = containeranalysis_v1.ContainerAnalysisClient()
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
-          note = Note(
-              vulnerability=Note.Vulnerability(
-                  severity=Note.Vulnerability.Severity.HIGH,
-                  short_description="Trivy scan results for ${{ inputs.service_name }}"
-            )
-          )
-          parent = f"projects/{project_id}/locations/global/notes"
-          request = {"parent": parent, "note_id": note_id, "note": note}
-          client.create_note(request=request)
-          print(f"Created note: {note_id}")
+          note = {
+             "vulnerability": {
+                 "severity": containeranalysis_v1.Severity.HIGH,
+                 "short_description": "Trivy scan results for ${{ inputs.service_name }}"
+            }
+          }
+          parent = f"projects/{project_id}/notes"
+          try:
+              client.create_note(parent=parent, note_id=note_id, note=note)
+              print(f"Created note: {note_id}")
+          except AlreadyExists:
+              print(f"Note {note_id} already exists, skipping creation")
           EOF
           python3 create_trivy_note.py
 
@@ -588,8 +590,7 @@ jobs:
           IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
         run: |
           cat << 'EOF' > create_trivy_occurrence.py
-          from google.cloud.artifactregistry_v1 import ArtifactRegistryClient
-          from google.cloud.artifactregistry_v1.types import Occurrence
+          from google.cloud import containeranalysis_v1
           import json
           import os
 
@@ -597,20 +598,19 @@ jobs:
             f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = ArtifactRegistryClient()
+          client = containeranalysis_v1.ContainerAnalysisClient()
           project_id = "${{ github.repository_owner }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
-          occurrence = Occurrence(
-              resource_uri=f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
-              note_name=f"projects/{project_id}/locations/global/notes/{note_id}",
-              vulnerability=Occurrence.Vulnerability(
-                  severity=Occurrence.Vulnerability.Severity.HIGH,
-                  package_issue=[]
-              )
-          )
-          parent = f"projects/{project_id}/locations/global/occurrences"
-          request = {"parent": parent, "occurrence": occurrence}
-          client.create_occurrence(request=request)
+          occurrence = {
+              "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
+              "note_name": f"projects/{project_id}/notes/{note_id}",
+              "vulnerability": {
+                  "severity": containeranalysis_v1.Severity.HIGH,
+                  "package_issue": []
+              }
+          }
+          parent = f"projects/{project_id}/occurrences"
+          client.create_occurrence(parent=parent, occurrence=occurrence)
           print(f"Created occurrence for Trivy scan")
           EOF
           python3 create_trivy_occurrence.py
