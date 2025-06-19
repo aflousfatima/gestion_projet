@@ -555,6 +555,7 @@ jobs:
           from google.oauth2 import service_account
           from grafeas.grafeas_v1 import GrafeasClient
           from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
+          import grpc
           import os
 
           with open('gcp_sa_key.json', 'w') as f:
@@ -562,15 +563,24 @@ jobs:
           try:
               credentials = service_account.Credentials.from_service_account_file(
                   'gcp_sa_key.json',
-                  scopes=['https://www.googleapis.com/auth/cloud-platform']
+                   scopes=['https://www.googleapis.com/auth/cloud-platform']
               )
               print(f"Scopes: {credentials.scopes}")
               print(f"Service account email: {credentials.service_account_email}")
-              print("Credentials loaded successfully")    
-              client = GrafeasClient(
-                  transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"),
-                  credentials=credentials
+              print("Credentials loaded successfully")
+
+              # Créer un canal gRPC avec les credentials explicites
+              channel = grpc.secure_channel(
+                  'containeranalysis.googleapis.com',
+                  grpc.ssl_channel_credentials(),
+                  options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
               )
+              channel = grpc.intercept_channel(
+                  channel,
+                  grpc.metadata_call_credentials(credentials)
+              )
+              transport = GrafeasGrpcTransport(channel=channel)
+              client = GrafeasClient(transport=transport)
               print("GrafeasClient initialized successfully")
               project_id = "grafeas-poc-2025"
               parent = f"projects/{project_id}/notes"
