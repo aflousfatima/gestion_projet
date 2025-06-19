@@ -571,16 +571,16 @@ jobs:
 
               # Créer un canal gRPC avec les credentials explicites
               ssl_credentials = grpc.ssl_channel_credentials()
-              auth_credentials = grpc.metadata_call_credentials(credentials)
+              auth_credentials = grpc.metadata_call_credentials(metadata_callback)
               composite_credentials = grpc.composite_channel_credentials(
                   ssl_credentials,
                   auth_credentials
               )
               channel = grpc.secure_channel(
-                  'containeranalysis.googleapis.com',
-                  composite_credentials,
-                  options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
-              )
+                'containeranalysis.googleapis.com',
+                composite_credentials,
+                options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
+              )          
               transport = GrafeasGrpcTransport(channel=channel)
               client = GrafeasClient(transport=transport)
               print("GrafeasClient initialized successfully")
