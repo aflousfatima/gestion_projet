@@ -554,7 +554,7 @@ jobs:
           cat << 'EOF' > debug_credentials.py
           from google.oauth2 import service_account
           from grafeas.grafeas_v1 import GrafeasClient
-          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
+          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTranspor
           import grpc
           import os
 
@@ -570,14 +570,16 @@ jobs:
               print("Credentials loaded successfully")
 
               # Créer un canal gRPC avec les credentials explicites
+              ssl_credentials = grpc.ssl_channel_credentials()
+              auth_credentials = grpc.metadata_call_credentials(credentials)
+              composite_credentials = grpc.composite_channel_credentials(
+                  ssl_credentials,
+                  auth_credentials
+              )
               channel = grpc.secure_channel(
                   'containeranalysis.googleapis.com',
-                  grpc.ssl_channel_credentials(),
+                  composite_credentials,
                   options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
-              )
-              channel = grpc.intercept_channel(
-                  channel,
-                  grpc.metadata_call_credentials(credentials)
               )
               transport = GrafeasGrpcTransport(channel=channel)
               client = GrafeasClient(transport=transport)
