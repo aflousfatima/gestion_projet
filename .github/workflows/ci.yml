@@ -731,6 +731,7 @@ jobs:
           from google.oauth2 import service_account
           from google.auth.transport.requests import Request
           from google.api_core.exceptions import GoogleAPIError
+          from google.api_core import retry
           import grpc
           import os
           import json
@@ -795,7 +796,13 @@ jobs:
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           parent = f"projects/{project_id}"
 
-          # Lire le rapport Trivy
+          try:
+              print("Listing existing notes:")
+              for note in client.list_notes(parent=parent):
+                  print(f"Found note: {note.name}")
+          except Exception as e:
+              print(f"Failed to list notes: {e}")
+
           try:
               with open('trivy-image-scan-${{ inputs.service_name }}.json', 'r') as f:
                   trivy_report = json.load(f)
@@ -822,9 +829,7 @@ jobs:
                           "fixed_version": {
                               "name": fixed_version,
                               "kind": "NORMAL"
-                          },
-                          "affected_cpe_uri": vuln.get('CpeURIs', [''])[0] or "cpe:/a:unknown:unknown",
-                          "fixed_cpe_uri": vuln.get('CpeURIs', [''])[0] or "cpe:/a:unknown:unknown"
+                          }
                       }
                       package_issues.append(package_issue)
                       print(f"Added package issue: {json.dumps(package_issue, indent=2)}")
@@ -834,7 +839,7 @@ jobs:
               exit(0)
 
           occurrence = {
-              "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
+              "resource_uri": f"ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@{os.environ['IMAGE_DIGEST']}",
               "note_name": f"projects/{project_id}/notes/{note_id}",
               "vulnerability": {
                   "severity": Severity.HIGH,
@@ -844,9 +849,13 @@ jobs:
           }
           print(f"Occurrence to be created: {json.dumps(occurrence, indent=2)}")
 
+          @retry.Retry(predicate=retry.if_transient_error, initial=1.0, maximum=10.0, multiplier=2.0, deadline=60.0)
+          def create_occurrence_with_retry(client, parent, occurrence):
+              return client.create_occurrence(parent=parent, occurrence=occurrence)
+
           try:
-              client.create_occurrence(parent=parent, occurrence=occurrence)
-              print("Created occurrence for Trivy scan")
+              response = create_occurrence_with_retry(client, parent, occurrence)
+              print(f"Created occurrence: {response.name}")
           except GoogleAPIError as api_error:
               print(f"API error creating occurrence: {api_error}")
               print(f"Full traceback: {traceback.format_exc()}")
