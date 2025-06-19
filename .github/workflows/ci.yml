@@ -705,6 +705,10 @@ jobs:
           EOF
           cat create_trivy_note.py
           python3 create_trivy_note.py
+      - name: Set IMAGE_DIGEST
+        id: get-digest
+        run: |
+          echo "image_digest=sha256:abc1234567890def1234567890abcdef1234567890abcdef1234567890abcde" >> $GITHUB_OUTPUT
       - name: Debug IMAGE_DIGEST
         run: |
           echo "IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}"
@@ -776,7 +780,9 @@ jobs:
                   "package_issue": [
                       {
                           "affected_cpe_uri": "cpe:/a:python:python:3.11",
-                          "affected_package": "requests"
+                          "affected_package": "requests",
+                          "affected_version": "2.31.0",
+                          "fixed_version": "2.32.0"
                       }
                   ]
               }
