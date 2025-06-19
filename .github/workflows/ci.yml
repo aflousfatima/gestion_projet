@@ -720,6 +720,7 @@ jobs:
       - name: Debug IMAGE_DIGEST
         run: |
           echo "IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}"
+
       - name: Create Grafeas occurrence for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
@@ -749,10 +750,9 @@ jobs:
               return severity_map.get(trivy_sev, Severity.UNKNOWN)
 
           def generate_cpe(pkg_name):
-              """Generate a generic CPE for a package name."""
-              # Nettoyer le nom du package pour éviter les caractères non valides
+              """Generate a CPE 2.3 compliant URI."""
               clean_pkg_name = pkg_name.lower().replace(':', '_').replace('/', '_')
-              return f"cpe:/a:{clean_pkg_name}:{clean_pkg_name}"
+              return f"cpe:2.3:a:{clean_pkg_name}:{clean_pkg_name}:*:*:*:*:*:*:*"
 
           def metadata_callback(context, callback):
               """Handle authentication metadata for gRPC."""
@@ -779,7 +779,7 @@ jobs:
               callback([('authorization', f'Bearer {token}')], None)
               print(f"Sent metadata with token: {token}")
 
-          # Write service account key to file
+          # Write service account key
           with open('gcp_sa_key.json', 'w') as f:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
 
@@ -795,7 +795,7 @@ jobs:
               auth_credentials
           )
           channel = grpc.secure_channel(
-              'containeranalysis.googleapis.com',
+              'containeranalysis.googleapis.com:443',
               composite_credentials,
               options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
           )
@@ -807,13 +807,25 @@ jobs:
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           parent = f"projects/{project_id}"
 
-          # List existing notes for debugging
+          # Debug: List existing notes
           try:
               print("Listing existing notes:")
+              notes_found = False
               for note in client.list_notes(parent=parent):
                   print(f"Found note: {note.name}")
+                  if note.name.endswith(note_id):
+                      notes_found = True
+              if not notes_found:
+                  print(f"Warning: Note {note_id} not found in project {project_id}")
           except Exception as e:
               print(f"Failed to list notes: {e}")
+
+          # Validate resource URI
+          resource_uri = f"ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@{os.environ['IMAGE_DIGEST']}"
+          print(f"Resource URI: {resource_uri}")
+          if "placeholder" in resource_uri or not resource_uri.startswith("ghcr.io/"):
+              print("Error: Invalid resource URI")
+              exit(1)
 
           # Read Trivy report
           try:
@@ -824,7 +836,7 @@ jobs:
               print(f"Failed to load Trivy report: {e}")
               exit(1)
 
-          # Process vulnerabilities
+          # Process vulnerabilities (limit to one for testing)
           package_issues = []
           for result in trivy_report.get('Results', []):
               for vuln in result.get('Vulnerabilities', []):
@@ -834,6 +846,7 @@ jobs:
                           print(f"Skipping vulnerability {vuln.get('VulnerabilityID')} with no fixed version")
                           continue
                       pkg_name = vuln.get('PkgName', 'unknown')
+                      cpe_uri = vuln.get('CpeURIs', [''])[0] or generate_cpe(pkg_name)
                       package_issue = {
                           "affected_package": pkg_name,
                           "affected_version": {
@@ -845,11 +858,14 @@ jobs:
                               "name": fixed_version,
                               "kind": "NORMAL"
                           },
-                          "affected_cpe_uri": generate_cpe(pkg_name),
-                          "fixed_cpe_uri": generate_cpe(pkg_name)
+                          "affected_cpe_uri": cpe_uri,
+                          "fixed_cpe_uri": cpe_uri
                       }
                       package_issues.append(package_issue)
                       print(f"Added package issue: {json.dumps(package_issue, indent=2)}")
+                      break  # Limit to one package issue
+              if package_issues:
+                  break  # Stop after finding one vulnerability
 
           if not package_issues:
               print("No critical or high vulnerabilities with fixed versions found, skipping occurrence creation")
@@ -857,7 +873,7 @@ jobs:
 
           # Create occurrence
           occurrence = {
-              "resource_uri": f"ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@{os.environ['IMAGE_DIGEST']}",
+              "resource_uri": resource_uri,
               "note_name": f"projects/{project_id}/notes/{note_id}",
               "vulnerability": {
                   "severity": Severity.HIGH,
@@ -865,28 +881,38 @@ jobs:
                   "package_issue": package_issues
               }
           }
-          print(f"Occurrence to be created: {json.dumps(occurrence, indent=2)}")
+          print(f"Debugging: Occurrence JSON: {json.dumps(occurrence, indent=2)}")
 
           # Retry on transient errors
-          @retry.Retry(predicate=retry.if_transient_error, initial=1.0, maximum=10.0, multiplier=2.0, deadline=60.0)
+          @retry.Retry(predicate=retry.if_transient_error, initial=2.0, maximum=60.0, multiplier=2.5, deadline=120.0)
           def create_occurrence_with_retry(client, parent, occurrence):
-              return client.create_occurrence(parent=parent, occurrence=occurrence)
+              try:
+                  response = client.create_occurrence(parent=parent, occurrence=occurrence)
+                  return response
+              except Exception as e:
+                  print(f"Retry attempt failed with error: {e}")
+                  raise
 
           # Attempt to create occurrence
           try:
               response = create_occurrence_with_retry(client, parent, occurrence)
-              print(f"Created occurrence: {response.name}")
+              print(f"Successfully created occurrence: {response.name}")
           except GoogleAPIError as api_error:
               print(f"API error creating occurrence: {api_error}")
+              print(f"Detailed error message: {str(api_error)}")
               print(f"Full traceback: {traceback.format_exc()}")
               exit(1)
           except Exception as e:
               print(f"Unexpected error creating occurrence: {e}")
               print(f"Full traceback: {traceback.format_exc()}")
               exit(1)
+          finally:
+              channel.close()
           EOF
+          echo "Executing create_trivy_occ.py"
           cat create_trivy_occ.py
           python3 create_trivy_occ.py
+
     
   sign_and_verify:
     runs-on: ubuntu-latest
