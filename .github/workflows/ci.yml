@@ -554,7 +554,7 @@ jobs:
           cat << 'EOF' > debug_credentials.py
           from google.oauth2 import service_account
           from grafeas.grafeas_v1 import GrafeasClient
-          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTranspor
+          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
           import grpc
           import os
 
