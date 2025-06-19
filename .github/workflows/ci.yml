@@ -720,7 +720,7 @@ jobs:
       - name: Debug IMAGE_DIGEST
         run: |
           echo "IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}"
-      - name: Create Grafeas occurrence for Trivy scan
+- name: Create Grafeas occurrence for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
           IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
@@ -730,9 +730,11 @@ jobs:
           from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
           from google.oauth2 import service_account
           from google.auth.transport.requests import Request
+          from google.api_core.exceptions import GoogleAPIError
           import grpc
           import os
           import json
+          import traceback
 
           def map_trivy_severity(trivy_sev):
               severity_map = {
@@ -794,13 +796,22 @@ jobs:
           parent = f"projects/{project_id}"
 
           # Lire le rapport Trivy
-          with open('trivy-image-scan-${{ inputs.service_name }}.json', 'r') as f:
-              trivy_report = json.load(f)
+          try:
+              with open('trivy-image-scan-${{ inputs.service_name }}.json', 'r') as f:
+                  trivy_report = json.load(f)
+              print("Trivy report loaded successfully")
+          except Exception as e:
+              print(f"Failed to load Trivy report: {e}")
+              exit(1)
 
           package_issues = []
           for result in trivy_report.get('Results', []):
               for vuln in result.get('Vulnerabilities', []):
                   if vuln.get('Severity') in ['CRITICAL', 'HIGH']:
+                      fixed_version = vuln.get('FixedVersion')
+                      if not fixed_version:
+                          print(f"Skipping vulnerability {vuln.get('VulnerabilityID')} with no fixed version")
+                          continue
                       package_issue = {
                           "affected_package": vuln.get('PkgName', 'unknown'),
                           "affected_version": {
@@ -809,16 +820,17 @@ jobs:
                           },
                           "fixed_package": vuln.get('PkgName', 'unknown'),
                           "fixed_version": {
-                              "name": vuln.get('FixedVersion', 'unknown'),
-                              "kind": "NORMAL" if vuln.get('FixedVersion') else "NONE"
+                              "name": fixed_version,
+                              "kind": "NORMAL"
                           },
                           "affected_cpe_uri": vuln.get('CpeURIs', [''])[0] or "cpe:/a:unknown:unknown",
                           "fixed_cpe_uri": vuln.get('CpeURIs', [''])[0] or "cpe:/a:unknown:unknown"
                       }
                       package_issues.append(package_issue)
+                      print(f"Added package issue: {json.dumps(package_issue, indent=2)}")
 
           if not package_issues:
-              print("No critical or high vulnerabilities found, skipping occurrence creation")
+              print("No critical or high vulnerabilities with fixed versions found, skipping occurrence creation")
               exit(0)
 
           occurrence = {
@@ -830,12 +842,18 @@ jobs:
                   "package_issue": package_issues
               }
           }
+          print(f"Occurrence to be created: {json.dumps(occurrence, indent=2)}")
 
           try:
               client.create_occurrence(parent=parent, occurrence=occurrence)
-              print(f"Created occurrence for Trivy scan")
-          except Exception as occ_error:
-              print(f"Failed to create occurrence: {occ_error}")
+              print("Created occurrence for Trivy scan")
+          except GoogleAPIError as api_error:
+              print(f"API error creating occurrence: {api_error}")
+              print(f"Full traceback: {traceback.format_exc()}")
+              exit(1)
+          except Exception as e:
+              print(f"Unexpected error creating occurrence: {e}")
+              print(f"Full traceback: {traceback.format_exc()}")
               exit(1)
           EOF
           cat create_trivy_occ.py
