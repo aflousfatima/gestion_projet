@@ -689,6 +689,8 @@ jobs:
                   "severity": Severity.HIGH,
                   "details": [
                       {
+                          "affected_cpe_uri": "cpe:/a:python:python:3.11",
+                          "affected_package": "requests",
                           "description": "Trivy scan results for ${{ inputs.service_name }}"
                       }
                   ]
@@ -703,47 +705,91 @@ jobs:
           EOF
           cat create_trivy_note.py
           python3 create_trivy_note.py
-          
-      - name: Get image digest
-        id: get-digest
-        run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
-          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE 2>/dev/null | cut -d'@' -f2 || echo "")
-          if [ -z "$DIGEST" ]; then
-              docker pull $IMAGE
-              DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
-          fi
-          echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
-
       - name: Create Grafeas occurrence for Trivy scan
         env:
-            GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
-            IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
+          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
+          IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
         run: |
-          cat << 'EOF' > create_trivy_occurrence.py
-          from grafeas.grafeas_v1 import GrafeasClient, VulnerabilityOccurrence, Severity
-          import json
+          cat << 'EOF' > create_trivy_occ.py
+          from grafeas.grafeas_v1 import GrafeasClient, Severity
+          from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
+          from google.oauth2 import service_account
+          from google.auth.transport.requests import Request
+          import grpc
           import os
+
+          def metadata_callback(context, callback):
+              credentials = service_account.Credentials.from_service_account_file(
+                  'gcp_sa_key.json',
+                  scopes=['https://www.googleapis.com/auth/cloud-platform']
+              )
+              print("Loading token in metadata_callback")
+              token = credentials.token
+              print(f"Initial token: {token}")
+              if not token:
+                  try:
+                      credentials.refresh(Request())
+                      token = credentials.token
+                      print(f"Refreshed token: {token}")
+                  except Exception as refresh_error:
+                      print(f"Failed to refresh token: {refresh_error}")
+                      callback([], refresh_error)
+                      return
+              if not token:
+                  print("Token is still None after refresh")
+                  callback([], Exception("No valid token available"))
+                  return
+              callback([('authorization', f'Bearer {token}')], None)
+              print(f"Sent metadata with token: {token}")
+
           with open('gcp_sa_key.json', 'w') as f:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
-          os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'gcp_sa_key.json'
 
-          client = GrafeasClient()
-          project_id = "${{ github.repository_owner }}"
+          credentials = service_account.Credentials.from_service_account_file(
+              'gcp_sa_key.json',
+              scopes=['https://www.googleapis.com/auth/cloud-platform']
+          )
+          ssl_credentials = grpc.ssl_channel_credentials()
+          auth_credentials = grpc.metadata_call_credentials(metadata_callback)
+          composite_credentials = grpc.composite_channel_credentials(
+              ssl_credentials,
+              auth_credentials
+          )
+          channel = grpc.secure_channel(
+              'containeranalysis.googleapis.com',
+              composite_credentials,
+              options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
+          )
+          transport = GrafeasGrpcTransport(channel=channel)
+          client = GrafeasClient(transport=transport)
+
+          project_id = "grafeas-project"
+          note_id = "trivy-${{ inputs.service_name }}"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           occurrence = {
               "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
               "note_name": f"projects/{project_id}/notes/{note_id}",
               "vulnerability": {
                   "severity": Severity.HIGH,
-                  "package_issue": []
+                  "package_issue": [
+                      {
+                          "affected": {
+                              "cpe_uri": "cpe:/a:python:python:3.11",
+                              "package": f"requests"
+                          },
+                      }
+                  ]
               }
-            }
-          parent = f"projects/{project_id}/occurrences"
-          client.create_occurrence(parent=parent, occurrence=occurrence)
-          print(f"Created occurrence for Trivy scan")
+          }
+          parent = f"projects/{project_id}"
+          try:
+              client.create_occurrence(parent=parent, occurrence=occurrence)
+              print(f"Created occurrence for Trivy scan")
+          except Exception as occ_error:
+              print(f"Failed to create occurrence: {occ_error}")
           EOF
-          python3 create_trivy_occurrence.py
+          cat create_trivy_occ.py
+          python3 create_trivy_occ.py
     
   sign_and_verify:
     runs-on: ubuntu-latest
