@@ -705,6 +705,9 @@ jobs:
           EOF
           cat create_trivy_note.py
           python3 create_trivy_note.py
+      - name: Debug IMAGE_DIGEST
+        run: |
+          echo "IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}"
       - name: Create Grafeas occurrence for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
@@ -763,8 +766,7 @@ jobs:
           transport = GrafeasGrpcTransport(channel=channel)
           client = GrafeasClient(transport=transport)
 
-          project_id = "grafeas-project"
-          note_id = "trivy-${{ inputs.service_name }}"
+          project_id = "grafeas-poc-2025"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           occurrence = {
               "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
@@ -773,10 +775,8 @@ jobs:
                   "severity": Severity.HIGH,
                   "package_issue": [
                       {
-                          "affected": {
-                              "cpe_uri": "cpe:/a:python:python:3.11",
-                              "package": f"requests"
-                          },
+                          "affected_cpe_uri": "cpe:/a:python:python:3.11",
+                          "affected_package": "requests"
                       }
                   ]
               }
