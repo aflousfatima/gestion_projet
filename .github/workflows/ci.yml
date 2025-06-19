@@ -612,7 +612,7 @@ jobs:
               print("GrafeasClient initialized successfully")
 
               project_id = "grafeas-poc-2025"
-              parent = f"projects/{project_id}/notes"
+              parent = f"projects/{project_id}"
               try:
                   for note in client.list_notes(parent=parent):
                       print(f"Found note: {note.name}")
@@ -640,7 +640,7 @@ jobs:
           def metadata_callback(context, callback):
               credentials = service_account.Credentials.from_service_account_file(
                   'gcp_sa_key.json',
-                  scopes=['https://www.googleapis.com/auth/containeranalysis.notes']
+                  scopes=['https://www.googleapis.com/auth/cloud-platform']
               )
               print("Loading token in metadata_callback")
               token = credentials.token
@@ -666,7 +666,7 @@ jobs:
 
           credentials = service_account.Credentials.from_service_account_file(
               'gcp_sa_key.json',
-              scopes=['https://www.googleapis.com/auth/containeranalysis.notes']
+              scopes=['https://www.googleapis.com/auth/cloud-platform']
           )
           ssl_credentials = grpc.ssl_channel_credentials()
           auth_credentials = grpc.metadata_call_credentials(metadata_callback)
@@ -694,7 +694,7 @@ jobs:
                   ]
               }
           }
-          parent = f"projects/{project_id}/notes"
+          parent = f"projects/{project_id}"
           try:
               client.create_note(parent=parent, note_id=note_id, note=note)
               print(f"Created note: {note_id}")
