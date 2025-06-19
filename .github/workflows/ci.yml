@@ -738,6 +738,7 @@ jobs:
           import traceback
 
           def map_trivy_severity(trivy_sev):
+              """Map Trivy severity to Grafeas severity."""
               severity_map = {
                   "CRITICAL": Severity.CRITICAL,
                   "HIGH": Severity.HIGH,
@@ -747,7 +748,14 @@ jobs:
               }
               return severity_map.get(trivy_sev, Severity.UNKNOWN)
 
+          def generate_cpe(pkg_name):
+              """Generate a generic CPE for a package name."""
+              # Nettoyer le nom du package pour éviter les caractères non valides
+              clean_pkg_name = pkg_name.lower().replace(':', '_').replace('/', '_')
+              return f"cpe:/a:{clean_pkg_name}:{clean_pkg_name}"
+
           def metadata_callback(context, callback):
+              """Handle authentication metadata for gRPC."""
               credentials = service_account.Credentials.from_service_account_file(
                   'gcp_sa_key.json',
                   scopes=['https://www.googleapis.com/auth/cloud-platform']
@@ -771,9 +779,11 @@ jobs:
               callback([('authorization', f'Bearer {token}')], None)
               print(f"Sent metadata with token: {token}")
 
+          # Write service account key to file
           with open('gcp_sa_key.json', 'w') as f:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
 
+          # Initialize Grafeas client
           credentials = service_account.Credentials.from_service_account_file(
               'gcp_sa_key.json',
               scopes=['https://www.googleapis.com/auth/cloud-platform']
@@ -792,10 +802,12 @@ jobs:
           transport = GrafeasGrpcTransport(channel=channel)
           client = GrafeasClient(transport=transport)
 
+          # Configuration
           project_id = "grafeas-poc-2025"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           parent = f"projects/{project_id}"
 
+          # List existing notes for debugging
           try:
               print("Listing existing notes:")
               for note in client.list_notes(parent=parent):
@@ -803,6 +815,7 @@ jobs:
           except Exception as e:
               print(f"Failed to list notes: {e}")
 
+          # Read Trivy report
           try:
               with open('trivy-image-scan-${{ inputs.service_name }}.json', 'r') as f:
                   trivy_report = json.load(f)
@@ -811,6 +824,7 @@ jobs:
               print(f"Failed to load Trivy report: {e}")
               exit(1)
 
+          # Process vulnerabilities
           package_issues = []
           for result in trivy_report.get('Results', []):
               for vuln in result.get('Vulnerabilities', []):
@@ -819,17 +833,20 @@ jobs:
                       if not fixed_version:
                           print(f"Skipping vulnerability {vuln.get('VulnerabilityID')} with no fixed version")
                           continue
+                      pkg_name = vuln.get('PkgName', 'unknown')
                       package_issue = {
-                          "affected_package": vuln.get('PkgName', 'unknown'),
+                          "affected_package": pkg_name,
                           "affected_version": {
                               "name": vuln.get('InstalledVersion', 'unknown'),
                               "kind": "NORMAL"
                           },
-                          "fixed_package": vuln.get('PkgName', 'unknown'),
+                          "fixed_package": pkg_name,
                           "fixed_version": {
                               "name": fixed_version,
                               "kind": "NORMAL"
-                          }
+                          },
+                          "affected_cpe_uri": generate_cpe(pkg_name),
+                          "fixed_cpe_uri": generate_cpe(pkg_name)
                       }
                       package_issues.append(package_issue)
                       print(f"Added package issue: {json.dumps(package_issue, indent=2)}")
@@ -838,6 +855,7 @@ jobs:
               print("No critical or high vulnerabilities with fixed versions found, skipping occurrence creation")
               exit(0)
 
+          # Create occurrence
           occurrence = {
               "resource_uri": f"ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}@{os.environ['IMAGE_DIGEST']}",
               "note_name": f"projects/{project_id}/notes/{note_id}",
@@ -849,10 +867,12 @@ jobs:
           }
           print(f"Occurrence to be created: {json.dumps(occurrence, indent=2)}")
 
+          # Retry on transient errors
           @retry.Retry(predicate=retry.if_transient_error, initial=1.0, maximum=10.0, multiplier=2.0, deadline=60.0)
           def create_occurrence_with_retry(client, parent, occurrence):
               return client.create_occurrence(parent=parent, occurrence=occurrence)
 
+          # Attempt to create occurrence
           try:
               response = create_occurrence_with_retry(client, parent, occurrence)
               print(f"Created occurrence: {response.name}")
