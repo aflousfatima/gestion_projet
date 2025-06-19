@@ -781,8 +781,14 @@ jobs:
                       {
                           "affected_cpe_uri": "cpe:/a:python:python:3.11",
                           "affected_package": "requests",
-                          "affected_version": "2.31.0",
-                          "fixed_version": "2.32.0"
+                          "affected_version": {
+                              "name": "2.31.0",
+                              "kind": "NORMAL"
+                          },
+                          "fixed_version": {
+                              "name": "2.32.0",
+                              "kind": "NORMAL"
+                          }
                       }
                   ]
               }
