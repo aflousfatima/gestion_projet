@@ -708,7 +708,15 @@ jobs:
       - name: Set IMAGE_DIGEST
         id: get-digest
         run: |
-          echo "image_digest=sha256:abc1234567890def1234567890abcdef1234567890abcdef1234567890abcde" >> $GITHUB_OUTPUT
+          IMAGE=ghcr.io/${{ github.repository_owner }}/${{ steps.lowercase.outputs.service_name_lower }}:latest
+          DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE 2>/dev/null | cut -d'@' -f2 || echo "")
+          if [ -z "$DIGEST" ]; then
+            echo "Failed to get digest, pulling image explicitly"
+            docker pull $IMAGE
+            DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' $IMAGE | cut -d'@' -f2)
+          fi
+          echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Digest found: $DIGEST"
       - name: Debug IMAGE_DIGEST
         run: |
           echo "IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}"
@@ -724,6 +732,17 @@ jobs:
           from google.auth.transport.requests import Request
           import grpc
           import os
+          import json
+
+          def map_trivy_severity(trivy_sev):
+              severity_map = {
+                  "CRITICAL": Severity.CRITICAL,
+                  "HIGH": Severity.HIGH,
+                  "MEDIUM": Severity.MEDIUM,
+                  "LOW": Severity.LOW,
+                  "UNKNOWN": Severity.UNKNOWN
+              }
+              return severity_map.get(trivy_sev, Severity.UNKNOWN)
 
           def metadata_callback(context, callback):
               credentials = service_account.Credentials.from_service_account_file(
@@ -772,33 +791,52 @@ jobs:
 
           project_id = "grafeas-poc-2025"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
+          parent = f"projects/{project_id}"
+
+          # Lire le rapport Trivy
+          with open('trivy-image-scan-${{ inputs.service_name }}.json', 'r') as f:
+              trivy_report = json.load(f)
+
+          package_issues = []
+          for result in trivy_report.get('Results', []):
+              for vuln in result.get('Vulnerabilities', []):
+                  if vuln.get('Severity') in ['CRITICAL', 'HIGH']:
+                      package_issue = {
+                          "affected_package": vuln.get('PkgName', 'unknown'),
+                          "affected_version": {
+                              "name": vuln.get('InstalledVersion', 'unknown'),
+                              "kind": "NORMAL"
+                          },
+                          "fixed_package": vuln.get('PkgName', 'unknown'),
+                          "fixed_version": {
+                              "name": vuln.get('FixedVersion', 'unknown'),
+                              "kind": "NORMAL" if vuln.get('FixedVersion') else "NONE"
+                          },
+                          "affected_cpe_uri": vuln.get('CpeURIs', [''])[0] or "cpe:/a:unknown:unknown",
+                          "fixed_cpe_uri": vuln.get('CpeURIs', [''])[0] or "cpe:/a:unknown:unknown"
+                      }
+                      package_issues.append(package_issue)
+
+          if not package_issues:
+              print("No critical or high vulnerabilities found, skipping occurrence creation")
+              exit(0)
+
           occurrence = {
               "resource_uri": f"ghcr.io/{project_id}/${{ inputs.service_name }}@{os.environ['IMAGE_DIGEST']}",
               "note_name": f"projects/{project_id}/notes/{note_id}",
               "vulnerability": {
                   "severity": Severity.HIGH,
-                  "package_issue": [
-                      {
-                          "affected_cpe_uri": "cpe:/a:python:python:3.11",
-                          "affected_package": "requests",
-                          "affected_version": {
-                              "name": "2.31.0",
-                              "kind": "NORMAL"
-                          },
-                          "fixed_version": {
-                              "name": "2.32.0",
-                              "kind": "NORMAL"
-                          }
-                      }
-                  ]
+                  "effective_severity": Severity.HIGH,
+                  "package_issue": package_issues
               }
           }
-          parent = f"projects/{project_id}"
+
           try:
               client.create_occurrence(parent=parent, occurrence=occurrence)
               print(f"Created occurrence for Trivy scan")
           except Exception as occ_error:
               print(f"Failed to create occurrence: {occ_error}")
+              exit(1)
           EOF
           cat create_trivy_occ.py
           python3 create_trivy_occ.py
