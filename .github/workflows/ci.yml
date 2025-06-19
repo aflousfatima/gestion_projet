@@ -566,48 +566,44 @@ jobs:
               if not token:
                   credentials.refresh(None)
                   token = credentials.token
-              callback([('authorization', f'Bearer {token}')], None)
+                callback([('authorization', f'Bearer {token}')], None)
           with open('gcp_sa_key.json', 'w') as f:
-              f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])   
+              f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
           try:
               credentials = service_account.Credentials.from_service_account_file(
                   'gcp_sa_key.json',
-                   scopes=['https://www.googleapis.com/auth/cloud-platform']
-            )
-            print(f"Scopes: {credentials.scopes}")
-            print(f"Service account email: {credentials.service_account_email}")
-            print("Credentials loaded successfully")
-
-            # Créer un canal gRPC avec les credentials explicites
-            ssl_credentials = grpc.ssl_channel_credentials()
-            auth_credentials = grpc.metadata_call_credentials(metadata_callback)
-            composite_credentials = grpc.composite_channel_credentials(
-                ssl_credentials,
-                auth_credentials
-            )
-            channel = grpc.secure_channel(
-                'containeranalysis.googleapis.com',
-                composite_credentials,
-                options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
-            )          
-            transport = GrafeasGrpcTransport(channel=channel)
-            client = GrafeasClient(transport=transport)
-            print("GrafeasClient initialized successfully")
-            project_id = "grafeas-poc-2025"
-            parent = f"projects/{project_id}/notes"
-            # Teste une requête simple pour lister les notes
-            try:
-                for note in client.list_notes(parent=parent):
-                    print(f"Found note: {note.name}")
-                print("Successfully listed notes")
-            except Exception as e:
-              print(f"Failed to list notes: {e}")
+                  scopes=['https://www.googleapis.com/auth/cloud-platform']
+              )
+              print(f"Scopes: {credentials.scopes}")
+              print(f"Service account email: {credentials.service_account_email}")
+              print("Credentials loaded successfully")
+              ssl_credentials = grpc.ssl_channel_credentials()
+              auth_credentials = grpc.metadata_call_credentials(metadata_callback)
+              composite_credentials = grpc.composite_channel_credentials(
+                  ssl_credentials,
+                  auth_credentials
+              )
+              channel = grpc.secure_channel(
+                  'containeranalysis.googleapis.com',
+                  composite_credentials,
+                  options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
+              )
+              transport = GrafeasGrpcTransport(channel=channel)
+              client = GrafeasClient(transport=transport)
+              print("GrafeasClient initialized successfully")
+              project_id = "grafeas-poc-2025"
+              parent = f"projects/{project_id}/notes"
+              try:
+                  for note in client.list_notes(parent=parent):
+                      print(f"Found note: {note.name}")
+                  print("Successfully listed notes")
+              except Exception as e:
+                  print(f"Failed to list notes: {e}")
           except Exception as client_error:
-                print(f"Failed to initialize GrafeasClient: {client_error}")
-          except Exception as cred_error:
-                print(f"Error loading credentials: {cred_error}")
+              print(f"Failed to initialize GrafeasClient: {client_error}")
           EOF
           python3 debug_credentials.py
+
     
       - name: Create Grafeas note for Trivy scan
         env:
