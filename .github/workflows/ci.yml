@@ -553,6 +553,7 @@ jobs:
         run: |
           cat << 'EOF' > debug_credentials.py
           from google.oauth2 import service_account
+          from google.auth.transport.requests import Request
           from grafeas.grafeas_v1 import GrafeasClient
           from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
           import grpc
@@ -563,11 +564,24 @@ jobs:
                   'gcp_sa_key.json',
                   scopes=['https://www.googleapis.com/auth/cloud-platform']
               )
+              print("Loading token in metadata_callback")
               token = credentials.token
+              print(f"Initial token: {token}")
               if not token:
-                  credentials.refresh(None)
-                  token = credentials.token
+                  try:
+                      credentials.refresh(Request())
+                      token = credentials.token
+                      print(f"Refreshed token: {token}")
+                  except Exception as refresh_error:
+                      print(f"Failed to refresh token: {refresh_error}")
+                      callback([], refresh_error)
+                      return
+              if not token:
+                  print("Token is still None after refresh")
+                  callback([], Exception("No valid token available"))
+                  return
               callback([('authorization', f'Bearer {token}')], None)
+              print(f"Sent metadata with token: {token}")
 
           with open('gcp_sa_key.json', 'w') as f:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
@@ -610,7 +624,6 @@ jobs:
           EOF
           cat debug_credentials.py
           python3 debug_credentials.py
-    
       - name: Create Grafeas note for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
@@ -620,29 +633,66 @@ jobs:
           from grafeas.grafeas_v1.services.grafeas.transports import GrafeasGrpcTransport
           from google.api_core.exceptions import AlreadyExists
           from google.oauth2 import service_account
-          import json
+          from google.auth.transport.requests import Request
+          import grpc
           import os
+
+          def metadata_callback(context, callback):
+              credentials = service_account.Credentials.from_service_account_file(
+                  'gcp_sa_key.json',
+                  scopes=['https://www.googleapis.com/auth/containeranalysis.notes']
+              )
+              print("Loading token in metadata_callback")
+              token = credentials.token
+              print(f"Initial token: {token}")
+              if not token:
+                  try:
+                      credentials.refresh(Request())
+                      token = credentials.token
+                      print(f"Refreshed token: {token}")
+                  except Exception as refresh_error:
+                      print(f"Failed to refresh token: {refresh_error}")
+                      callback([], refresh_error)
+                      return
+              if not token:
+                  print("Token is still None after refresh")
+                  callback([], Exception("No valid token available"))
+                  return
+              callback([('authorization', f'Bearer {token}')], None)
+              print(f"Sent metadata with token: {token}")
+
           with open('gcp_sa_key.json', 'w') as f:
               f.write(os.environ['GOOGLE_APPLICATION_CREDENTIALS_JSON'])
+
           credentials = service_account.Credentials.from_service_account_file(
               'gcp_sa_key.json',
-               scopes=['https://www.googleapis.com/auth/containeranalysis.notes']
+              scopes=['https://www.googleapis.com/auth/containeranalysis.notes']
           )
-          client = GrafeasClient(
-            transport=GrafeasGrpcTransport(host="containeranalysis.googleapis.com"),
-            credentials=credentials
+          ssl_credentials = grpc.ssl_channel_credentials()
+          auth_credentials = grpc.metadata_call_credentials(metadata_callback)
+          composite_credentials = grpc.composite_channel_credentials(
+              ssl_credentials,
+              auth_credentials
           )
+          channel = grpc.secure_channel(
+              'containeranalysis.googleapis.com',
+              composite_credentials,
+              options=(('grpc.default_authority', 'containeranalysis.googleapis.com'),)
+          )
+          transport = GrafeasGrpcTransport(channel=channel)
+          client = GrafeasClient(transport=transport)
+
           project_id = "grafeas-poc-2025"
           note_id = "trivy-vulnerability-${{ inputs.service_name }}"
           note = {
-            "vulnerability": {
-                "severity": Severity.HIGH,
-                "details": [
-                    {
-                         "description": "Trivy scan results for ${{ inputs.service_name }}"
-                    }
-                ]
-            }
+              "vulnerability": {
+                  "severity": Severity.HIGH,
+                  "details": [
+                      {
+                          "description": "Trivy scan results for ${{ inputs.service_name }}"
+                      }
+                  ]
+              }
           }
           parent = f"projects/{project_id}/notes"
           try:
@@ -651,6 +701,7 @@ jobs:
           except AlreadyExists:
               print(f"Note {note_id} already exists, skipping creation")
           EOF
+          cat create_trivy_note.py
           python3 create_trivy_note.py
           
       - name: Get image digest
