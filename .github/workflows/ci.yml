@@ -720,7 +720,7 @@ jobs:
       - name: Debug IMAGE_DIGEST
         run: |
           echo "IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}"
-- name: Create Grafeas occurrence for Trivy scan
+      - name: Create Grafeas occurrence for Trivy scan
         env:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GCP_SA_KEY }}
           IMAGE_DIGEST: ${{ steps.get-digest.outputs.image_digest }}
