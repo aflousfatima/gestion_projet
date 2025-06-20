@@ -106,25 +106,13 @@ jobs:
             ls -l ${{ inputs.service_path }}/target/*.jar || echo "ERROR: No JAR files found"
             sha256sum ${{ inputs.service_path }}/target/*.jar || echo "ERROR: Failed to compute SHA256"
 
-      - name: Test Nexus connectivity
-        run: |
-          echo "Testing Nexus URL: ${{ secrets.NEXUS_URL }}/repository/maven-snapshots-custom/"
-          curl -I --insecure -u ${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }} \
-            ${{ secrets.NEXUS_URL }}/repository/maven-snapshots-custom/ || echo "ERROR: Cannot reach Nexus or authentication failed"
-          echo "Testing Raw Reports URL: ${{ secrets.NEXUS_URL }}/repository/raw-reports-custom/"
-          curl -I --insecure -u ${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }} \
-            ${{ secrets.NEXUS_URL }}/repository/raw-reports-custom/ || echo "ERROR: Cannot reach Raw Reports or authentication failed"
       - name: Deploy JAR to Nexus
         run: |
           mkdir -p ~/.m2
           echo "<settings><servers><server><id>nexus</id><username>${{ secrets.NEXUS_USERNAME }}</username><password>${{ secrets.NEXUS_PASSWORD }}</password></server></servers></settings>" > ~/.m2/settings.xml
-          cd ${{ inputs.service_path }}
-          # Remplacer ${{ secrets.NEXUS_URL }} dans le pom.xml
-          sed -i 's|${{ secrets.NEXUS_URL }}|https://fc4a-105-74-1-194.ngrok-free.app|g' pom.xml
-          # Debug : afficher le pom.xml modifié
-          echo "Modified pom.xml:"
-          cat pom.xml
+          cd ${{ inputs.service_path }}    
           mvn deploy \
+            -Dnexus.url=https://fc4a-105-74-1-194.ngrok-free.app \
             -Dmaven.wagon.http.ssl.insecure=true \
             -Dmaven.wagon.http.ssl.allowall=true \
             -Daether.connector.basic.threads=1
