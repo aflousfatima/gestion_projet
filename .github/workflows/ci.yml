@@ -113,11 +113,10 @@ jobs:
           echo "<settings><servers><server><id>nexus</id><username>${{ secrets.NEXUS_USERNAME }}</username><password>${{ secrets.NEXUS_PASSWORD }}</password></server></servers></settings>" > ~/.m2/settings.xml
           # Déployer le JAR
           cd ${{ inputs.service_path }}
-          mvn deploy:deploy-file \
-            -Dfile=target/${{ inputs.service_name }}-0.0.1-SNAPSHOT.jar \
-            -DpomFile=pom.xml \
-            -Durl=${{ secrets.NEXUS_URL }}/repository/maven-snapshots/ \
-            -DrepositoryId=nexus
+          mvn deploy \
+            -Dmaven.wagon.http.ssl.insecure=true \
+            -Dmaven.wagon.http.ssl.allowall=true \
+            -X
           # Déployer le fichier in-toto link
           curl -u ${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }} \
             -X POST \
