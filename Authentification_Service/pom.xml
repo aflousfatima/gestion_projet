@@ -13,6 +13,18 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>Authentification_Service</name>
 	<description>Authentification_Service</description>
+	
+	<distributionManagement>
+	  <snapshotRepository>
+            <id>nexus</id>
+            <url>${{ secrets.NEXUS_URL }}/repository/maven-snapshots/</url>
+          </snapshotRepository>
+          <repository>
+            <id>nexus</id>
+            <url>${{ secrets.NEXUS_URL }}/repository/maven-releases/</url>
+          </repository>
+        </distributionManagement>
+	
 	<url/>
 	<licenses>
 		<license/>
