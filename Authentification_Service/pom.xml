@@ -17,11 +17,11 @@
 	<distributionManagement>
 	  <snapshotRepository>
             <id>nexus</id>
-            <url>${{ secrets.NEXUS_URL }}/repository/maven-snapshots-custom/</url>
+            <url>${nexus.url}/repository/maven-snapshots-custom/</url>
           </snapshotRepository>
           <repository>
             <id>nexus</id>
-            <url>${{ secrets.NEXUS_URL }}/repository/maven-releases-custom/</url>
+            <url>${nexus.url}/repository/maven-releases-custom/</url>
           </repository>
         </distributionManagement>
 	
