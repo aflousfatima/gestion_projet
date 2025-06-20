@@ -281,7 +281,7 @@
 				<artifactId>sonar-maven-plugin</artifactId>
 				<version>4.0.0.4121</version>
 			</plugin>
-
+                       <!--
 			<plugin>
 				<groupId>org.cyclonedx</groupId>
 				<artifactId>cyclonedx-maven-plugin</artifactId>
@@ -302,6 +302,7 @@
 					<includeRuntimeScope>true</includeRuntimeScope>
 				</configuration>
 			</plugin>
+			-->
 
 		</plugins>
 	</build>
