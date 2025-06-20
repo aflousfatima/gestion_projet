@@ -116,7 +116,6 @@ jobs:
           mvn deploy \
             -Dmaven.wagon.http.ssl.insecure=true \
             -Dmaven.wagon.http.ssl.allowall=true \
-            -X
           # Déployer le fichier in-toto link
           curl -u ${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }} \
             -X POST \
