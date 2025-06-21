@@ -125,6 +125,7 @@ jobs:
             -DartifactId=${{ inputs.service_name }} \
             -Dversion=0.0.1-SNAPSHOT \
             -Dpackaging=jar \
+            -DuniqueVersion=false \
             -Dmaven.wagon.http.ssl.insecure=true \
             -Dmaven.wagon.http.ssl.allowall=true \
             -Daether.connector.basic.threads=1
