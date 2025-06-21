@@ -111,7 +111,20 @@ jobs:
           mkdir -p ~/.m2
           echo "<settings><servers><server><id>nexus</id><username>${{ secrets.NEXUS_USERNAME }}</username><password>${{ secrets.NEXUS_PASSWORD }}</password></server></servers></settings>" > ~/.m2/settings.xml
           cd "${{ inputs.service_path }}"
-          mvn clean deploy \
+          JAR_PATH=$(find target -type f -name "*.jar" | head -n1)
+          if [ ! -f "$JAR_PATH" ]; then
+            echo "❌ ERROR: Aucun fichier JAR trouvé à l'emplacement: $JAR_PATH"
+            exit 1
+          fi
+          echo "JAR trouvé: $JAR_PATH"
+          mvn deploy:deploy-file \
+            -Dfile="$JAR_PATH" \
+            -Durl=https://fc4a-105-74-1-194.ngrok-free.app/repository/maven-snapshots-custom \
+            -DrepositoryId=nexus \
+            -DgroupId=com.auth \
+            -DartifactId=${{ inputs.service_name }} \
+            -Dversion=0.0.1-SNAPSHOT \
+            -Dpackaging=jar \
             -Dmaven.wagon.http.ssl.insecure=true \
             -Dmaven.wagon.http.ssl.allowall=true \
             -Daether.connector.basic.threads=1
