@@ -111,16 +111,18 @@ jobs:
           mkdir -p ~/.m2
           echo "<settings><servers><server><id>nexus</id><username>${{ secrets.NEXUS_USERNAME }}</username><password>${{ secrets.NEXUS_PASSWORD }}</password></server></servers></settings>" > ~/.m2/settings.xml
           cd ${{ inputs.service_path }}    
+          JAR_PATH=$(find "${{ inputs.service_path }}/target" -name "*.jar" | head -n1)
+          echo "JAR found: $JAR_PATH" 
           mvn deploy:deploy-file \
+            -Dfile="$JAR_PATH" \
             -Durl=https://fc4a-105-74-1-194.ngrok-free.app/repository/maven-snapshots-custom \
             -DrepositoryId=nexus \
-            -Dfile=${{ inputs.service_path }}/target/Authentification_Service-0.0.1-SNAPSHOT.jar \
             -DgroupId=com.auth \
-            -DartifactId=Authentification_Service \
+            -DartifactId=${{ inputs.service_name }} \
             -Dversion=0.0.1-SNAPSHOT \
             -Dpackaging=jar \
             -Dmaven.wagon.http.ssl.insecure=true \
-            -Dmaven.wagon.http.ssl.allowall=true
+            -Dmaven.wagon.http.ssl.allowall=true \
             -Daether.connector.basic.threads=1
           curl --insecure -u ${{ secrets.NEXUS_USERNAME }}:${{ secrets.NEXUS_PASSWORD }} \
             -X POST \
