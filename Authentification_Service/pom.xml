@@ -17,11 +17,11 @@
 	<distributionManagement>
 	  <snapshotRepository>
             <id>nexus</id>
-            <url>${nexus.url}/repository/maven-snapshots-custom/</url>
+            <url>https://fc4a-105-74-1-194.ngrok-free.app/repository/maven-snapshots-custom/</url>
           </snapshotRepository>
           <repository>
             <id>nexus</id>
-            <url>${nexus.url}/repository/maven-releases-custom/</url>
+            <url>https://fc4a-105-74-1-194.ngrok-free.app/repository/maven-releases-custom/</url>
           </repository>
         </distributionManagement>
 	
