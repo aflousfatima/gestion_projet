@@ -18,6 +18,7 @@
 	  <snapshotRepository>
             <id>nexus</id>
             <url>https://fc4a-105-74-1-194.ngrok-free.app/repository/maven-snapshots-custom/</url>
+	    <uniqueVersion>false</uniqueVersion>
           </snapshotRepository>
           <repository>
             <id>nexus</id>
