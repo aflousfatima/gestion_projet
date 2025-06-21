@@ -111,7 +111,8 @@ jobs:
           mkdir -p ~/.m2
           echo "<settings><servers><server><id>nexus</id><username>${{ secrets.NEXUS_USERNAME }}</username><password>${{ secrets.NEXUS_PASSWORD }}</password></server></servers></settings>" > ~/.m2/settings.xml
           cd ${{ inputs.service_path }}    
-          JAR_PATH=$(find target -type f -name "*.jar" | head -n)
+          echo "🔍 Recherche du fichier JAR..."
+          JAR_PATH=$(find target -type f -name "*.jar" | head -n 1)
           if [ ! -f "$JAR_PATH" ]; then
             echo "❌ ERROR: Aucun fichier JAR trouvé à l'emplacement: $JAR_PATH"
             exit 1
