@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(name="sprint")
 public class Sprint {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -34,9 +34,11 @@
     "react-hook-form": "^7.55.0",
     "react-pdf": "^9.2.1",
     "react-quill-new": "^3.4.6",
+    "react-router-dom": "^7.6.2",
     "react-toastify": "^11.0.5",
     "sanitize-html": "^2.16.0",
-    "sockjs-client": "^1.6.1"
+    "sockjs-client": "^1.6.1",
+    "util": "^0.12.5"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.27.2",
@@ -51,6 +53,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-router-dom": "^5.3.3",
     "@types/sockjs-client": "^1.5.4",
     "eslint": "^9",
     "eslint-config-next": "15.2.0",

@@ -5,16 +5,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "auth-service", url = "http://localhost:8083",fallback = AuthClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
+@FeignClient(name = "authentification-service", url = "http://authentification-service:8083",fallback = AuthClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface AuthClient {
+    @GetMapping("/api/project-members/by-user")
+    List<ProjectMemberDTO> getProjectMembersByUserId(@RequestParam("userId") String userId);
 
     @GetMapping("/api/auth/users/{authId}")
     Map<String, Object> getUserDetailsByAuthId(
             @PathVariable("authId") String authId,
             @RequestHeader("Authorization") String authorization
     );
-    @GetMapping("/api/project-members/by-user")
-    List<ProjectMemberDTO> getProjectMembersByUserId(@RequestParam("userId") String userId);
+
     @GetMapping("/api/assign-manager-role")
     String extractUserIdFromToken(@RequestHeader("Authorization") String authorization);
 

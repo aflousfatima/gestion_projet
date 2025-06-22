@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
+@Table(name="history")
 public abstract class History {
 
     @Id

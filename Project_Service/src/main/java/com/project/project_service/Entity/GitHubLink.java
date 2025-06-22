@@ -3,6 +3,7 @@ package com.project.project_service.Entity;
 import jakarta.persistence.*;
 
 @Entity
+@Table(name="githublink")
 public class GitHubLink {
 
     @Id

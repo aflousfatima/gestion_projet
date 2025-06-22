@@ -1,13 +1,12 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import useAxios from "@/hooks/useAxios";
+import { useAuth } from "../../../../context/AuthContext";
+import useAxios from "../../../../hooks/useAxios";
 import Link from "next/link";
 import { AUTH_SERVICE_URL } from "../../../../config/useApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
-  faEnvelope,
   faEdit,
   faSave,
   faTimes,
@@ -79,7 +78,11 @@ const ProfilePage: React.FC = () => {
         console.log("✅ Réponse de /api/me:", response.data);
         setUser({
           ...response.data,
-          avatar: response.data.avatar || `https://ui-avatars.com/api/?name=${response.data.firstName?.charAt(0) || 'U'}+${response.data.lastName?.charAt(0) || 'U'}`,
+          avatar:
+            response.data.avatar ||
+            `https://ui-avatars.com/api/?name=${
+              response.data.firstName?.charAt(0) || "U"
+            }+${response.data.lastName?.charAt(0) || "U"}`,
           notificationPreferences: response.data.notificationPreferences || {
             emailNotifications: true,
             taskUpdates: true,
@@ -87,8 +90,14 @@ const ProfilePage: React.FC = () => {
           },
         });
       } catch (err: any) {
-        console.error("Erreur lors de la récupération des infos utilisateur:", err);
-        setError(err.response?.data?.message || "Erreur lors de la récupération des informations utilisateur");
+        console.error(
+          "Erreur lors de la récupération des infos utilisateur:",
+          err
+        );
+        setError(
+          err.response?.data?.message ||
+            "Erreur lors de la récupération des informations utilisateur"
+        );
       }
     };
 
@@ -98,7 +107,17 @@ const ProfilePage: React.FC = () => {
   // Récupérer les rôles dans les projets
   useEffect(() => {
     const fetchProjectRoles = async () => {
-      if (!accessToken || isLoading || !user.id) return;
+      if (!accessToken || isLoading || !user.id) {
+        console.log(
+          "🚫 fetchProjectRoles bloqué - accessToken:",
+          !!accessToken,
+          "isLoading:",
+          isLoading,
+          "user.id:",
+          user.id
+        );
+        return;
+      }
       try {
         console.log("🔍 Récupération des projets pour authId:", user.id);
         const response = await axiosInstance.get(
@@ -110,15 +129,21 @@ const ProfilePage: React.FC = () => {
         );
         console.log("✅ Réponse de /projects/by-user:", response.data);
         const projectRoles = response.data.projects.map((project: any) => ({
-          projectId: project.id,
-          projectName: project.name,
-          roleInProject: project.roleInProject,
+          projectId: project.id || 0,
+          projectName: project.name || "Unknown Project",
+          roleInProject: project.roleInProject || "Unknown Role",
         }));
         console.log("✅ Rôles de projet finaux:", projectRoles);
         setProjectRoles(projectRoles);
       } catch (err: any) {
-        console.error("Erreur lors de la récupération des rôles de projet:", err);
-        setError(err.response?.data?.message || "Erreur lors de la récupération des rôles de projet");
+        console.error(
+          "Erreur lors de la récupération des rôles de projet:",
+          err
+        );
+        setError(
+          err.response?.data?.message ||
+            "Erreur lors de la récupération des rôles de projet"
+        );
       }
     };
 
@@ -139,7 +164,7 @@ const ProfilePage: React.FC = () => {
     setUser((prev) => ({
       ...prev,
       notificationPreferences: {
-        ...prev.notificationPreferences,
+        ...prev.notificationPreferences!,
         [name]: checked,
       },
     }));
@@ -155,18 +180,14 @@ const ProfilePage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await axiosInstance.put(
-        "http://localhost:8083/api/update",
-        user,
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
+      await axiosInstance.put("http://localhost:8083/api/update", user, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       setSuccessMessage("Profile updated successfully!");
       setIsEditing(false);
       setError(null);
-    } catch (err) {
-      setError("Error updating profile");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error updating profile");
       setSuccessMessage(null);
       console.error(err);
     }
@@ -192,10 +213,14 @@ const ProfilePage: React.FC = () => {
       );
       setSuccessMessage("Password changed successfully!");
       setIsChangingPassword(false);
-      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
       setError(null);
-    } catch (err) {
-      setError("Error changing password");
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error changing password");
       setSuccessMessage(null);
       console.error(err);
     }
@@ -220,8 +245,8 @@ const ProfilePage: React.FC = () => {
         );
         setUser((prev) => ({ ...prev, avatar: response.data.avatarUrl }));
         setSuccessMessage("Avatar updated successfully!");
-      } catch (err) {
-        setError("Error uploading avatar");
+      } catch (err: any) {
+        setError(err.response?.data?.message || "Error uploading avatar");
         console.error(err);
       }
     }
@@ -229,8 +254,14 @@ const ProfilePage: React.FC = () => {
 
   // Générer les initiales pour le placeholder
   const getInitials = () => {
-    const firstInitial = user.firstName && user.firstName !== "Inconnu" ? user.firstName.charAt(0) : "U";
-    const lastInitial = user.lastName && user.lastName !== "Inconnu" ? user.lastName.charAt(0) : "U";
+    const firstInitial =
+      user.firstName && user.firstName !== "Inconnu"
+        ? user.firstName.charAt(0)
+        : "U";
+    const lastInitial =
+      user.lastName && user.lastName !== "Inconnu"
+        ? user.lastName.charAt(0)
+        : "U";
     return `${firstInitial}${lastInitial}`.toUpperCase();
   };
 
@@ -245,7 +276,9 @@ const ProfilePage: React.FC = () => {
   return (
     <div className="profile-container">
       {error && <div className="error-message">{error}</div>}
-      {successMessage && <div className="success-message">{successMessage}</div>}
+      {successMessage && (
+        <div className="success-message">{successMessage}</div>
+      )}
 
       <div className="profile-content">
         {/* Section Informations personnelles */}
@@ -263,7 +296,10 @@ const ProfilePage: React.FC = () => {
                 <button className="save-btn" onClick={handleSubmit}>
                   <FontAwesomeIcon icon={faSave} /> Save
                 </button>
-                <button className="cancel-btn" onClick={() => setIsEditing(false)}>
+                <button
+                  className="cancel-btn"
+                  onClick={() => setIsEditing(false)}
+                >
                   <FontAwesomeIcon icon={faTimes} /> Cancel
                 </button>
               </div>
@@ -271,7 +307,8 @@ const ProfilePage: React.FC = () => {
           </div>
           <div className="card-body">
             <div className="avatar-section">
-              {user.avatar && user.avatar !== `https://ui-avatars.com/api/?name=U+U` ? (
+              {user.avatar &&
+              user.avatar !== `https://ui-avatars.com/api/?name=U+U` ? (
                 <img
                   src={user.avatar}
                   alt={`${user.firstName} ${user.lastName}`}
@@ -281,12 +318,22 @@ const ProfilePage: React.FC = () => {
                 <div className="user-avatar-placeholder">{getInitials()}</div>
               )}
               {isEditing && (
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  className="avatar-upload"
-                />
+                <>
+                  <label
+                    htmlFor="avatar-upload"
+                    className="avatar-upload-label"
+                  >
+                    Upload Avatar
+                  </label>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="avatar-upload"
+                    data-testid="avatar-upload"
+                  />
+                </>
               )}
             </div>
             {isEditing ? (
@@ -294,32 +341,38 @@ const ProfilePage: React.FC = () => {
                 <div className="form-columns">
                   <div className="form-column">
                     <div className="form-group">
-                      <label>First Name</label>
+                      <label htmlFor="firstName">First Name</label>
                       <input
+                        id="firstName"
                         type="text"
                         name="firstName"
                         value={user.firstName}
                         onChange={handleInputChange}
                         required
+                        data-testid="first-name"
                       />
                     </div>
                     <div className="form-group">
-                      <label>Last Name</label>
+                      <label htmlFor="lastName">Last Name</label>
                       <input
+                        id="lastName"
                         type="text"
                         name="lastName"
                         value={user.lastName}
                         onChange={handleInputChange}
                         required
+                        data-testid="last-name"
                       />
                     </div>
                     <div className="form-group">
-                      <label>Email</label>
+                      <label htmlFor="email">Email</label>
                       <input
+                        id="email"
                         type="email"
                         name="email"
                         value={user.email}
                         disabled
+                        data-testid="email"
                       />
                     </div>
                   </div>
@@ -328,9 +381,16 @@ const ProfilePage: React.FC = () => {
             ) : (
               <div className="info-columns">
                 <div className="info-column">
-                  <p><strong>First Name:</strong> {user.firstName || "Not defined"}</p>
-                  <p><strong>Last Name:</strong> {user.lastName || "Not defined"}</p>
-                  <p><strong>Email:</strong> {user.email || "Not defined"}</p>
+                  <p>
+                    <strong>First Name:</strong>{" "}
+                    {user.firstName || "Not defined"}
+                  </p>
+                  <p>
+                    <strong>Last Name:</strong> {user.lastName || "Not defined"}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {user.email || "Not defined"}
+                  </p>
                 </div>
               </div>
             )}
@@ -354,33 +414,39 @@ const ProfilePage: React.FC = () => {
             {isChangingPassword ? (
               <form className="password-form" onSubmit={handlePasswordSubmit}>
                 <div className="form-group">
-                  <label>Current Password</label>
+                  <label htmlFor="currentPassword">Current Password</label>
                   <input
+                    id="currentPassword"
                     type="password"
                     name="currentPassword"
                     value={passwordData.currentPassword}
                     onChange={handlePasswordChange}
                     required
+                    data-testid="current-password"
                   />
                 </div>
                 <div className="form-group">
-                  <label>New Password</label>
+                  <label htmlFor="newPassword">New Password</label>
                   <input
+                    id="newPassword"
                     type="password"
                     name="newPassword"
                     value={passwordData.newPassword}
                     onChange={handlePasswordChange}
                     required
+                    data-testid="new-password"
                   />
                 </div>
                 <div className="form-group">
-                  <label>Confirm New Password</label>
+                  <label htmlFor="confirmPassword">Confirm Password</label>
                   <input
+                    id="confirmPassword"
                     type="password"
                     name="confirmPassword"
                     value={passwordData.confirmPassword}
                     onChange={handlePasswordChange}
                     required
+                    data-testid="confirm-password"
                   />
                 </div>
                 <div className="form-actions">
@@ -452,37 +518,43 @@ const ProfilePage: React.FC = () => {
           <div className="card-body">
             <form className="notification-form">
               <div className="form-group">
-                <label>
+                <label htmlFor="emailNotifications">
                   <input
+                    id="emailNotifications"
                     type="checkbox"
                     name="emailNotifications"
                     checked={user.notificationPreferences?.emailNotifications}
                     onChange={handleNotificationChange}
                     disabled={!isEditing}
+                    data-testid="email-notifications"
                   />
                   Email Notifications
                 </label>
               </div>
               <div className="form-group">
-                <label>
+                <label htmlFor="taskUpdates">
                   <input
+                    id="taskUpdates"
                     type="checkbox"
                     name="taskUpdates"
                     checked={user.notificationPreferences?.taskUpdates}
                     onChange={handleNotificationChange}
                     disabled={!isEditing}
+                    data-testid="task-updates"
                   />
                   Task Updates
                 </label>
               </div>
               <div className="form-group">
-                <label>
+                <label htmlFor="deadlineReminders">
                   <input
+                    id="deadlineReminders"
                     type="checkbox"
                     name="deadlineReminders"
                     checked={user.notificationPreferences?.deadlineReminders}
                     onChange={handleNotificationChange}
                     disabled={!isEditing}
+                    data-testid="deadline-reminders"
                   />
                   Deadline Reminders
                 </label>

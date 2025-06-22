@@ -1,42 +1,40 @@
-version: '3.8' # Spécifiez la version pour éviter des comportements inattendus
 services:
-  mysql:
+  mysql_gestion_projets:
     image: mysql:8.0
-    container_name: mysql
+    container_name: mysql_gestion_projets
     networks:
       - keycloak-network
     environment:
       - MYSQL_ROOT_PASSWORD=root
     ports:
-      - "3307:3306"
+      - "3308:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - gestion_projet_data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  authentification-service:
+  task-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: authentification-service
+    container_name: task-service
     networks:
       - keycloak-network
     env_file:
       - .env
     ports:
-      - "8083:8083"
+      - "8086:8086"
     dns:
       - 8.8.8.8
-      - 1.1.1.1
     depends_on:
-      mysql:
+      mysql_gestion_projets:
         condition: service_healthy
 
 volumes:
-  mysql_data:
+  gestion_projet_data:
 
 networks:
   keycloak-network:

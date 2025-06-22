@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-@FeignClient(name = "project-service", url = "http://localhost:8085",fallback = ProjectClientFallback.class)
+@FeignClient(name = "project-service", url = "http://project-service:8085",fallback = ProjectClientFallback.class)
 public interface ProjectClient {
 
 

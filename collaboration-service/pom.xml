@@ -56,10 +56,6 @@
             <artifactId>spring-cloud-starter-openfeign</artifactId>
         </dependency>
         <!-- Spring WebSocket -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
         <!-- Pour SockJS (fallback pour les navigateurs sans WebSocket) -->
         <dependency>
             <groupId>org.webjars</groupId>

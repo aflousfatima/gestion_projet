@@ -221,7 +221,9 @@ export default function Teams() {
 
         <div className="teams-teamList">
           {teamLoading ? (
-            <p><img src="/loading.svg" alt="Loading" className="loading-img" /></p>
+            <p>
+              <img src="/loading.svg" alt="Loading" className="loading-img" />
+            </p>
           ) : teamError ? (
             <p style={{ color: "red" }}>{teamError}</p>
           ) : teamMembers.length > 0 ? (
@@ -250,7 +252,11 @@ export default function Teams() {
         </div>
 
         {isModalOpen && (
-          <div className="teams-modalOverlay" onClick={handleOverlayClick}>
+          <div
+            className="teams-modalOverlay"
+            data-testid="modal-overlay"
+            onClick={handleOverlayClick}
+          >
             <div className="teams-modal">
               <h2 className="teams-modalTitle">Inviter un collègue</h2>
               <form onSubmit={handleInvite} className="teams-form">
@@ -304,7 +310,9 @@ export default function Teams() {
                     <option value="DEVOPS">DevOps</option>
                     <option value="DESIGNER">Designer</option>
                     <option value="CLOUD_ENGINEER">Ingenieur Cloud</option>
-                    <option value="FRONTEND_DEVELOPPER">Develppeur Front End </option>
+                    <option value="FRONTEND_DEVELOPPER">
+                      Develppeur Front End{" "}
+                    </option>
                     <option value="SCRUM_MASTER">Scrum Master</option>
                     <option value="PRODUCT_OWNER">Product Owner</option>
                   </select>

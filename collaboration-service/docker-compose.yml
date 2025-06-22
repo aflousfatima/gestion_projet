@@ -1,0 +1,44 @@
+services:
+  postgres_collab:
+    image: postgres:16
+    container_name: postgres_collab
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: collabdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+    volumes:
+      - collabdb_data:/var/lib/postgresql/data
+    networks:
+      - keycloak-network
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "postgres", "-d", "collabdb" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  collaboration-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: collaboration-service
+    ports:
+      - "8088:8088"
+    env_file:
+      - .env
+    networks:
+      - keycloak-network
+    dns:
+      - 8.8.8.8
+    depends_on:
+      postgres_collab:
+         condition: service_healthy
+
+volumes:
+  collabdb_data:
+
+networks:
+  keycloak-network:
+    name: keycloak-network
+    external: true
