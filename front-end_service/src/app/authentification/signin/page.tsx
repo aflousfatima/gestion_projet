@@ -3,8 +3,8 @@ import "../../../styles/Signin.css";
 import { useState, ChangeEvent, FormEvent, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Utilisez `next/navigation` au lieu de `next/router`
-import { useAuth } from "../../../context/AuthContext"; // Importer le contexte d'authentification
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext"; 
 
 interface FormData {
   email: string;
