@@ -8,7 +8,7 @@ import org.junit.runner.RunWith;
         features = "classpath:features",
         glue = {
                 "com.auth.authentification_service.e2e.steps",
-                "com.auth.authentification_service.e2e.config" // Ajoute le package de CucumberSpringConfiguration
+                "com.auth.authentification_service.e2e.config"
         },
         plugin = {"pretty", "html:target/cucumber-reports.html"},
         monochrome = true

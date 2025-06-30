@@ -101,7 +101,7 @@
 		<dependency>
 			<groupId>io.cucumber</groupId>
 			<artifactId>cucumber-spring</artifactId>
-			<version>7.22.1</version> <!-- Assure-toi que la version correspond à cucumber-java -->
+			<version>7.22.1</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

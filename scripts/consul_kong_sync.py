@@ -4,7 +4,7 @@ import json
 
 CONSUL_URL = "http://localhost:8500/v1/health/service"
 KONG_ADMIN_URL = "http://localhost:8001"
-HOST_IP = "192.168.1.153"  # Ton IP locale
+HOST_IP = "192.168.1.154"  # Ton IP locale
 
 def get_all_services():
     """Récupérer tous les services sains depuis Consul."""

@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .and()
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "api/channels/*",
+                                "api/channels/*","/actuator/health",
                                 "api/channels/public",
                                 "/ws/**"
                         ).permitAll() // Endpoints publics

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "task-service", url = "http://task-service:8086",fallback = TaskClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
+@FeignClient(name = "task-service", url = "http://localhost:8086",fallback = TaskClientFallback.class)  // Utilisez un URL dynamique ou un nom de service si vous utilisez Eureka
 public interface TaskClient {
 
     @GetMapping("/api/chatbot/tasks/status")

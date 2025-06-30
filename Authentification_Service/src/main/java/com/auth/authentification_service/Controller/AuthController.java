@@ -231,7 +231,7 @@ public class AuthController {
             // Supprimer le cookie côté client en mettant une expiration immédiate
             Cookie expiredCookie = new Cookie("REFRESH_TOKEN", "");
             expiredCookie.setHttpOnly(true);
-            expiredCookie.setSecure(false); // ⚠ Mettre true en prod
+            expiredCookie.setSecure(true); // ⚠ Mettre true en prod
             expiredCookie.setPath("/");
             expiredCookie.setMaxAge(0); // Expiration immédiate
             expiredCookie.setAttribute("SameSite", "Lax");

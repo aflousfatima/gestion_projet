@@ -28,6 +28,10 @@
     </scm>
     <properties>
         <java.version>17</java.version>
+        <sonar.projectKey>fatimaaflous_gestion_Project_Service</sonar.projectKey>
+        <sonar.organization>fatimaaflous</sonar.organization>
+        <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+        <sonar.login>365c4de1a8db91286fa3456b2df7b9b97549102f</sonar.login>
     </properties>
     <dependencies>
         <dependency>
@@ -184,6 +188,11 @@
                         </exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.sonarsource.scanner.maven</groupId>
+                <artifactId>sonar-maven-plugin</artifactId>
+                <version>4.0.0.4121</version>
             </plugin>
         </plugins>
     </build>

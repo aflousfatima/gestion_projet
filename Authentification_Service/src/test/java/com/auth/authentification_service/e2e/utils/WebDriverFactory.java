@@ -12,7 +12,7 @@ public class WebDriverFactory {
         if (driver == null) {
             WebDriverManager.chromedriver().setup();
             ChromeOptions options = new ChromeOptions();
-            //options.addArguments("--headless"); // Exécuter en mode sans interface pour CI/CD
+            //options.addArguments("--headless");
             options.addArguments("--disable-g recopierpu");
             driver = new ChromeDriver(options);
             driver.manage().window().setSize(new Dimension(1920, 1080));

@@ -40,7 +40,6 @@ public class SigninSteps {
     public void i_submit_the_signin_form() {
         signinPage.submitForm();
     }
-
     @Then("I am redirected to the company choice page")
     public void i_am_redirected_to_the_company_choice_page() {
         // Vérifier le message de succès avant la redirection
