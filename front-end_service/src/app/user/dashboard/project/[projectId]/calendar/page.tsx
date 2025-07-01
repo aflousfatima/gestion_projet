@@ -292,10 +292,6 @@ export default function CalendarView() {
             if (!position) return null;
             const { startWeek, endWeek, startColumn, endColumn } = position;
             const barColorClass = `task-bar-color-${globalIndex % 3}`;
-            const width =
-              endWeek === startWeek
-                ? `${(endColumn - startColumn + 1) * 100}%`
-                : "100%";
             const startDateKey = format(event.start, "yyyy-MM-dd");
             const taskIndex = tasksByStartDate[startDateKey].findIndex(
               (e) => e.id === event.id

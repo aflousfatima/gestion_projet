@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import "../../../../../styles/Dashboard-Project.css";
 import { useAuth } from "../../../../../context/AuthContext";
 import useAxios from "../../../../../hooks/useAxios";
-import { AxiosError } from "axios"; // Ajoutez cet import en haut du fichier
+import { AxiosError } from "axios"; 
 import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
@@ -172,7 +172,7 @@ export default function ProjectLayout({
             }
           );
           setBugs(bugsResponse.data);
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error(
             "Erreur lors de la récupération des tâches et bugs :",
             err
@@ -982,7 +982,6 @@ export default function ProjectLayout({
           </button>
           <button
             className="tasks-option"
-            onClick={() => setFilterMyTasks(!filterMyTasks)}
           >
             <i className="fa fa-user"></i> My Tasks
           </button>

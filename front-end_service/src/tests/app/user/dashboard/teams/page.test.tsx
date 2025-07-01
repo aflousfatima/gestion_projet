@@ -6,13 +6,11 @@ import {
   waitFor,
   act,
 } from "@testing-library/react";
-import { axe, toHaveNoViolations } from "jest-axe";
+import {  toHaveNoViolations } from "jest-axe";
 import Teams from "../../../../../app/user/dashboard/teams/page";
 import { useAuth } from "../../../../../context/AuthContext";
 import useAxios from "../../../../../hooks/useAxios";
 import { useProjects } from "../../../../../hooks/useProjects";
-import axios from "axios";
-
 // Extend jest-axe matchers
 expect.extend(toHaveNoViolations);
 

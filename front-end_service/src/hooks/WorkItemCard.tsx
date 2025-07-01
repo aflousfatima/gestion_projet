@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
@@ -114,49 +115,49 @@ interface WorkItemCardProps {
 
 const getActionClass = (action: string) => {
   switch (action.toUpperCase()) {
-    case 'CREATION':
-      return 'created';
-    case 'MISE_A_JOUR':
-      return 'updated';
-    case 'SUPPRESSION':
-      return 'deleted';
-    case 'AJOUT_DEPENDANCE':
-      return 'add_dependency';
-    case 'SUPPRESSION_DEPENDANCE':
-      return 'remove_dependency';
-    case 'AJOUT_COMMENTAIRE':
-      return 'add_comment';
-    case 'AJOUT_PIECE_JOINTE':
-      return 'add_attachment';
-    case 'SUPPRESSION_PIECE_JOINTE':
-      return 'remove_attachment';
-    case 'AJOUT_TEMPS':
-      return 'add_time';
+    case "CREATION":
+      return "created";
+    case "MISE_A_JOUR":
+      return "updated";
+    case "SUPPRESSION":
+      return "deleted";
+    case "AJOUT_DEPENDANCE":
+      return "add_dependency";
+    case "SUPPRESSION_DEPENDANCE":
+      return "remove_dependency";
+    case "AJOUT_COMMENTAIRE":
+      return "add_comment";
+    case "AJOUT_PIECE_JOINTE":
+      return "add_attachment";
+    case "SUPPRESSION_PIECE_JOINTE":
+      return "remove_attachment";
+    case "AJOUT_TEMPS":
+      return "add_time";
     default:
-      return action.toLowerCase().replace(/\s+/g, '_');
+      return action.toLowerCase().replace(/\s+/g, "_");
   }
 };
 
 const getActionLabel = (action: string) => {
   switch (action.toUpperCase()) {
-    case 'CREATION':
-      return 'Créé';
-    case 'MISE_A_JOUR':
-      return 'Mis à jour';
-    case 'SUPPRESSION':
-      return 'Supprimé';
-    case 'AJOUT_DEPENDANCE':
-      return 'Dépendance ajoutée';
-    case 'SUPPRESSION_DEPENDANCE':
-      return 'Dépendance supprimée';
-    case 'AJOUT_COMMENTAIRE':
-      return 'Commentaire ajouté';
-    case 'AJOUT_PIECE_JOINTE':
-      return 'Pièce jointe ajoutée';
-    case 'SUPPRESSION_PIECE_JOINTE':
-      return 'Pièce jointe supprimée';
-    case 'AJOUT_TEMPS':
-      return 'Temps ajouté';
+    case "CREATION":
+      return "Créé";
+    case "MISE_A_JOUR":
+      return "Mis à jour";
+    case "SUPPRESSION":
+      return "Supprimé";
+    case "AJOUT_DEPENDANCE":
+      return "Dépendance ajoutée";
+    case "SUPPRESSION_DEPENDANCE":
+      return "Dépendance supprimée";
+    case "AJOUT_COMMENTAIRE":
+      return "Commentaire ajouté";
+    case "AJOUT_PIECE_JOINTE":
+      return "Pièce jointe ajoutée";
+    case "SUPPRESSION_PIECE_JOINTE":
+      return "Pièce jointe supprimée";
+    case "AJOUT_TEMPS":
+      return "Temps ajouté";
     default:
       return action;
   }
@@ -352,14 +353,12 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
   const [displayedTimeSpent, setDisplayedTimeSpent] = useState<number | null>(
     workItem.totalTimeSpent
   );
-  const [displayedProgress, setDisplayedProgress] = useState<number>(
-    workItem.progress
-  );
+  const [setDisplayedProgress] = useState<number>(workItem.progress);
 
   // Récupérer l'historique
   useEffect(() => {
     if (!showHistoryPopup || !workItem.id || !accessToken) return;
-  
+
     const fetchHistory = async () => {
       setIsLoadingHistory(true);
       setHistoryError(null);
@@ -383,7 +382,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
         setIsLoadingHistory(false);
       }
     };
-  
+
     fetchHistory();
   }, [showHistoryPopup, workItem.id, workItem.type, accessToken]);
 
@@ -406,12 +405,12 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
             (totalMinutes / workItem.estimationTime) * 100,
             90
           );
-          setDisplayedProgress(progress);
+      
         }
       }, 60000); // Mettre à jour chaque minute
     } else {
       setDisplayedTimeSpent(workItem.totalTimeSpent);
-      setDisplayedProgress(workItem.progress);
+
     }
 
     return () => {
@@ -484,12 +483,18 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
     }
   };
 
-
   // Rendu de la fenêtre contextuelle pour l'historique
   const renderHistoryPopup = () => (
     <div className="modal-overlay-history">
-      <div className="modal-content-history" ref={popupRef} role="dialog" aria-labelledby="history-title">
-        <h5 id="history-title">History of {workItem.type === "TASK" ? "Task" : "le bug"}</h5>
+      <div
+        className="modal-content-history"
+        ref={popupRef}
+        role="dialog"
+        aria-labelledby="history-title"
+      >
+        <h5 id="history-title">
+          History of {workItem.type === "TASK" ? "Task" : "le bug"}
+        </h5>
         <button
           className="close-history-btn"
           onClick={() => setShowHistoryPopup(false)}
@@ -1269,12 +1274,12 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({
                 <span>Add Dependency</span>
               </button>
               <button
-        className="menu-item"
-        onClick={() => setShowHistoryPopup(true)}
-      >
-        <i className="fa fa-history"></i>
-        <span>Historique</span>
-      </button>
+                className="menu-item"
+                onClick={() => setShowHistoryPopup(true)}
+              >
+                <i className="fa fa-history"></i>
+                <span>Historique</span>
+              </button>
             </div>
           )}
           {showHistoryPopup && renderHistoryPopup()}

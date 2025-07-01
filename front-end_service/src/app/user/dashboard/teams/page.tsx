@@ -54,12 +54,17 @@ export default function Teams() {
 
     console.log("📋 Projets récupérés :", projects);
 
-    if (projects.length > 0) {
+    if (
+      projects.length > 0 &&
+      projects[0].id !== undefined &&
+      projects[0].id !== null
+    ) {
       setSelectedProjectId(projects[0].id.toString());
       console.log("✅ Default Selected Project (ID) :", projects[0].id);
     } else {
       console.log("⚠️ No project available, selectedProjectId is empty.");
     }
+    
   }, [projectsLoading, projectsError, projects]);
 
   // Récupérer le nom de l'entreprise

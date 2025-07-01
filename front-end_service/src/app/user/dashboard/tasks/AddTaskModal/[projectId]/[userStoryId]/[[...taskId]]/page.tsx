@@ -8,7 +8,7 @@ import {
   TASK_SERVICE_URL,
   AUTH_SERVICE_URL,
 } from "../../../../../../../../config/useApi";
-
+import axios from "axios";
 interface TeamMember {
   id: string;
   firstName: string;
@@ -88,8 +88,17 @@ export default function AddTaskModalPage() {
         );
         console.log("Team members received:", teamResponse.data);
         setTeamMembers(teamResponse.data);
-      } catch (err: any) {
-        console.error("Error fetching team members:", err.response?.data || err.message);
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          console.error(
+            "Error fetching team members:",
+            err.response?.data || err.message
+          );
+        } else if (err instanceof Error) {
+          console.error("Error fetching team members:", err.message);
+        } else {
+          console.error("Error fetching team members:", err);
+        }
         setError("Unable to load team members.");
       } finally {
         setLoading(false);
@@ -117,9 +126,10 @@ export default function AddTaskModalPage() {
         setError(null);
 
         // Determine endpoint based on workItemType (assume TASK for initial fetch, adjust after)
-        const endpoint = workItemType === "TASK"
-          ? `${TASK_SERVICE_URL}/api/project/tasks/${projectId}/${userStoryId}/${taskId}`
-          : `${TASK_SERVICE_URL}/api/project/bugs/${projectId}/${userStoryId}/${taskId}`;
+        const endpoint =
+          workItemType === "TASK"
+            ? `${TASK_SERVICE_URL}/api/project/tasks/${projectId}/${userStoryId}/${taskId}`
+            : `${TASK_SERVICE_URL}/api/project/bugs/${projectId}/${userStoryId}/${taskId}`;
 
         const response = await axiosInstance.get(endpoint, {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -130,8 +140,12 @@ export default function AddTaskModalPage() {
           id: response.data.id,
           title: response.data.title || "",
           description: response.data.description || "",
-          startDate: response.data.startDate ? response.data.startDate.split("T")[0] : "",
-          dueDate: response.data.dueDate ? response.data.dueDate.split("T")[0] : "",
+          startDate: response.data.startDate
+            ? response.data.startDate.split("T")[0]
+            : "",
+          dueDate: response.data.dueDate
+            ? response.data.dueDate.split("T")[0]
+            : "",
           estimationTime: response.data.estimationTime || null,
           status: response.data.status || "TO_DO",
           priority: response.data.priority || "",
@@ -144,12 +158,20 @@ export default function AddTaskModalPage() {
         setWorkItemType(workItemData.type);
         setWorkItem(workItemData);
         console.log("WorkItem updated with:", workItemData);
-      } catch (err: any) {
-        console.error("Error fetching work item:", {
-          message: err.message,
-          status: err.response?.status,
-          data: err.response?.data,
-        });
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          console.error("Error fetching work item:", {
+            message: err.message,
+            status: err.response?.status,
+            data: err.response?.data,
+          });
+        } else if (err instanceof Error) {
+          console.error("Error fetching work item:", {
+            message: err.message,
+          });
+        } else {
+          console.error("Error fetching work item:", err);
+        }
         setError("Unable to load work item data. Please try again.");
       } finally {
         setLoading(false);
@@ -240,7 +262,9 @@ export default function AddTaskModalPage() {
         description: workItem.description || null,
         startDate: workItem.startDate || null,
         dueDate: workItem.dueDate || null,
-        estimationTime: workItem.estimationTime ? parseInt(workItem.estimationTime.toString()) : null,
+        estimationTime: workItem.estimationTime
+          ? parseInt(workItem.estimationTime.toString())
+          : null,
         status: workItem.status,
         priority: workItem.priority || null,
         assignedUser: workItem.assignedUser,
@@ -250,13 +274,16 @@ export default function AddTaskModalPage() {
       };
       console.log("Submitting payload:", payload);
 
-      const baseUrl = workItemType === "TASK"
-        ? `${TASK_SERVICE_URL}/api/project/tasks`
-        : `${TASK_SERVICE_URL}/api/project/bugs`;
+      const baseUrl =
+        workItemType === "TASK"
+          ? `${TASK_SERVICE_URL}/api/project/tasks`
+          : `${TASK_SERVICE_URL}/api/project/bugs`;
 
       if (isEditing) {
         const response = await axiosInstance.put(
-          `${baseUrl}/${taskId}/update${workItemType === "TASK" ? "Task" : "Bug"}`,
+          `${baseUrl}/${taskId}/update${
+            workItemType === "TASK" ? "Task" : "Bug"
+          }`,
           payload,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -270,7 +297,9 @@ export default function AddTaskModalPage() {
         }
       } else {
         const response = await axiosInstance.post(
-          `${baseUrl}/${projectId}/${userStoryId}/create${workItemType === "TASK" ? "Task" : "Bug"}`,
+          `${baseUrl}/${projectId}/${userStoryId}/create${
+            workItemType === "TASK" ? "Task" : "Bug"
+          }`,
           payload,
           {
             headers: { Authorization: `Bearer ${accessToken}` },
@@ -283,14 +312,28 @@ export default function AddTaskModalPage() {
           throw new Error(`Failed to create ${workItemType.toLowerCase()}`);
         }
       }
-    } catch (error: any) {
-      console.error(`Error submitting ${workItemType.toLowerCase()}:`, error.response?.data || error.message);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        console.error(
+          `Error submitting ${workItemType.toLowerCase()}:`,
+          error.response?.data || error.message
+        );
+      } else if (error instanceof Error) {
+        console.error(
+          `Error submitting ${workItemType.toLowerCase()}:`,
+          error.message
+        );
+      } else {
+        console.error(`Error submitting ${workItemType.toLowerCase()}:`, error);
+      }
+
       alert(
         isEditing
           ? `Une erreur s'est produite lors de la mise à jour du ${workItemType.toLowerCase()}.`
           : `Une erreur s'est produite lors de la création du ${workItemType.toLowerCase()}.`
       );
     }
+    
   };
 
   const handleClose = () => {

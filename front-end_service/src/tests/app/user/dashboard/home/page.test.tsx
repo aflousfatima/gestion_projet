@@ -19,8 +19,12 @@ jest.mock('../../../../../hooks/useProjects', () => ({
 }));
 
 // Mock ProtectedRoute component
-jest.mock('../../../../../components/ProtectedRoute', () => {
-  return ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+jest.mock("../../../../../components/ProtectedRoute", () => {
+  const MockProtectedRoute = ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  );
+  MockProtectedRoute.displayName = "MockProtectedRoute";
+  return MockProtectedRoute;
 });
 
 // Mock global fetch

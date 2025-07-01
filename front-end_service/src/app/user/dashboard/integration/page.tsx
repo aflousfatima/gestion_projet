@@ -30,14 +30,27 @@ const Integrations: React.FC = () => {
         );
         console.log("✅ Réponse de /api/github/check-token:", response.data);
         setGithubConnected(response.data.hasToken);
-      } catch (err: any) {
-        console.error("Erreur lors de la vérification de la connexion GitHub:", err);
-        setGithubConnected(false);
-        setError(
-          err.response?.data?.error ||
-          err.response?.data?.message ||
-          "Erreur lors de la vérification de la connexion GitHub"
+      } catch (err: unknown) {
+        console.error(
+          "Erreur lors de la vérification de la connexion GitHub:",
+          err
         );
+        const errorMessage =
+          err instanceof Error && "response" in err
+            ? (
+                err as {
+                  response?: { data?: { error?: string; message?: string } };
+                }
+              ).response?.data?.error ??
+              (
+                err as {
+                  response?: { data?: { error?: string; message?: string } };
+                }
+              ).response?.data?.message ??
+              null
+            : "Erreur lors de la vérification de la connexion GitHub";
+        setError(errorMessage);
+        setGithubConnected(false);
       }
     };
 
@@ -63,14 +76,22 @@ const Integrations: React.FC = () => {
     try {
       console.log("🔄 Redirection vers l'authentification GitHub...");
       if (!accessToken) {
-        throw new Error("Aucun token d'accès disponible. Veuillez vous connecter.");
+        throw new Error(
+          "Aucun token d'accès disponible. Veuillez vous connecter."
+        );
       }
-      const githubLoginUrl = `http://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(accessToken)}`;
+      const githubLoginUrl = `http://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(
+        accessToken
+      )}`;
       console.log("🔄 Redirection vers:", githubLoginUrl);
       window.location.href = githubLoginUrl;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Erreur lors de la redirection GitHub:", err);
-      setError(err.message || "Erreur lors de la connexion à GitHub");
+      const errorMessage =
+        err instanceof Error
+          ? err.message ?? null
+          : "Erreur lors de la connexion à GitHub";
+      setError(errorMessage);
       setGithubLoading(false);
     }
   };
@@ -104,13 +125,24 @@ const Integrations: React.FC = () => {
                   className="connect-button"
                   onClick={async () => {
                     try {
-                      await axiosInstance.delete("http://localhost:8087/api/github-integration/remove-token", {
-                        headers: { Authorization: `Bearer ${accessToken}` },
-                      });
+                      await axiosInstance.delete(
+                        "http://localhost:8087/api/github-integration/remove-token",
+                        {
+                          headers: { Authorization: `Bearer ${accessToken}` },
+                        }
+                      );
                       setGithubConnected(false);
                       setSuccessMessage("GitHub déconnecté avec succès !");
-                    } catch (err: any) {
-                      setError(err.response?.data?.message || "Erreur lors de la déconnexion GitHub");
+                    } catch (err: unknown) {
+                      const errorMessage =
+                        err instanceof Error && "response" in err
+                          ? (
+                              err as {
+                                response?: { data?: { message?: string } };
+                              }
+                            ).response?.data?.message ?? null
+                          : "Erreur lors de la déconnexion GitHub";
+                      setError(errorMessage);
                     }
                   }}
                 >

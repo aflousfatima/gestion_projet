@@ -4,7 +4,7 @@ import { useAuth } from "../../../../context/AuthContext";
 import useAxios from "../../../../hooks/useAxios";
 import "../../../../styles/Chatbot.css";
 import { AUTH_SERVICE_URL } from "@/config/useApi";
-
+import { AxiosError } from 'axios';
 interface Message {
   id: string;
   text: string;
@@ -30,7 +30,7 @@ interface WebSocketMessage {
   response?: string;
   buttons?: { label: string; action: string }[];
   intent?: string;
-  parameters?: Record<string, any>;
+  parameters?: Record<string, unknown>;
   confidence?: number;
 }
 
@@ -179,14 +179,20 @@ const [flippedCard, setFlippedCard] = useState<string | null>(null);
   useEffect(() => {
     const fetchUserInfo = async () => {
       if (!accessToken || isLoading) {
-        console.debug("[Chatbot] Skipping user info fetch: no token or loading", {
-          accessToken,
-          isLoading,
-        });
+        console.debug(
+          "[Chatbot] Skipping user info fetch: no token or loading",
+          {
+            accessToken,
+            isLoading,
+          }
+        );
         return;
       }
       try {
-        console.info("[Chatbot] Fetching user info from", `${AUTH_SERVICE_URL}/api/me`);
+        console.info(
+          "[Chatbot] Fetching user info from",
+          `${AUTH_SERVICE_URL}/api/me`
+        );
         const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -198,20 +204,27 @@ const [flippedCard, setFlippedCard] = useState<string | null>(null);
             `https://ui-avatars.com/api/?name=${
               response.data.firstName?.charAt(0) || "U"
             }+${response.data.lastName?.charAt(0) || "U"}`,
-          notificationPreferences:
-            response.data.notificationPreferences || {
-              emailNotifications: true,
-              taskUpdates: true,
-              deadlineReminders: true,
-            },
+          notificationPreferences: response.data.notificationPreferences || {
+            emailNotifications: true,
+            taskUpdates: true,
+            deadlineReminders: true,
+          },
         };
         setUser(userData);
         console.info("[Chatbot] User info set:", {
           id: userData.id,
           firstName: userData.firstName,
         });
-      } catch (err: any) {
-        console.error("[Chatbot] Error fetching user info:", err.message, err.response?.data);
+      } catch (err: unknown) {
+        if (err instanceof AxiosError) {
+          console.error(
+            "[Chatbot] Error fetching user info:",
+            err.message,
+            err.response?.data
+          );
+        } else {
+          console.error("[Chatbot] Unexpected error:", err);
+        }
         setUser(null);
       }
     };
@@ -555,7 +568,7 @@ const [flippedCard, setFlippedCard] = useState<string | null>(null);
               Explore the features of your project management assistant. Click on a category to discover example questions.
             </p>
             <div className="guide-tiles">
-              {Object.entries(intents).map(([intentId, intent], index) => (
+              {Object.entries(intents).map(([intentId, intent]) => (
                 <div
                   key={intentId}
                   className={`guide-tile ${flippedCard === intentId ? "active" : ""}`}

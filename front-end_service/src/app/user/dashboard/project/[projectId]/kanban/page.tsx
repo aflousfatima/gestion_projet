@@ -6,7 +6,7 @@ import "../../../../../../styles/Dashboard-Task-Kanban.css";
 import { useAuth } from "../../../../../../context/AuthContext";
 import useAxios from "../../../../../../hooks/useAxios";
 import { TASK_SERVICE_URL } from "../../../../../../config/useApi";
-
+import { AxiosError } from "axios"; 
 interface User {
   id: string;
   firstName: string;
@@ -70,7 +70,6 @@ export default function Kanban() {
   const { accessToken } = useAuth();
   const axiosInstance = useAxios();
   const [showDates, setShowDates] = useState(false);
-  const [draggingWorkItemId, setDraggingWorkItemId] = useState<number | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
@@ -116,9 +115,6 @@ export default function Kanban() {
     if (!workItem || !workItem.id || workItem.status === newStatus) return;
 
     setIsUpdatingStatus(true);
-    setDraggingWorkItemId(null);
-
-    const originalWorkItems = [...workItems];
     handleWorkItemUpdate({ id: workItem.id, status: newStatus });
 
     const workItemDTO = {
@@ -156,18 +152,12 @@ export default function Kanban() {
         }
       );
       handleWorkItemUpdate({ ...response.data, type: workItemType });
-    } catch (err: any) {
-      let errorMessage = "Failed to update work item status";
-      if (err.response?.data) {
-        errorMessage =
-          typeof err.response.data === "string"
-            ? err.response.data
-            : err.response.data.error ||
-              err.response.data.message ||
-              errorMessage;
-      }
+    } catch (err: unknown) {
       handleWorkItemUpdate({ id: workItem.id, status: workItem.status });
-      console.error("Error updating work item status:", err.response?.data || err);
+      console.error(
+        "Error updating work item status:",
+        err instanceof AxiosError ? err.response?.data : err
+      );
     } finally {
       setIsUpdatingStatus(false);
     }

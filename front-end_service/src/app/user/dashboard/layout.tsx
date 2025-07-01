@@ -78,21 +78,31 @@ useEffect(() => {
   const fetchChannels = async () => {
     if (accessToken) {
       try {
-        const response = await axiosInstance.get(`${COLLABORATION_SERVICE_URL}/api/channels/public`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await axiosInstance.get(
+          `${COLLABORATION_SERVICE_URL}/api/channels/public`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
         setChannels(
-          response.data.map((channel: any) => ({
+          response.data.map((channel: Channel) => ({
             id: channel.id.toString(),
             name: channel.name,
             type: channel.type,
             isPrivate: channel.isPrivate,
-            members: channel.participantIds || [],
+            members: channel.members || [],
           }))
         );
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Erreur lors de la récupération des canaux");
+      } catch (err: unknown) {
+        if (axios.isAxiosError(err)) {
+          setError(err.response?.data?.message ?? null);
+        } else if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unknown error occurred");
+        }
       }
+      
     }
   };
   fetchChannels();

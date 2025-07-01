@@ -104,7 +104,7 @@ const Home = () => {
 
         // Créer une map des projets pour associer projectName
         const projectMap = new Map(projects.map(p => [p.id, p.name]));
-        const mappedTasks = tasksData.map((task: any) => ({
+        const mappedTasks = tasksData.map((task: Task) => ({
           id: task.id,
           title: task.title,
           status: task.status,

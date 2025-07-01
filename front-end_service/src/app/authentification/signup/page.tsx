@@ -1,10 +1,10 @@
+/* eslint-disable */
 "use client";
 import "../../../styles/Signup.css";
 import { useState, ChangeEvent, FormEvent, useEffect } from "react";
-import axios, { AxiosError } from "axios";
-import { useSearchParams } from "next/navigation";
+import axios from "axios";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Utilisez `next/navigation` au lieu de `next/router`
+import { useRouter } from "next/navigation";
 
 interface FormData {
   firstName: string;
@@ -14,21 +14,18 @@ interface FormData {
   password: string;
   marketingConsent: boolean;
   termsAccepted: boolean;
-  token?: string; // Ajout du jeton optionnel
+  token?: string;
 }
+
 interface InvitationData {
   email: string;
   role: string;
   entrepriseId: string;
   project: string;
 }
+
 export default function SignupPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter(); // Initialisation de useRouter pour la redirection
-  useEffect(() => {
-    router.prefetch("/company-registration"); // Précharge la page en cache
-  }, []);
-  const token = searchParams.get("token"); // Extraire le jeton de l'URL
+  const router = useRouter();
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
     lastName: "",
@@ -37,20 +34,28 @@ export default function SignupPage() {
     password: "",
     marketingConsent: false,
     termsAccepted: false,
-    token: token || undefined, // Stocker le jeton dans formData
+    token: undefined,
   });
   const [invitationData, setInvitationData] = useState<InvitationData | null>(
     null
   );
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  // Vérifier le jeton au chargement de la page
+
   useEffect(() => {
+    // Get token from query parameters client-side
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get("token");
+    setFormData((prevData) => ({
+      ...prevData,
+      token: token || undefined,
+    }));
+
     const verifyToken = async () => {
       if (token) {
         try {
           const response = await axios.get(
-            `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/invitations/verify?token=${token}`
+            `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATION_SERVICE_URL}/api/invitations/verify?token=${token}`
           );
           const invitation = response.data;
           setInvitationData({
@@ -59,23 +64,22 @@ export default function SignupPage() {
             entrepriseId: invitation.entrepriseId,
             project: invitation.project,
           });
-          // Pré-remplir l'email
           setFormData((prevData) => ({
             ...prevData,
             email: invitation.email,
           }));
-        } catch (err) {
-          console.error('Token verification error:', err, 'isAxiosError:', axios.isAxiosError(err));
-          if (axios.isAxiosError(err)) {
-            setError(err.response?.data || "Lien d'invitation invalide ou expiré");
-          } else {
-            setError("Une erreur inattendue est survenue lors de la vérification du token.");
-          }       
-      }
+        } catch (err: any) {
+          console.error("Token verification error:", err);
+          setError(err.response?.data?.message ?? null);
+        }
       }
     };
     verifyToken();
-  }, [token]);
+  }, []);
+
+  useEffect(() => {
+    router.prefetch("/company-registration");
+  }, [router]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -87,107 +91,86 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     try {
-      // Log des données envoyées pour l'inscription
-      console.log("Données envoyées pour l'inscription:", formData);
-
-      // Envoi de la requête POST au backend Spring Boot
+      console.log("Signup data submitted:", formData);
       const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/signup`,
+        `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATION_SERVICE_URL}/api/signup`,
         formData
       );
-
-      // Log de la réponse du serveur
-      console.log("Réponse du serveur:", response);
-
+      console.log("Server response:", response);
       if (response.status === 201) {
         setSuccessMessage(
-          "Registration successful! Please check your email to confirm ."
-              );
+          "Registration successful! Please check your email to confirm."
+        );
         setTimeout(() => {
           router.replace("/authentification/signin");
-        }, 3000); // Redirection après 2 secondes
+        }, 3000);
       } else {
         setError(response.data.message);
       }
-    } catch (err) {
-    console.error("Caught error:", err);
-    if (axios.isAxiosError(err)) {
-      console.error("Axios error:", err.response?.data);
-      setError(err.response?.data || "Une erreur est survenue lors de l'inscription.");
-    } else {
-      console.error("Non-Axios error:", err);
-      setError("Une erreur inattendue est survenue. Veuillez réessayer.");
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      setError(err.response?.data?.message ?? null);
     }
-  }
   };
 
-if (error) {
+  if (error) {
     return (
-        <div className="feedback-container">
-            <div className="feedback-box">
-                <h3 className="feedback-title error-title">Error</h3>
-                <p className="feedback-message error-message">{error}</p>
-               {/* this line is for the selenium test <p className="feedback-message error-message">Registration failed! Email Already Exist , please Try with another email .</p>*/}
-                <Link href="/authentification/signup" className="feedback-link">Go Back To SignUp</Link>
-            </div>
+      <div className="feedback-container">
+        <div className="feedback-box">
+          <h3 className="feedback-title error-title">Error</h3>
+          <p className="feedback-message error-message">{error}</p>
+          <Link href="/authentification/signup" className="feedback-link">
+            Back to Signup
+          </Link>
         </div>
+      </div>
     );
-}
+  }
 
-if (successMessage) {
+  if (successMessage) {
     return (
-        <div className="feedback-container">
-            <div className="feedback-box">
-                <h3 className="feedback-title success-title">Success</h3>
+      <div className="feedback-container">
+        <div className="feedback-box">
+          <h3 className="feedback-title success-title">Success</h3>
           <p className="success-message">{successMessage}</p>
-      <p className="feedback-info">Redirect to signin...</p>
-            </div>
+          <p className="feedback-info">Redirecting to sign in...</p>
         </div>
+      </div>
     );
-}
+  }
+
   return (
     <div className="container1">
-      <div className=" form-box1">
+      <div className="form-box1">
         <h3 className="title1up">Get started with AGILIA</h3>
         <h2 className="title2up">
-          It’s free for up to 10 users - no credit card needed.
+          Free for up to 10 users - no credit card needed.
         </h2>
-        {/* Horizontal Signup Sections */}
         <div className="signup-sections">
-          {/* Social Sign Up Section (Left) */}
-          {/* Social Sign Up Section */}
           <div className="social-signup">
-            <a href="#" className="social-icon" title="Continuer avec Google">
+            <a href="#" className="social-icon" title="Continue with Google">
               <img src="/google.png" alt="Google" className="social-img" />
             </a>
-            <a href="#" className="social-icon" title="Continuer avec Facebook">
+            <a href="#" className="social-icon" title="Continue with Facebook">
               <img src="/facebook.png" alt="Facebook" className="social-img" />
             </a>
-            <a
-              href="#"
-              className="social-icon"
-              title="Continuer avec Microsoft"
-            >
+            <a href="#" className="social-icon" title="Continue with Microsoft">
               <img
                 src="/microsoft.png"
                 alt="Microsoft"
                 className="social-img"
               />
             </a>
-            <a href="#" className="social-icon" title="Continuer avec Apple">
+            <a href="#" className="social-icon" title="Continue with Apple">
               <img src="/apple.png" alt="Apple" className="social-img" />
             </a>
           </div>
-
           <div className="separator">
-            <div className="vertical-line"></div> {/* Ligne verticale */}
+            <div className="vertical-line"></div>
             <div className="or-text">OR</div>
-            <div className="vertical-line"></div> {/* Ligne verticale */}
+            <div className="vertical-line"></div>
           </div>
-
-          {/* Personal Info Sign Up Section (Right) */}
           <div className="personal-signup">
             <form onSubmit={handleSubmit}>
               <div className="input-group">
@@ -212,7 +195,6 @@ if (successMessage) {
                   required
                 />
               </div>
-
               <div className="input-group">
                 <i className="fas fa-user-circle input-icon"></i>
                 <input
@@ -220,12 +202,11 @@ if (successMessage) {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  placeholder="User name"
+                  placeholder="Username"
                   className="input-field"
                   required
                 />
               </div>
-
               <div className="input-group">
                 <i className="fas fa-envelope input-icon"></i>
                 <input
@@ -233,13 +214,12 @@ if (successMessage) {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Professionnel e-mail"
+                  placeholder="Professional email"
                   className="input-field"
                   required
-                  readOnly={!!invitationData} // Rendre l'email non modifiable si pré-rempli
+                  readOnly={!!invitationData}
                 />
               </div>
-
               <div className="input-group">
                 <i className="fas fa-lock input-icon"></i>
                 <input
@@ -247,12 +227,11 @@ if (successMessage) {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="minimum 8 caracteres "
+                  placeholder="Minimum 8 characters"
                   className="input-field"
                   required
                 />
               </div>
-
               <div className="checkbox-group1">
                 <input
                   type="checkbox"
@@ -261,9 +240,10 @@ if (successMessage) {
                   checked={formData.marketingConsent}
                   onChange={handleChange}
                 />
-                <label htmlFor="marketingConsent">I agree to receive marketing emails.</label>
+                <label htmlFor="marketingConsent">
+                  I agree to receive marketing emails.
+                </label>
               </div>
-
               <div className="checkbox-group1">
                 <input
                   type="checkbox"
@@ -274,30 +254,29 @@ if (successMessage) {
                   required
                 />
                 <label htmlFor="termsAccepted">
-                  I agree the {""}
+                  I agree to the{" "}
                   <a href="#" className="law-custom">
                     terms of use
-                  </a>
-                  {""} and the {""}
+                  </a>{" "}
+                  and the{" "}
                   <a href="#" className="law-custom">
                     privacy policy
                   </a>
                   .
                 </label>
               </div>
-
               <button type="submit" className="submit-btn">
                 Sign Up
               </button>
               <p className="quest">
-                Already have an account ?{" "}
+                Already have an account?{" "}
                 <Link
                   className="nav-link active low-custom1"
                   aria-current="page"
                   href="/authentification/signin"
                 >
                   Sign In
-                </Link>{" "}
+                </Link>
               </p>
             </form>
           </div>

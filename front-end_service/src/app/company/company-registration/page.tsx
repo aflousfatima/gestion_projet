@@ -28,7 +28,11 @@ const Page = () => {
 
   const [successMessage, setSuccessMessage] = useState("");
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >
+  ) => {
     const { id, value } = e.target;
     setFormData((prevData) => ({
       ...prevData,
@@ -44,7 +48,7 @@ const Page = () => {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     try {
       const response = await axiosInstance.post(

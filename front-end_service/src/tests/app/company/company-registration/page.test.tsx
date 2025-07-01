@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import axios, { AxiosError, AxiosHeaders } from 'axios';
+import { AxiosError, AxiosHeaders, AxiosInstance } from 'axios';
 import CompanyRegistrationPage from '../../../../app/company/company-registration/page';
 import useAxios from '../../../../hooks/useAxios';
 import { PROJECT_SERVICE_URL } from '../../../../config/useApi';
@@ -13,10 +13,9 @@ jest.mock('../../../../hooks/useAxios', () => jest.fn());
 
 // Mock axios for API calls
 jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('CompanyRegistrationPage Component', () => {
-  let mockAxiosInstance: any;
+  let mockAxiosInstance: jest.Mocked<AxiosInstance>;
 
   beforeEach(() => {
     // Reset mocks before each test
@@ -24,7 +23,7 @@ describe('CompanyRegistrationPage Component', () => {
     // Mock useAxios to return a mock axios instance
     mockAxiosInstance = {
       post: jest.fn(),
-    };
+    } as unknown as jest.Mocked<AxiosInstance>; // Double cast through unknown
     (useAxios as jest.Mock).mockReturnValue(mockAxiosInstance);
   });
 
@@ -36,17 +35,15 @@ describe('CompanyRegistrationPage Component', () => {
     render(<CompanyRegistrationPage />);
 
     await waitFor(() => {
-      // Check for header elements (assuming they're present in the actual component)
       expect(screen.getByRole('heading', { name: /Welcome to Your Setup/i })).toBeInTheDocument();
       expect(screen.getByText(/Complete the 4 steps to get started/i)).toBeInTheDocument();
-      // Target step title specifically to avoid ambiguity
       expect(screen.getByRole('heading', { name: /Your Company/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByLabelText(/Organization Name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Industry/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Next →/i })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Back/i })).not.toBeInTheDocument();
       expect(screen.getByText(/Your Company/i, { selector: '.step-label' }).closest('li')).toHaveClass('active');
-      expect(screen.getByText(/25%/i)).toBeInTheDocument(); // Progress bar at 25%
+      expect(screen.getByText(/25%/i)).toBeInTheDocument();
     });
   });
 
@@ -70,14 +67,13 @@ describe('CompanyRegistrationPage Component', () => {
     });
 
     await waitFor(() => {
-      // Target step title specifically
       expect(screen.getByRole('heading', { name: /Your Team/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByLabelText(/Team Name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Number of Employees/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Next →/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
       expect(screen.getByText(/Your Team/i, { selector: '.step-label' }).closest('li')).toHaveClass('active');
-      expect(screen.getByText(/50%/i)).toBeInTheDocument(); // Progress bar at 50%
+      expect(screen.getByText(/50%/i)).toBeInTheDocument();
     });
   });
 
@@ -103,14 +99,13 @@ describe('CompanyRegistrationPage Component', () => {
     });
 
     await waitFor(() => {
-      // Target step title specifically
       expect(screen.getByRole('heading', { name: /About You/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByLabelText(/Department/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Your Role/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Next →/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
       expect(screen.getByText(/About You/i, { selector: '.step-label' }).closest('li')).toHaveClass('active');
-      expect(screen.getByText(/75%/i)).toBeInTheDocument(); // Progress bar at 75%
+      expect(screen.getByText(/75%/i)).toBeInTheDocument();
     });
   });
 
@@ -138,7 +133,6 @@ describe('CompanyRegistrationPage Component', () => {
     });
 
     await waitFor(() => {
-      // Target step title specifically
       expect(screen.getByRole('heading', { name: /Your Project/i, level: 2 })).toBeInTheDocument();
       expect(screen.getByLabelText(/Project Name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
@@ -150,7 +144,7 @@ describe('CompanyRegistrationPage Component', () => {
       expect(screen.getByRole('button', { name: /Launch/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
       expect(screen.getByText(/Your Project/i, { selector: '.step-label' }).closest('li')).toHaveClass('active');
-      expect(screen.getByText(/100%/i)).toBeInTheDocument(); // Progress bar at 100%
+      expect(screen.getByText(/100%/i)).toBeInTheDocument();
     });
   });
 
@@ -205,7 +199,6 @@ describe('CompanyRegistrationPage Component', () => {
 
     render(<CompanyRegistrationPage />);
 
-    // Navigate to step 4 and fill out the form
     await waitFor(() => {
       fireEvent.click(screen.getByRole('button', { name: /Next →/i }));
       fireEvent.click(screen.getByRole('button', { name: /Next →/i }));
@@ -252,7 +245,6 @@ describe('CompanyRegistrationPage Component', () => {
 
     render(<CompanyRegistrationPage />);
 
-    // Navigate to step 4 and fill out the form
     await waitFor(() => {
       fireEvent.click(screen.getByRole('button', { name: /Next →/i }));
       fireEvent.click(screen.getByRole('button', { name: /Next →/i }));
@@ -281,6 +273,7 @@ describe('CompanyRegistrationPage Component', () => {
           priority: 'HIGH',
         })
       );
+      expect(screen.getByText(/Invalid project data/i)).toBeInTheDocument();
     });
   });
 

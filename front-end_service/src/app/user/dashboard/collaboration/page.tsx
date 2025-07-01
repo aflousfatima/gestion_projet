@@ -9,14 +9,6 @@ import { AUTH_SERVICE_URL, PROJECT_SERVICE_URL ,COLLABORATION_SERVICE_URL } from
 import useAxios from "../../../../hooks/useAxios";
 import { useSearchParams, useRouter } from "next/navigation";
 
-interface Channel {
-  id: string;
-  name: string;
-  type: "TEXT" | "VOCAL";
-  isPrivate: boolean;
-  members: string[];
-}
-
 interface User {
   id: string;
   firstName: string;
@@ -32,11 +24,6 @@ interface Project {
   creationDate?: string;
 }
 
-interface Role {
-  id: string;
-  name: string;
-}
-
 const CollaborationPage: React.FC = () => {
   const { accessToken } = useAuth();
   const axiosInstance = useAxios();
@@ -44,10 +31,6 @@ const CollaborationPage: React.FC = () => {
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [roles] = useState<Role[]>([
-    { id: "member", name: "Member" },
-    { id: "admin", name: "Admin" },
-  ]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newChannel, setNewChannel] = useState({
     name: "",
@@ -78,18 +61,26 @@ const CollaborationPage: React.FC = () => {
     const fetchCurrentUser = async () => {
       if (accessToken && !currentUser) {
         try {
-          const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
+          const response = await axiosInstance.get(
+            `${AUTH_SERVICE_URL}/api/me`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
           setCurrentUser({
             id: response.data.id.toString(),
             firstName: response.data.firstName,
             lastName: response.data.lastName,
             email: response.data.email,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Failed to fetch current user:", err);
-          setError(err.response?.data?.message || "Erreur lors de la récupération de l'utilisateur");
+          const errorMessage =
+            err instanceof Error && "response" in err
+              ? (err as { response?: { data?: { message?: string } } }).response
+                  ?.data?.message ?? null
+              : "Erreur lors de la récupération de l'utilisateur";
+          setError(errorMessage);
         }
       }
     };
@@ -100,19 +91,27 @@ const CollaborationPage: React.FC = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await axiosInstance.get(`${PROJECT_SERVICE_URL}/api/projects/AllProjects`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await axiosInstance.get(
+          `${PROJECT_SERVICE_URL}/api/projects/AllProjects`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
         setProjects(
-          response.data.map((project: any) => ({
+          response.data.map((project: Project) => ({
             id: project.id.toString(),
             name: project.name,
             description: project.description,
             creationDate: project.creationDate,
           }))
         );
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Erreur lors de la récupération des projets");
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error && "response" in err
+            ? (err as { response?: { data?: { message?: string } } }).response
+                ?.data?.message ?? null
+            : "Erreur lors de la récupération des projets";
+        setError(errorMessage);
       }
     };
     fetchProjects();
@@ -122,19 +121,31 @@ const CollaborationPage: React.FC = () => {
   useEffect(() => {
     const fetchTeamMembers = async () => {
       try {
-        const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/team-members`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const response = await axiosInstance.get(
+          `${AUTH_SERVICE_URL}/api/team-members`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
         setUsers(
-          response.data.map((user: any) => ({
+          response.data.map((user: User) => ({
             id: user.id.toString(),
             firstName: user.firstName,
             lastName: user.lastName,
-            avatar: user.avatar || `https://ui-avatars.com/api/?name=${user.firstName.charAt(0)}+${user.lastName.charAt(0)}`,
+            avatar:
+              user.avatar ||
+              `https://ui-avatars.com/api/?name=${user.firstName.charAt(
+                0
+              )}+${user.lastName.charAt(0)}`,
           }))
         );
-      } catch (err: any) {
-        setError(err.response?.data?.message || "Erreur lors de la récupération des membres de l'équipe");
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error && "response" in err
+            ? (err as { response?: { data?: { message?: string } } }).response
+                ?.data?.message ?? null
+            : "Erreur lors de la récupération des membres de l'équipe";
+        setError(errorMessage);
       }
     };
     fetchTeamMembers();
@@ -200,17 +211,36 @@ const CollaborationPage: React.FC = () => {
     };
 
     try {
-      await axiosInstance.post(`${COLLABORATION_SERVICE_URL}/api/channels/createChanel`, payload, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      await axiosInstance.post(
+        `${COLLABORATION_SERVICE_URL}/api/channels/createChanel`,
+        payload,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
       setSuccessMessage("Canal créé avec succès !");
       setShowCreateModal(false);
       router.replace("/user/dashboard/collaboration", { scroll: false });
-      setNewChannel({ name: "", type: "TEXT", isPrivate: false, members: [], roles: [], projectId: null });
+      setNewChannel({
+        name: "",
+        type: "TEXT",
+        isPrivate: false,
+        members: [],
+        roles: [],
+        projectId: null,
+      });
       setStep(1);
-    } catch (err: any) {
-      console.error("Channel creation error:", err.response?.data);
-      setError(err.response?.data?.message || "Erreur lors de la création du canal");
+    } catch (err: unknown) {
+      console.error(
+        "Channel creation error:",
+        (err as { response?: { data?: unknown } }).response?.data
+      );
+      const errorMessage =
+        err instanceof Error && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message ?? null
+          : "Erreur lors de la création du canal";
+      setError(errorMessage);
     }
   };
 

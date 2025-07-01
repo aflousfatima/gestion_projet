@@ -20,22 +20,28 @@ interface GanttInstance {
     drag_links?: boolean;
     fit_tasks?: boolean;
     auto_scheduling?: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   init: (element: HTMLElement) => void;
   templates: {
     task_text?: (start: Date, end: Date, task: GanttTask) => string;
     task_class?: (start: Date, end: Date, task: GanttTask) => string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
-  parse: (data: { data: GanttTask[]; links: any[] }) => void;
+  parse: (data: { data: GanttTask[]; links: unknown[] }) => void;
   attachEvent: (
     event: string,
     handler: (id: string, mode?: string, task?: GanttTask) => void
   ) => void;
   clearAll: () => void;
 }
+interface CustomWindow extends Window {
+  toggleUsersPopup?: () => void;
+}
 
+interface Window {
+  toggleUsersPopup?: (taskId: string) => void; // Match the function signature
+}
 const GanttTyped = Gantt as unknown as GanttInstance;
 
 interface GanttTask {
@@ -180,7 +186,8 @@ const GanttView: React.FC = () => {
       // Map workItems to DHTMLX Gantt format (only tasks)
       const ganttTasks: GanttTask[] = workItems
         .filter(
-          (item) => item.type === "TASK" && item.startDate && item.dueDate && item.id
+          (item) =>
+            item.type === "TASK" && item.startDate && item.dueDate && item.id
         )
         .map((item) => {
           const mappedTask = {
@@ -250,7 +257,11 @@ const GanttView: React.FC = () => {
       // Handle task updates
       GanttTyped.attachEvent(
         "onAfterTaskDrag",
-        (id: string, mode: string, task: GanttTask) => {
+        (id: string, mode?: string, task?: GanttTask) => {
+          if (!task) {
+            console.warn("No task provided for drag event");
+            return;
+          }
           console.log("Task dragged:", {
             id,
             startDate: task.start_date,
@@ -278,8 +289,8 @@ const GanttView: React.FC = () => {
       );
 
       // Expose toggleUsersPopup to window for onclick
-      (window as any).toggleUsersPopup = toggleUsersPopup;
 
+      (window as Window).toggleUsersPopup = toggleUsersPopup;
       // Enhanced fallback: Force avatar rendering and log DOM state
       GanttTyped.attachEvent("onGanttRender", () => {
         console.log("Gantt rendered, inspecting DOM for avatars");
@@ -296,7 +307,6 @@ const GanttView: React.FC = () => {
               avatarsStack = document.createElement("div");
               avatarsStack.className = "avatars-stack";
               avatarsStack.setAttribute("data-task-id", task.id);
-              avatarsStack.onclick = () => toggleUsersPopup(task.id);
               const users = task.assignedUsers || [];
               if (users.length > 0) {
                 users.slice(0, 3).forEach((user, index) => {
@@ -309,7 +319,9 @@ const GanttView: React.FC = () => {
                         0
                       )}${user.lastName.charAt(0)}</div>`;
                   wrapper.innerHTML = avatarContent;
-                  avatarsStack.appendChild(wrapper);
+                  if (avatarsStack) {
+                    avatarsStack.appendChild(wrapper);
+                  }
                 });
                 if (users.length > 3) {
                   const more = document.createElement("div");
@@ -330,7 +342,8 @@ const GanttView: React.FC = () => {
                 avatarsStack,
                 dependencyIndicator
                   ? dependencyIndicator.nextSibling
-                  : taskElement.firstChild?.nextSibling || taskElement.firstChild
+                  : taskElement.firstChild?.nextSibling ||
+                      taskElement.firstChild
               );
             }
             // Log DOM content and force visibility
@@ -351,7 +364,7 @@ const GanttView: React.FC = () => {
 
       return () => {
         GanttTyped.clearAll();
-        delete (window as any).toggleUsersPopup;
+        delete (window as CustomWindow).toggleUsersPopup;
       };
     } catch (err) {
       console.error("Error initializing DHTMLX Gantt:", err);

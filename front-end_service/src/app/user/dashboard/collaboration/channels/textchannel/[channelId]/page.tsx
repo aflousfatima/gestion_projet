@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import useAxios from "@/hooks/useAxios";
 import { AUTH_SERVICE_URL, COLLABORATION_SERVICE_URL } from "@/config/useApi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { AxiosError } from "axios"; 
+
 import {
   faHashtag,
   faVolumeUp,
@@ -87,6 +89,34 @@ interface Participant {
   status?: "ONLINE" | "OFFLINE";
 }
 
+interface RawMessage {
+  id: number | string;
+  channelId: number | string;
+  senderId: number | string;
+  senderName?: string;
+  text: string;
+  fileUrl?: string | null;
+  mimeType?: string | null;
+  type: string;
+  createdAt: string;
+  reactions?: { [key: string]: string[] };
+  replyToId?: number | string | null;
+  replyToText?: string | null;
+  replyToSenderName?: string | null;
+  pinned?: boolean;
+  duration?: number | null;
+}
+
+interface RawParticipant {
+  id: number | string;
+  userId: string;
+  role: "ADMIN" | "MEMBER";
+  channelId: string;
+  joinedAt: string;
+  firstName?: string;
+  lastName?: string;
+  status?: "ONLINE" | "OFFLINE";
+}
 const ChannelPage: React.FC = () => {
   const { channelId } = useParams();
   const { accessToken } = useAuth();
@@ -179,9 +209,11 @@ const participantsPopupRef = useRef<HTMLDivElement>(null);
     return (
       <div className="audio-player-container">
         <audio ref={audioRef} controls src={src} className="audio-player">
-          Votre navigateur ne prend pas en charge l'élément audio.
+          Your browser does not support the audio element.
         </audio>
-        <span className="audio-duration">{formatDuration(computedDuration)}</span>
+        <span className="audio-duration">
+          {formatDuration(computedDuration)}
+        </span>
       </div>
     );
   };
@@ -310,9 +342,12 @@ const participantsPopupRef = useRef<HTMLDivElement>(null);
         updatedMessage.pinned ? "Message épinglé !" : "Message désépinglé !"
       );
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message || "Erreur lors de l'épinglage du message"
+        err instanceof AxiosError
+          ? err.response?.data?.message ||
+              "Erreur lors de l'épinglage du message"
+          : "Erreur inconnue"
       );
       console.error("Erreur épinglage:", err);
     }
@@ -362,10 +397,12 @@ const participantsPopupRef = useRef<HTMLDivElement>(null);
             isPrivate: response.data.isPrivate,
             members: response.data.participantIds || [],
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           setError(
-            err.response?.data?.message ||
-              "Erreur lors de la récupération du canal"
+            err instanceof AxiosError
+              ? err.response?.data?.message ||
+                  "Erreur lors de la récupération du canal"
+              : "Erreur inconnue"
           );
         }
       }
@@ -375,44 +412,48 @@ const participantsPopupRef = useRef<HTMLDivElement>(null);
 
 
   // Récupérer les participants
-const fetchParticipants = async () => {
-  if (!accessToken || !channelId) return;
-  try {
-    const response = await axiosInstance.get(
-      `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/participants`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    );
-    console.log("Réponse API participants:", response.data); // Affiche la réponse brute
-    const mappedParticipants = response.data.map((p: any) => {
-      console.log(`Participant ${p.userId} - Status: ${p.status || "OFFLINE"}`); // Affiche le statut de chaque participant
-      return {
-        id: p.id.toString(),
-        userId: p.userId,
-        role: p.role,
-        channelId: channelId as string,
-        joinedAt: p.joinedAt,
-        firstName: p.firstName,
-        lastName: p.lastName,
-        status: p.status || "OFFLINE", // Corrigé de "tatus" à "status"
-      };
-    });
-    setParticipants(mappedParticipants);
-  } catch (err: any) {
-    console.error("Erreur lors de la récupération des participants:", err); // Affiche l'erreur complète
-    setError(
-      err.response?.data?.message ||
-        "Erreur lors de la récupération des participants"
-    );
-  }
-};
+  const fetchParticipants = useCallback(async () => {
+    if (!accessToken || !channelId) return;
+    try {
+      const response = await axiosInstance.get(
+        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/participants`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      console.log("Réponse API participants:", response.data);
+      const mappedParticipants = response.data.map((p: RawParticipant) => {
+        console.log(
+          `Participant ${p.userId} - Status: ${p.status || "OFFLINE"}`
+        );
+        return {
+          id: p.id.toString(),
+          userId: p.userId,
+          role: p.role,
+          channelId: channelId as string,
+          joinedAt: p.joinedAt,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          status: p.status || "OFFLINE",
+        };
+      });
+      setParticipants(mappedParticipants);
+    } catch (err: unknown) {
+      console.error("Erreur lors de la récupération des participants:", err);
+      setError(
+        err instanceof AxiosError
+          ? err.response?.data?.message ||
+              "Erreur lors de la récupération des participants"
+          : "Erreur inconnue"
+      );
+    }
+  }, [accessToken, channelId, axiosInstance, setParticipants, setError]);
 
 useEffect(() => {
   if (showParticipantsPopup && accessToken && channelId) {
     fetchParticipants();
   }
-}, [showParticipantsPopup, accessToken, channelId]);
+}, [showParticipantsPopup, accessToken, channelId, fetchParticipants]);
 
 
 // Ajouter un participant
@@ -444,9 +485,11 @@ const addParticipant = async () => {
     fetchParticipants(); // Rafraîchir la liste
     setSuccessMessage("Participant ajouté !");
     setTimeout(() => setSuccessMessage(null), 3000);
-  } catch (err: any) {
+  } catch (err: unknown) {
     setError(
-      err.response?.data?.message || "Erreur lors de l'ajout du participant"
+      err instanceof AxiosError
+        ? err.response?.data?.message || "Erreur lors de l'ajout du participant"
+        : "Erreur inconnue"
     );
   }
 };
@@ -466,9 +509,12 @@ const removeParticipant = async (userId: string) => {
     fetchParticipants(); // Rafraîchir la liste
     setSuccessMessage("Participant retiré !");
     setTimeout(() => setSuccessMessage(null), 3000);
-  } catch (err: any) {
+  } catch (err: unknown) {
     setError(
-      err.response?.data?.message || "Erreur lors de la suppression du participant"
+      err instanceof AxiosError
+        ? err.response?.data?.message ||
+            "Erreur lors de la suppression du participant"
+        : "Erreur inconnue"
     );
   }
 };
@@ -499,7 +545,7 @@ useEffect(() => {
             }
           );
           setMessages(
-            response.data.map((msg: any) => ({
+            response.data.map((msg: RawMessage) => ({
               id: msg.id.toString(),
               channelId: msg.channelId.toString(),
               senderId: msg.senderId.toString(),
@@ -517,10 +563,12 @@ useEffect(() => {
               duration: msg.duration || null,
             }))
           );
-        } catch (err: any) {
+        } catch (err: unknown) {
           setError(
-            err.response?.data?.message ||
-              "Erreur lors de la récupération des messages"
+            err instanceof AxiosError
+              ? err.response?.data?.message ||
+                  "Erreur lors de la récupération des messages"
+              : "Erreur inconnue"
           );
         }
       }
@@ -568,7 +616,7 @@ useEffect(() => {
       setReplyingTo(null);
       setSuccessMessage("Message envoyé !");
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch {
       setError("Erreur lors de l'envoi du message");
     }
   };
@@ -635,11 +683,13 @@ useEffect(() => {
             lastName: response.data.lastName,
             email: response.data.email,
           });
-        } catch (err: any) {
+        } catch (err: unknown) {
           console.error("Failed to fetch current user:", err);
           setError(
-            err.response?.data?.message ||
-              "Erreur lors de la récupération de l'utilisateur"
+            err instanceof AxiosError
+              ? err.response?.data?.message ||
+                  "Erreur lors de la récupération de l'utilisateur"
+              : "Erreur inconnue"
           );
         }
       }
@@ -719,10 +769,12 @@ useEffect(() => {
         );
       }
       setShowReactionPicker(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message ||
-          "Erreur lors de la gestion de la réaction"
+        err instanceof AxiosError
+          ? err.response?.data?.message ||
+              "Erreur lors de la gestion de la réaction"
+          : "Erreur inconnue"
       );
       console.error("Erreur réaction:", err);
     }
@@ -777,13 +829,14 @@ useEffect(() => {
       setEditedMessageText("");
       setSuccessMessage("Message modifié !");
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message ||
-          "Erreur lors de la modification du message"
+        err instanceof AxiosError
+          ? err.response?.data?.message || "Erreur lors de la modification du message"
+          : "Erreur inconnue"
       );
     }
-  };
+  }
 
   const messageGroups = groupMessagesByDate(messages);
 
@@ -799,81 +852,108 @@ useEffect(() => {
       );
       setSuccessMessage("Message supprimé !");
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message ||
-          "Erreur lors de la suppression du message"
+        err instanceof AxiosError
+          ? err.response?.data?.message ||
+              "Erreur lors de la suppression du message"
+          : "Erreur inconnue"
       );
     }
   };
 
-const handleUploadFile = async (type: "IMAGE" | "FILE") => {
-  if (!fileInputRef.current || !channel || !currentUser || !stompClientRef.current) {
-    setError("Conditions non remplies pour l'envoi du fichier.");
-    return;
-  }
-
-  fileInputRef.current.accept = type === "IMAGE" ? "image/*" : "*/*";
-  fileInputRef.current.click();
-
-  fileInputRef.current.onchange = async () => {
-    if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
-      const file = fileInputRef.current.files[0];
-      const mimeType = file.type || (file.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "application/octet-stream");
-      const formData = new FormData();
-      formData.append("file", file);
-      if (replyingTo) {
-        formData.append("replyToId", replyingTo.id);
-      }
-
-      try {
-        const tempMessage: Message = {
-          id: `temp-${Date.now()}`,
-          channelId: channelId as string,
-          senderId: currentUser.id,
-          senderName: `${currentUser.firstName} ${currentUser.lastName}`,
-          text: file.name,
-          fileUrl: null,
-          mimeType: mimeType,
-          type,
-          createdAt: new Date().toISOString(),
-          replyToId: replyingTo ? replyingTo.id : null,
-          replyToText: replyingTo ? replyingTo.text : null,
-          replyToSenderName: replyingTo ? replyingTo.senderName : null,
-          pinned: false,
-          modified: false,
-        };
-
-        setMessages((prev) => [...prev, tempMessage]);
-
-        const response = await axiosInstance.post(
-          `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${type.toLowerCase()}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              "Content-Type": "multipart/form-data",
-            },
-          }
-        );
-
-        setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
-        setReplyingTo(null);
-        setSuccessMessage(`${type === "IMAGE" ? "Image" : "Fichier"} envoyé !`);
-        setTimeout(() => setSuccessMessage(null), 3000);
-      } catch (err: any) {
-        setError(
-          err.response?.data?.message || `Erreur lors de l'envoi du ${type.toLowerCase()}`
-        );
-        setMessages((prev) => prev.filter((msg) => msg.id !== tempMessage.id));
-        console.error(`Erreur envoi ${type.toLowerCase()}:`, err);
-      } finally {
-        fileInputRef.current.value = "";
-      }
+  const handleUploadFile = async (type: "IMAGE" | "FILE") => {
+    if (
+      !fileInputRef.current ||
+      !channel ||
+      !currentUser ||
+      !stompClientRef.current
+    ) {
+      setError("Conditions non remplies pour l'envoi du fichier.");
+      return;
     }
+
+    fileInputRef.current.accept = type === "IMAGE" ? "image/*" : "*/*";
+    fileInputRef.current.click();
+
+    fileInputRef.current.onchange = async () => {
+      if (
+        fileInputRef.current?.files &&
+        fileInputRef.current.files.length > 0
+      ) {
+        const file = fileInputRef.current.files[0];
+        const mimeType =
+          file.type ||
+          (file.name.toLowerCase().endsWith(".pdf")
+            ? "application/pdf"
+            : "application/octet-stream");
+        const formData = new FormData();
+        formData.append("file", file);
+        if (replyingTo) {
+          formData.append("replyToId", replyingTo.id);
+        }
+
+        let tempMessage: Message | null = null; // Initialize tempMessage outside try
+
+        try {
+          tempMessage = {
+            id: `temp-${Date.now()}`,
+            channelId: channelId as string,
+            senderId: currentUser.id,
+            senderName: `${currentUser.firstName} ${currentUser.lastName}`,
+            text: file.name,
+            fileUrl: null,
+            mimeType: mimeType,
+            type,
+            createdAt: new Date().toISOString(),
+            replyToId: replyingTo ? replyingTo.id : null,
+            replyToText: replyingTo ? replyingTo.text : null,
+            replyToSenderName: replyingTo ? replyingTo.senderName : null,
+            pinned: false,
+            modified: false,
+          };
+
+          setMessages((prev) => [...prev, tempMessage!]); // Add temp message
+
+          await axiosInstance.post(
+            `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/messages/${type.toLowerCase()}`,
+            formData,
+            {
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+
+          setMessages((prev) =>
+            prev.filter((msg) => msg.id !== tempMessage!.id)
+          ); // Remove temp message
+          setReplyingTo(null);
+          setSuccessMessage(
+            `${type === "IMAGE" ? "Image" : "Fichier"} envoyé !`
+          );
+          setTimeout(() => setSuccessMessage(null), 3000);
+        } catch (err: unknown) {
+          setError(
+            err instanceof AxiosError
+              ? err.response?.data?.message ||
+                  `Erreur lors de l'envoi du ${type.toLowerCase()}`
+              : "Erreur inconnue"
+          );
+          if (tempMessage) {
+            setMessages((prev) =>
+              prev.filter((msg) => msg.id !== tempMessage!.id)
+            ); // Remove temp message if it exists
+          }
+          console.error(`Erreur envoi ${type.toLowerCase()}:`, err);
+        } finally {
+          fileInputRef.current.value = "";
+        }
+      }
+    };
+    setShowOptionsMenu(false);
   };
-  setShowOptionsMenu(false);
-};
 
   const handleEmojiSelect = (emojiData: EmojiClickData) => {
     setNewMessage((prev) => prev + emojiData.emoji);
@@ -899,9 +979,12 @@ const handleUploadFile = async (type: "IMAGE" | "FILE") => {
       setTimeout(() => {
         router.push("/user/dashboard/collaboration");
       }, 2000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message || "Erreur lors de la suppression du canal"
+        err instanceof AxiosError
+          ? err.response?.data?.message ||
+              "Erreur lors de la suppression du canal"
+          : "Erreur inconnue"
       );
     }
     setShowActionMenu(false);
@@ -1118,9 +1201,12 @@ const handleUploadFile = async (type: "IMAGE" | "FILE") => {
       setRecordingTime(0);
       setSuccessMessage("Message audio envoyé !");
       setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err.response?.data?.message || "Erreur lors de l'envoi du message audio"
+        err instanceof AxiosError
+          ? err.response?.data?.message ||
+              "Erreur lors de l'envoi du message audio"
+          : "Erreur inconnue"
       );
       console.error("Erreur envoi audio:", err);
       if (tempMessage) {

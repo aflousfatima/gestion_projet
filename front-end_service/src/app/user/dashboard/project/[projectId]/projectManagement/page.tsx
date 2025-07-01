@@ -5,7 +5,7 @@ import useAxios from "../../../../../../hooks/useAxios";
 import "../../../../../../styles/ProjectManagement.css";
 import { useParams } from "next/navigation";
 import { PROJECT_SERVICE_URL } from "../../../../../../config/useApi";
-
+import { AxiosError } from "axios"; 
 interface Project {
   id: number;
   name: string;
@@ -233,11 +233,13 @@ const ProjectManagement: React.FC = () => {
             setPullRequests(pullRequestsResponse.data || []);
           }
         }
-      } catch (err: any) {
-        setError(
-          err.response?.data?.error ||
-            "Erreur lors du chargement des détails du projet"
-        );
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof AxiosError
+            ? err.response?.data?.error ||
+              "Erreur lors du chargement des détails du projet"
+            : "Erreur lors du chargement des détails du projet";
+        setError(errorMessage);
         setProject({ id: Number(projectId), name: "Projet Inconnu" });
       } finally {
         setLoading(false);
@@ -306,11 +308,13 @@ const ProjectManagement: React.FC = () => {
         );
         setPullRequests(pullRequestsResponse.data || []);
       }
-    } catch (err: any) {
-      setError(
-        err.response?.data?.error ||
-          "Erreur lors de la liaison du dépôt GitHub."
-      );
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof AxiosError
+          ? err.response?.data?.error ||
+            "Erreur lors de la liaison du dépôt GitHub."
+          : "Erreur lors de la liaison du dépôt GitHub.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -363,13 +367,17 @@ const ProjectManagement: React.FC = () => {
             {linkedRepository ? (
               <div className="linked-repo">
                 <span className="linked-icon">✔</span> Lié :{" "}
-                <a href={linkedRepository} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={linkedRepository}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   {linkedRepository}
                 </a>
               </div>
             ) : (
               <p className="section-description">
-                Entrez l'URL du dépôt GitHub à lier à ce projet (ex. :
+                Enter the GitHub repository URL to link to this project (e.g. :
                 https://github.com/owner/repo).
               </p>
             )}
@@ -402,19 +410,25 @@ const ProjectManagement: React.FC = () => {
           <>
             <div className="tabs">
               <button
-                className={`tab-github ${activeTab === "commits" ? "active" : ""}`}
+                className={`tab-github ${
+                  activeTab === "commits" ? "active" : ""
+                }`}
                 onClick={() => setActiveTab("commits")}
               >
                 <i className="fas fa-code-commit"></i> Commits
               </button>
               <button
-                className={`tab-github ${activeTab === "branches" ? "active" : ""}`}
+                className={`tab-github ${
+                  activeTab === "branches" ? "active" : ""
+                }`}
                 onClick={() => setActiveTab("branches")}
               >
                 <i className="fas fa-code-branch"></i> Branches
               </button>
               <button
-                className={`tab-github ${activeTab === "pulls" ? "active" : ""}`}
+                className={`tab-github ${
+                  activeTab === "pulls" ? "active" : ""
+                }`}
                 onClick={() => setActiveTab("pulls")}
               >
                 <i className="fas fa-code-pull-request"></i> Pull Requests
@@ -428,14 +442,20 @@ const ProjectManagement: React.FC = () => {
                     placeholder="Sort by author"
                     value={commitFilter.author}
                     onChange={(e) =>
-                      setCommitFilter({ ...commitFilter, author: e.target.value })
+                      setCommitFilter({
+                        ...commitFilter,
+                        author: e.target.value,
+                      })
                     }
                     className="filter-input"
                   />
                   <select
                     value={commitFilter.branch}
                     onChange={(e) =>
-                      setCommitFilter({ ...commitFilter, branch: e.target.value })
+                      setCommitFilter({
+                        ...commitFilter,
+                        branch: e.target.value,
+                      })
                     }
                     className="filter-select"
                   >
@@ -450,7 +470,10 @@ const ProjectManagement: React.FC = () => {
                     type="datetime-local"
                     value={commitFilter.since}
                     onChange={(e) =>
-                      setCommitFilter({ ...commitFilter, since: e.target.value })
+                      setCommitFilter({
+                        ...commitFilter,
+                        since: e.target.value,
+                      })
                     }
                     className="filter-input"
                   />
@@ -458,7 +481,10 @@ const ProjectManagement: React.FC = () => {
                     type="datetime-local"
                     value={commitFilter.until}
                     onChange={(e) =>
-                      setCommitFilter({ ...commitFilter, until: e.target.value })
+                      setCommitFilter({
+                        ...commitFilter,
+                        until: e.target.value,
+                      })
                     }
                     className="filter-input"
                   />
@@ -469,7 +495,10 @@ const ProjectManagement: React.FC = () => {
                       <div key={commit.sha} className="commit-card">
                         <div className="commit-header">
                           <img
-                            src={commit.author?.avatar_url || "https://via.placeholder.com/40"}
+                            src={
+                              commit.author?.avatar_url ||
+                              "https://via.placeholder.com/40"
+                            }
                             alt="Author"
                             className="commit-avatar"
                           />
@@ -482,19 +511,26 @@ const ProjectManagement: React.FC = () => {
                             >
                               <span
                                 dangerouslySetInnerHTML={{
-                                  __html: parseIssueReferences(commit.commit.message),
+                                  __html: parseIssueReferences(
+                                    commit.commit.message
+                                  ),
                                 }}
                               />
                             </a>
                             <div className="commit-meta">
-                              <span className="commit-sha">{commit.sha.slice(0, 7)}</span>
+                              <span className="commit-sha">
+                                {commit.sha.slice(0, 7)}
+                              </span>
                               <span>by {commit.commit.author.name}</span>
-                              <span>on {formatDateTime(commit.commit.author.date)}</span>
+                              <span>
+                                on {formatDateTime(commit.commit.author.date)}
+                              </span>
                             </div>
                           </div>
                           <button
                             onClick={() => {
-                              const repoDetails = extractOwnerAndRepo(linkedRepository);
+                              const repoDetails =
+                                extractOwnerAndRepo(linkedRepository);
                               if (repoDetails) {
                                 const [owner, repo] = repoDetails;
                                 fetchCommitDetails(owner, repo, commit.sha);
@@ -509,18 +545,21 @@ const ProjectManagement: React.FC = () => {
                           <div className="commit-details">
                             <h4>Fichiers modifiés:</h4>
                             <ul>
-                              {commitDetails.get(commit.sha)?.files.map((file) => (
-                                <li key={file.filename} className="file-item">
-                                  <span>{file.filename}</span>
-                                  <span className="file-stats">
-                                    (+{file.additions}/-{file.deletions})
-                                  </span>
-                                  <pre className="diff">{file.patch}</pre>
-                                </li>
-                              ))}
+                              {commitDetails
+                                .get(commit.sha)
+                                ?.files.map((file) => (
+                                  <li key={file.filename} className="file-item">
+                                    <span>{file.filename}</span>
+                                    <span className="file-stats">
+                                      (+{file.additions}/-{file.deletions})
+                                    </span>
+                                    <pre className="diff">{file.patch}</pre>
+                                  </li>
+                                ))}
                             </ul>
                             <p className="commit-stats">
-                              Total: +{commitDetails.get(commit.sha)?.stats.additions}/-
+                              Total: +
+                              {commitDetails.get(commit.sha)?.stats.additions}/-
                               {commitDetails.get(commit.sha)?.stats.deletions}
                             </p>
                           </div>
@@ -533,44 +572,57 @@ const ProjectManagement: React.FC = () => {
                 )}
               </div>
             )}
-          {activeTab === "branches" && (
-  <div className="branches-section">
-    {branches.length > 0 ? (
-      <div className="branch-tree">
-        <div className="tree-trunk">
-          <span className="trunk-label">Main</span>
-        </div>
-        <div className="branch-nodes">
-          {branches.map((branch, index) => (
-            <div key={branch.name} className="branch-node" style={{ top: `${index * 80 + 50}px` }}>
-              <div className="branch-connector" style={{ height: `${index * 80 + 30}px` }}></div>
-              <div
-                className={`node ${
-                  branch.name.toLowerCase().includes("main") || branch.name.toLowerCase().includes("master")
-                    ? "main-branch"
-                    : branch.protected
-                    ? "protected-branch"
-                    : branch.merged
-                    ? "merged-branch"
-                    : ""
-                }`}
-              >
-                <span className="branch-name">{branch.name}</span>
-                <div className="branch-badges">
-                  {branch.protected && <span className="badge protected">Protected</span>}
-                  {branch.merged && <span className="badge merged">Merged</span>}
-                </div>
-         
+            {activeTab === "branches" && (
+              <div className="branches-section">
+                {branches.length > 0 ? (
+                  <div className="branch-tree">
+                    <div className="tree-trunk">
+                      <span className="trunk-label">Main</span>
+                    </div>
+                    <div className="branch-nodes">
+                      {branches.map((branch, index) => (
+                        <div
+                          key={branch.name}
+                          className="branch-node"
+                          style={{ top: `${index * 80 + 50}px` }}
+                        >
+                          <div
+                            className="branch-connector"
+                            style={{ height: `${index * 80 + 30}px` }}
+                          ></div>
+                          <div
+                            className={`node ${
+                              branch.name.toLowerCase().includes("main") ||
+                              branch.name.toLowerCase().includes("master")
+                                ? "main-branch"
+                                : branch.protected
+                                ? "protected-branch"
+                                : branch.merged
+                                ? "merged-branch"
+                                : ""
+                            }`}
+                          >
+                            <span className="branch-name">{branch.name}</span>
+                            <div className="branch-badges">
+                              {branch.protected && (
+                                <span className="badge protected">
+                                  Protected
+                                </span>
+                              )}
+                              {branch.merged && (
+                                <span className="badge merged">Merged</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="no-data">No branches found.</p>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    ) : (
-      <p className="no-data">No branches found.</p>
-    )}
-  </div>
-)}
+            )}
             {activeTab === "pulls" && (
               <div className="pull-requests-section">
                 <div className="filter-section">
@@ -604,20 +656,30 @@ const ProjectManagement: React.FC = () => {
                               #{pr.number} {pr.title}
                             </a>
                             <div className="pr-meta">
-                              <span className={`pr-status ${pr.state.toLowerCase()}`}>
+                              <span
+                                className={`pr-status ${pr.state.toLowerCase()}`}
+                              >
                                 {pr.state}
                               </span>
                               <span>by {pr.user.login}</span>
                               <span>on {formatDateTime(pr.created_at)}</span>
-                              <span> From {pr.head.ref} To {pr.base.ref}</span>
+                              <span>
+                                {" "}
+                                From {pr.head.ref} To {pr.base.ref}
+                              </span>
                             </div>
                           </div>
                           <button
                             onClick={() => {
-                              const repoDetails = extractOwnerAndRepo(linkedRepository);
+                              const repoDetails =
+                                extractOwnerAndRepo(linkedRepository);
                               if (repoDetails) {
                                 const [owner, repo] = repoDetails;
-                                fetchPullRequestDetails(owner, repo, pr.number.toString());
+                                fetchPullRequestDetails(
+                                  owner,
+                                  repo,
+                                  pr.number.toString()
+                                );
                               }
                             }}
                             className="details-button"
@@ -629,11 +691,14 @@ const ProjectManagement: React.FC = () => {
                           <div className="pr-details">
                             <h4>Commits:</h4>
                             <ul>
-                              {prDetails.get(pr.number)?.commits.map((commit) => (
-                                <li key={commit.sha} className="commit-item">
-                                  {commit.sha.slice(0, 7)}: {commit.commit.message}
-                                </li>
-                              ))}
+                              {prDetails
+                                .get(pr.number)
+                                ?.commits.map((commit) => (
+                                  <li key={commit.sha} className="commit-item">
+                                    {commit.sha.slice(0, 7)}:{" "}
+                                    {commit.commit.message}
+                                  </li>
+                                ))}
                             </ul>
                             <h4>Fichiers modifiés:</h4>
                             <ul>
@@ -649,21 +714,25 @@ const ProjectManagement: React.FC = () => {
                             </ul>
                             <h4>Révisions:</h4>
                             <ul>
-                              {prDetails.get(pr.number)?.reviews.map((review, index) => (
-                                <li key={index} className="review-item">
-                                  {review.user.login}: {review.state} (
-                                  {formatDateTime(review.submitted_at)})
-                                </li>
-                              ))}
+                              {prDetails
+                                .get(pr.number)
+                                ?.reviews.map((review, index) => (
+                                  <li key={index} className="review-item">
+                                    {review.user.login}: {review.state} (
+                                    {formatDateTime(review.submitted_at)})
+                                  </li>
+                                ))}
                             </ul>
                             <h4>Historique:</h4>
                             <ul>
-                              {prDetails.get(pr.number)?.events.map((event, index) => (
-                                <li key={index} className="event-item">
-                                  {event.event} par {event.actor.login} le{" "}
-                                  {formatDateTime(event.created_at)}
-                                </li>
-                              ))}
+                              {prDetails
+                                .get(pr.number)
+                                ?.events.map((event, index) => (
+                                  <li key={index} className="event-item">
+                                    {event.event} par {event.actor.login} le{" "}
+                                    {formatDateTime(event.created_at)}
+                                  </li>
+                                ))}
                             </ul>
                           </div>
                         )}

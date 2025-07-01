@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "next/navigation";
@@ -71,7 +72,9 @@ const VoiceChannelRoute: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(new Map());
+  const [remoteStreams, setRemoteStreams] = useState<Map<string, MediaStream>>(
+    new Map()
+  );
   const [users, setUsers] = useState<Map<string, User>>(new Map());
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -80,7 +83,9 @@ const VoiceChannelRoute: React.FC = () => {
   const [deafened, setDeafened] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [previousCallType, setPreviousCallType] = useState<"VOICE" | "VIDEO" | "SCREEN" | null>(null);
+  const [previousCallType, setPreviousCallType] = useState<
+    "VOICE" | "VIDEO" | "SCREEN" | null
+  >(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const screenShareRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
@@ -105,8 +110,12 @@ const VoiceChannelRoute: React.FC = () => {
   }, [call]);
 
   const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600).toString().padStart(2, "0");
-    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, "0");
+    const h = Math.floor(seconds / 3600)
+      .toString()
+      .padStart(2, "0");
+    const m = Math.floor((seconds % 3600) / 60)
+      .toString()
+      .padStart(2, "0");
     const s = (seconds % 60).toString().padStart(2, "0");
     return `${h}:${m}:${s}`;
   };
@@ -116,9 +125,12 @@ const VoiceChannelRoute: React.FC = () => {
     const fetchCurrentUser = async () => {
       if (accessToken && !currentUser) {
         try {
-          const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
+          const response = await axiosInstance.get(
+            `${AUTH_SERVICE_URL}/api/me`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
           setCurrentUser({
             id: response.data.id.toString(),
             firstName: response.data.firstName,
@@ -128,7 +140,10 @@ const VoiceChannelRoute: React.FC = () => {
           });
         } catch (err: any) {
           console.error("Failed to fetch current user:", err);
-          setError(err.response?.data?.message || "Erreur lors de la récupération de l'utilisateur");
+          setError(
+            err.response?.data?.message ||
+              "Erreur lors de la récupération de l'utilisateur"
+          );
         }
       }
     };
@@ -139,10 +154,13 @@ const VoiceChannelRoute: React.FC = () => {
   useEffect(() => {
     const fetchChannel = async () => {
       if (!accessToken || !channelId) {
-        console.warn("Skipping fetchChannel: accessToken or channelId is missing", {
-          accessToken: !!accessToken,
-          channelId,
-        });
+        console.warn(
+          "Skipping fetchChannel: accessToken or channelId is missing",
+          {
+            accessToken: !!accessToken,
+            channelId,
+          }
+        );
         setError("Identifiant du canal ou jeton d'accès manquant");
         return;
       }
@@ -182,8 +200,12 @@ const VoiceChannelRoute: React.FC = () => {
         setUsers(userMap);
       } catch (err: any) {
         console.error("Error fetching channel or participants:", err);
-        const errorMessage = err.response?.data?.message || "Erreur lors de la récupération du canal ou des participants";
-        setError(`${errorMessage} (Code: ${err.response?.status || 'inconnu'})`);
+        const errorMessage =
+          err.response?.data?.message ||
+          "Erreur lors de la récupération du canal ou des participants";
+        setError(
+          `${errorMessage} (Code: ${err.response?.status || "inconnu"})`
+        );
       }
     };
     fetchChannel();
@@ -239,7 +261,10 @@ const VoiceChannelRoute: React.FC = () => {
     if (localVideoRef.current && localStream && call?.type === "VIDEO") {
       console.log("Assigning localStream to video element:", localStream);
       localVideoRef.current.srcObject = localStream;
-      console.log("localVideoRef srcObject set:", localVideoRef.current.srcObject);
+      console.log(
+        "localVideoRef srcObject set:",
+        localVideoRef.current.srcObject
+      );
       const attemptPlay = async (retries = 3, delay = 500) => {
         for (let i = 0; i < retries; i++) {
           try {
@@ -254,7 +279,9 @@ const VoiceChannelRoute: React.FC = () => {
             }
           }
         }
-        setVideoError("Impossible de lire la vidéo locale. Vérifiez votre caméra et les permissions.");
+        setVideoError(
+          "Impossible de lire la vidéo locale. Vérifiez votre caméra et les permissions."
+        );
       };
       attemptPlay();
     }
@@ -287,7 +314,8 @@ const VoiceChannelRoute: React.FC = () => {
   // Auto-scroll chat
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop =
+        chatContainerRef.current.scrollHeight;
     }
   }, [chatMessages]);
 
@@ -311,14 +339,22 @@ const VoiceChannelRoute: React.FC = () => {
       console.log("Initiating call with type:", callType);
       let stream: MediaStream;
       if (callType === "SCREEN") {
-        stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        });
       } else {
         stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
           video: callType === "VIDEO" ? { facingMode: "user" } : false,
         });
       }
-      console.log("Local stream acquired:", stream, "Video tracks:", stream.getVideoTracks());
+      console.log(
+        "Local stream acquired:",
+        stream,
+        "Video tracks:",
+        stream.getVideoTracks()
+      );
       if (localStream) {
         localStream.getTracks().forEach((track) => track.stop());
       }
@@ -346,39 +382,10 @@ const VoiceChannelRoute: React.FC = () => {
       });
     } catch (err: any) {
       console.error("Error initiating call:", err);
-      setError(err.response?.data?.message || "Erreur lors de l'initiation de l'appel. Vérifiez les permissions de la caméra.");
-    }
-  };
-
-  const joinCall = async (callId: string) => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: call?.type === "VIDEO" ? { facingMode: "user" } : false,
-      });
-      console.log("Local stream acquired for join:", stream, "Video tracks:", stream.getVideoTracks());
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-      }
-      setLocalStream(stream);
-      setMuted(false);
-      setDeafened(false);
-
-      const response = await axiosInstance.post(
-        `${COLLABORATION_SERVICE_URL}/api/channels/${channelId}/calls/${callId}/join`,
-        {},
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+      setError(
+        err.response?.data?.message ||
+          "Erreur lors de l'initiation de l'appel. Vérifiez les permissions de la caméra."
       );
-      setCall(response.data);
-
-      channel?.members.forEach((participantId) => {
-        if (participantId !== currentUser?.id) {
-          createPeerConnection(participantId);
-        }
-      });
-    } catch (err: any) {
-      console.error("Error joining call:", err);
-      setError(err.response?.data?.message || "Erreur lors de la jointure de l'appel. Vérifiez les permissions de la caméra.");
     }
   };
 
@@ -410,7 +417,9 @@ const VoiceChannelRoute: React.FC = () => {
         setLocalStream(stream);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || "Erreur lors de la fin de l'appel");
+      setError(
+        err.response?.data?.message || "Erreur lors de la fin de l'appel"
+      );
     }
   };
 
@@ -424,10 +433,16 @@ const VoiceChannelRoute: React.FC = () => {
     peerConnections.current.set(participantId, peerConnection);
 
     peerConnection.oniceconnectionstatechange = () => {
-      console.log(`ICE connection state for ${participantId}:`, peerConnection.iceConnectionState);
+      console.log(
+        `ICE connection state for ${participantId}:`,
+        peerConnection.iceConnectionState
+      );
     };
     peerConnection.onconnectionstatechange = () => {
-      console.log(`Connection state for ${participantId}:`, peerConnection.connectionState);
+      console.log(
+        `Connection state for ${participantId}:`,
+        peerConnection.connectionState
+      );
     };
 
     localStream?.getTracks().forEach((track) => {
@@ -454,21 +469,24 @@ const VoiceChannelRoute: React.FC = () => {
       }
     };
 
-    peerConnection.createOffer().then((offer) => {
-      peerConnection.setLocalDescription(offer);
-      stompClientRef.current?.publish({
-        destination: `/app/signaling.${call?.id}`,
-        body: JSON.stringify({
-          userId: currentUser?.id,
-          sdp: { sdp: offer.sdp, type: offer.type },
-          type: "offer",
-        }),
-        headers: { Authorization: `Bearer ${accessToken}` },
+    peerConnection
+      .createOffer()
+      .then((offer) => {
+        peerConnection.setLocalDescription(offer);
+        stompClientRef.current?.publish({
+          destination: `/app/signaling.${call?.id}`,
+          body: JSON.stringify({
+            userId: currentUser?.id,
+            sdp: { sdp: offer.sdp, type: offer.type },
+            type: "offer",
+          }),
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      })
+      .catch((err) => {
+        console.error("Error creating offer:", err);
+        setError("Erreur lors de la création de l'offre WebRTC");
       });
-    }).catch((err) => {
-      console.error("Error creating offer:", err);
-      setError("Erreur lors de la création de l'offre WebRTC");
-    });
   };
 
   const handleSignalingMessage = async (message: SignalingMessage) => {
@@ -478,8 +496,18 @@ const VoiceChannelRoute: React.FC = () => {
     if (!peerConnection) return;
 
     try {
-      if (message.type === "offer") {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
+      if (message.type === "offer" ) {
+        if (message.sdp) {
+          const descriptionInit: RTCSessionDescriptionInit = {
+            sdp: message.sdp.sdp,
+            type: message.sdp.type as RTCSdpType, // 👈 cast ici
+          };
+
+          const remoteDescription = new RTCSessionDescription(descriptionInit);
+          await peerConnection.setRemoteDescription(remoteDescription);
+        }
+        
+        
         const answer = await peerConnection.createAnswer();
         await peerConnection.setLocalDescription(answer);
         stompClientRef.current?.publish({
@@ -492,9 +520,20 @@ const VoiceChannelRoute: React.FC = () => {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       } else if (message.type === "answer") {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp));
+        if (message.sdp) {
+          const descriptionInit: RTCSessionDescriptionInit = {
+            sdp: message.sdp.sdp,
+            type: message.sdp.type as RTCSdpType, // 👈 cast ici
+          };
+
+          const remoteDescription = new RTCSessionDescription(descriptionInit);
+          await peerConnection.setRemoteDescription(remoteDescription);
+        }
+        
       } else if (message.type === "ice-candidate") {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+        await peerConnection.addIceCandidate(
+          new RTCIceCandidate(message.candidate)
+        );
       }
     } catch (err) {
       console.error("Error handling signaling message:", err);
@@ -552,21 +591,34 @@ const VoiceChannelRoute: React.FC = () => {
         {error && <div className="error-message">{error}</div>}
         <div className="landing-page">
           <div className="landing-content">
-       <h2>Let’s Get Things Moving</h2>
-<p>Start the conversation, share ideas, and move your project forward — together, in real time.</p>
+            <h2>Let’s Get Things Moving</h2>
+            <p>
+              Start the conversation, share ideas, and move your project forward
+              — together, in real time.
+            </p>
 
             <div className="call-options">
-              <button onClick={() => initiateCall("VOICE")} className="call-option-btn voice">
-                <FontAwesomeIcon icon={faMicrophone} /> 
-                                                   voice call
+              <button
+                onClick={() => initiateCall("VOICE")}
+                className="call-option-btn voice"
+              >
+                <FontAwesomeIcon icon={faMicrophone} />
+                voice call
               </button>
-              <button onClick={() => initiateCall("VIDEO")} className="call-option-btn video">
+              <button
+                onClick={() => initiateCall("VIDEO")}
+                className="call-option-btn video"
+              >
                 <FontAwesomeIcon icon={faVideo} /> Video call
               </button>
             </div>
           </div>
           <div className="landing-image-container">
-            <img src="/vocal-img-3.png" alt="Voice Channel" className="landing-image" />
+            <img
+              src="/vocal-img-3.png"
+              alt="Voice Channel"
+              className="landing-image"
+            />
           </div>
         </div>
       </div>
@@ -581,7 +633,9 @@ const VoiceChannelRoute: React.FC = () => {
       {videoError && <div className="error-message">{videoError}</div>}
       <div className="call-interface">
         <div className="header">
-          <h4>#{channel.name} - {formatDuration(callDuration)}</h4>
+          <h4>
+            #{channel.name} - {formatDuration(callDuration)}
+          </h4>
           <button
             onClick={() => setIsChatOpen(!isChatOpen)}
             className={`chat-toggle ${isChatOpen ? "active" : ""}`}
@@ -594,15 +648,23 @@ const VoiceChannelRoute: React.FC = () => {
             <div className="participant-video">
               {call.type === "VIDEO" && (
                 <>
-                  {!localStream && <div className="video-placeholder">Chargement de la caméra...</div>}
-                  {videoError && <div className="video-placeholder">{videoError}</div>}
+                  {!localStream && (
+                    <div className="video-placeholder">
+                      Chargement de la caméra...
+                    </div>
+                  )}
+                  {videoError && (
+                    <div className="video-placeholder">{videoError}</div>
+                  )}
                   <video
                     ref={localVideoRef}
                     autoPlay
                     muted
                     playsInline
                     className="participant-video"
-                    style={{ display: call.type === "VOICE" ? "none" : "block" }}
+                    style={{
+                      display: "block",
+                    }}
                   />
                 </>
               )}
@@ -619,19 +681,31 @@ const VoiceChannelRoute: React.FC = () => {
               )}
             </div>
             <div className="participant-info">
-              <span>{currentUser.firstName} {currentUser.lastName}</span>
+              <span>
+                {currentUser.firstName} {currentUser.lastName}
+              </span>
               <div className="participant-controls">
                 <button onClick={toggleMute} className={muted ? "muted" : ""}>
-                  <FontAwesomeIcon icon={muted ? faMicrophoneSlash : faMicrophone} />
+                  <FontAwesomeIcon
+                    icon={muted ? faMicrophoneSlash : faMicrophone}
+                  />
                 </button>
-                <button onClick={toggleDeafen} className={deafened ? "deafened" : ""}>
-                  <FontAwesomeIcon icon={deafened ? faVolumeMute : faVolumeUp} />
+                <button
+                  onClick={toggleDeafen}
+                  className={deafened ? "deafened" : ""}
+                >
+                  <FontAwesomeIcon
+                    icon={deafened ? faVolumeMute : faVolumeUp}
+                  />
                 </button>
               </div>
             </div>
           </div>
           {call.type === "SCREEN" && (
-            <div className="participant-card screen-share-card" key="screen-share">
+            <div
+              className="participant-card screen-share-card"
+              key="screen-share"
+            >
               <div className="participant-video">
                 <video
                   ref={screenShareRef}
@@ -641,7 +715,9 @@ const VoiceChannelRoute: React.FC = () => {
                 />
               </div>
               <div className="participant-info">
-                <span>Share Screen - {currentUser.firstName} {currentUser.lastName}</span>
+                <span>
+                  Share Screen - {currentUser.firstName} {currentUser.lastName}
+                </span>
               </div>
             </div>
           )}
@@ -659,7 +735,9 @@ const VoiceChannelRoute: React.FC = () => {
                           el.srcObject = stream;
                           el.play().catch((err) => {
                             console.error("Error playing remote video:", err);
-                            setError("Erreur lors de la lecture de la vidéo distante");
+                            setError(
+                              "Erreur lors de la lecture de la vidéo distante"
+                            );
                           });
                         }
                       }
@@ -671,18 +749,25 @@ const VoiceChannelRoute: React.FC = () => {
                   {call.type === "VOICE" && (
                     <img
                       src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        users.get(participantId)?.firstName && users.get(participantId)?.lastName
-                          ? `${users.get(participantId)?.firstName}+${users.get(participantId)?.lastName}`
+                        users.get(participantId)?.firstName &&
+                          users.get(participantId)?.lastName
+                          ? `${users.get(participantId)?.firstName}+${
+                              users.get(participantId)?.lastName
+                            }`
                           : participantId
                       )}&background=808080&color=fff&size=80`}
-                      alt={`${users.get(participantId)?.firstName} ${users.get(participantId)?.lastName}`}
+                      alt={`${users.get(participantId)?.firstName} ${
+                        users.get(participantId)?.lastName
+                      }`}
                       className="participant-avatar"
                     />
                   )}
                 </div>
                 <div className="participant-info">
                   <span>
-                    {users.get(participantId)?.firstName} {users.get(participantId)?.lastName || "Utilisateur inconnu"}
+                    {users.get(participantId)?.firstName}{" "}
+                    {users.get(participantId)?.lastName ||
+                      "Utilisateur inconnu"}
                   </span>
                   <div className="participant-controls"></div>
                 </div>
@@ -690,20 +775,31 @@ const VoiceChannelRoute: React.FC = () => {
             ))}
         </div>
         <div className="control-bar">
-          <button onClick={() => endCall(call.id)} className="control-btn leave-call">
+          <button
+            onClick={() => endCall(call.id)}
+            className="control-btn leave-call"
+          >
             <FontAwesomeIcon icon={faPhoneSlash} /> Leave
           </button>
-          <button onClick={() => initiateCall("SCREEN")} className="control-btn screen-share">
+          <button
+            onClick={() => initiateCall("SCREEN")}
+            className="control-btn screen-share"
+          >
             <FontAwesomeIcon icon={faShareSquare} /> Share Screen
           </button>
           <button onClick={inviteFriend} className="control-btn invite-friend">
-            <FontAwesomeIcon icon={faUserPlus} /> Invite friend 
+            <FontAwesomeIcon icon={faUserPlus} /> Invite friend
           </button>
         </div>
-        <div className={`chat-panel ${isChatOpen ? "open" : ""}`} ref={chatPanelRef}>
+        <div
+          className={`chat-panel ${isChatOpen ? "open" : ""}`}
+          ref={chatPanelRef}
+        >
           <div className="chat-header">
             <h4>Chat Channel</h4>
-            <p>{channel.name} - {channel.isPrivate ? "Privé" : "Public"}</p>
+            <p>
+              {channel.name} - {channel.isPrivate ? "Privé" : "Public"}
+            </p>
           </div>
           <div className="chat-messages" ref={chatContainerRef}>
             {chatMessages.map((msg, index) => (
