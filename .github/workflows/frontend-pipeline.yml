@@ -21,37 +21,41 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Step 2: Configure Node.js
+      # Step 2: Debug - List files in front-end_service
+      - name: List Files in front-end_service
+        run: ls -l
+
+      # Step 3: Configure Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22.11'
 
-      # Step 3: Install dependencies
+      # Step 4: Install dependencies
       - name: Install Dependencies
         run: npm ci
 
-      # Step 4: Check vulnerabilities
+      # Step 5: Check vulnerabilities
       - name: Check Dependencies for Vulnerabilities
         run: npm audit --audit-level=high
         continue-on-error: true
 
-      # Step 5: Static analysis with ESLint
+      # Step 6: Static analysis with ESLint
       - name: Run ESLint Security Scan
         run: npm run lint
         continue-on-error: true
 
-      # Step 6: Build Next.js app
+      # Step 7: Build Next.js app
       - name: Build Next.js App
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
-      # Step 7: Run tests
+      # Step 8: Run tests
       - name: Run Tests
         run: npm run test
 
-      # Step 8: Log in to GitHub Container Registry
+      # Step 9: Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push'
         uses: docker/login-action@v3
@@ -60,13 +64,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 9: Build and push Docker image
+      # Step 10: Build and push Docker image
       - name: Build and Push Docker Image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
-          context: ./front-end_service 
-          file: ./front-end_service/Dockerfile 
+          context: ./front-end_service
+          file: ./front-end_service/Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
           platforms: linux/amd64
