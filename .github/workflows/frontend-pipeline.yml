@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./front-end_service  # Set working directory
+        working-directory: ./front-end_service
     steps:
       # Step 1: Clone the code source
       - name: Checkout Source Code
@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18.x'
+          node-version: '22.11'
 
       # Step 3: Install dependencies
       - name: Install Dependencies
@@ -65,8 +65,8 @@ jobs:
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
-          context: ./front-end_service  # Adjust context to front-end_service
-          file: ./front-end_service/Dockerfile  # Adjust path to Dockerfile
+          context: ./front-end_service 
+          file: ./front-end_service/Dockerfile 
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
           platforms: linux/amd64
