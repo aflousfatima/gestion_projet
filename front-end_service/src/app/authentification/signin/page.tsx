@@ -16,7 +16,7 @@ export default function SigninPage() {
     email: "",
     password: "",
   });
-  const router = useRouter(); // Initialisation de useRouter pour la redirection
+  const router = useRouter();
   const { login } = useAuth(); // Utilisation du contexte Auth pour accéder à la fonction login
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({
     text: "",
