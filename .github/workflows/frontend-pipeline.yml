@@ -13,41 +13,45 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front-end_service  # Set working directory
     steps:
-      # Étape 1 : Cloner le code source
+      # Step 1: Clone the code source
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Étape 2 : Configurer Node.js
+      # Step 2: Configure Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '18.x'
 
-      # Étape 3 : Installer les dépendances
+      # Step 3: Install dependencies
       - name: Install Dependencies
         run: npm ci
 
-      # Étape 4 : Vérifier les vulnérabilités des dépendances
+      # Step 4: Check vulnerabilities
       - name: Check Dependencies for Vulnerabilities
         run: npm audit --audit-level=high
         continue-on-error: true
 
-      # Étape 5 : Analyse statique avec ESLint
+      # Step 5: Static analysis with ESLint
       - name: Run ESLint Security Scan
         run: npm run lint
         continue-on-error: true
 
-      # Étape 6 : Construire l'application Next.js
+      # Step 6: Build Next.js app
       - name: Build Next.js App
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-      # Étape 7 : Exécuter les tests 
+
+      # Step 7: Run tests
       - name: Run Tests
         run: npm run test
-      
-      # Étape 8 : Configurer Docker pour GHCR
+
+      # Step 8: Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push'
         uses: docker/login-action@v3
@@ -56,13 +60,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Étape 8 : Construire et pousser l'image Docker
+      # Step 9: Build and push Docker image
       - name: Build and Push Docker Image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./front-end_service  # Adjust context to front-end_service
+          file: ./front-end_service/Dockerfile  # Adjust path to Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
           platforms: linux/amd64
