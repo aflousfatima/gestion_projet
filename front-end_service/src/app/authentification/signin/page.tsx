@@ -23,7 +23,7 @@ export default function SigninPage() {
     type: null,
   });
   useEffect(() => {
-    router.prefetch("/company-registration"); // Précharge la page en cache
+    router.prefetch("/company-registration"); 
   }, [router]);
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
