@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import Navbar from './Navbar';
 
-// Ajoute jest-axe au matcher pour les tests d'accessibilité
 expect.extend(toHaveNoViolations);
 
 // Mock de next/link pour capturer les props href
