@@ -3,7 +3,8 @@ name: CI/CD with DevSecOps and Docker for Next.js
 permissions:
   contents: read
   packages: write
-  
+  security-events: write
+
 on:
   push:
     branches: [main]
@@ -15,51 +16,133 @@ on:
       - 'front-end_service/**'
 
 jobs:
-  build-and-deploy:
+  setup-dependencies:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./front-end_service
     steps:
-      # Step 1: Clone the code source
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
-      # Step 2: Debug - List files in front-end_service
       - name: List Files in front-end_service
         run: ls -l
 
-      # Step 3: Configure Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '22.11'
 
-      # Step 4: Install dependencies
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ./front-end_service/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('front-end_service/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: Install Dependencies
         run: npm ci
 
-      # Step 5: Check vulnerabilities
+  security-analysis:
+    needs: setup-dependencies
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front-end_service
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ./front-end_service/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('front-end_service/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: Check Dependencies for Vulnerabilities
         run: npm audit --audit-level=high
         continue-on-error: true
 
-      # Step 6: Static analysis with ESLint
       - name: Run ESLint Security Scan
         run: npm run lint
         continue-on-error: true
 
-      # Step 7: Build Next.js app
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          projectBaseDir: ./front-end_service
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          npm install -g @cyclonedx/cyclonedx-npm
+          cyclonedx-npm --output-file bom.json
+        working-directory: ./front-end_service
+
+      - name: Submit SBOM to GitHub Dependency Graph
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          format: 'github'
+          output: 'dependency-results.sbom.json'
+          github-pat: ${{ secrets.GITHUB_TOKEN }}
+          scan-dir: './front-end_service'
+
+  build-test:
+    needs: setup-dependencies
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front-end_service
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Restore npm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ./front-end_service/node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('front-end_service/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+
       - name: Build Next.js App
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
-      # Step 8: Run tests
       - name: Run Tests
         run: npm run test
 
-      # Step 9: Log in to GitHub Container Registry
+      - name: Run k6 Performance Tests
+        uses: grafana/k6-action@v0.3.1
+        with:
+          path: ./front-end_service/load-test.js
+          flags: --vus 10 --duration 30s
+        env:
+          K6_TEST_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+  docker-build-scan:
+    needs: build-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front-end_service
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push'
         uses: docker/login-action@v3
@@ -68,8 +151,64 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 10: Build and push Docker image
-      - name: Build and Push Docker Image
+      - name: Build Docker Image
+        id: docker_build
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front-end_service
+          file: ./front-end_service/Dockerfile
+          push: false
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
+          platforms: linux/amd64
+          outputs: type=docker
+
+      - name: Run Trivy Vulnerability Scanner
+        if: github.event_name == 'push'
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}:${{ github.sha }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy Scan Results to GitHub Security
+        if: github.event_name == 'push'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ./front-end_service/trivy-results.sarif
+
+  docker-sign-push:
+    needs: docker-build-scan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front-end_service
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Cosign
+        if: github.event_name == 'push'
+        uses: sigstore/cosign-installer@v3.7.0
+
+      - name: Sign Docker Image
+        if: github.event_name == 'push'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          cosign sign --key env://COSIGN_PRIVATE_KEY ghcr.io/${{ github.repository }}:${{ github.sha }}
+
+      - name: Push Docker Image
         if: github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
@@ -78,3 +217,20 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
           platforms: linux/amd64
+
+  notify:
+    needs: [setup-dependencies, security-analysis, build-test, docker-build-scan, docker-sign-push]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
+          channel-id: 'general'
+          text: |
+            *GitHub Actions Workflow*: ${{ github.workflow }}
+            *Status*: ${{ job.status }}
+            *Repository*: ${{ github.repository }}
+            *Commit*: ${{ github.sha }}
+            *Run URL*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
