@@ -209,9 +209,7 @@ jobs:
           COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
           COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
         run: |
-          cosign sign --key env://COSIGN_PRIVATE_KEY ghcr.io/${{ github.repository }}:${{ github.sha }}
-
-
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY ghcr.io/${{ github.repository }}:${{ github.sha }}
 
   notify:
     needs: [setup-dependencies, security-analysis, build-test, docker-build-scan, docker-sign-push]
@@ -220,10 +218,11 @@ jobs:
     steps:
       - name: Send Slack Notification
         uses: slackapi/slack-github-action@v1.26.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
           channel-id: 'C08V19BHQVB'
-          text: |
+          slack-message: |
             *GitHub Actions Workflow*: ${{ github.workflow }}
             *Status*: ${{ job.status }}
             *Repository*: ${{ github.repository }}
