@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import Footer from './Footer';
 
-// Extend Jest with jest-axe for accessibility testing
 expect.extend(toHaveNoViolations);
 
 describe('Footer', () => {
