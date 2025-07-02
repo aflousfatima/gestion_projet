@@ -54,7 +54,7 @@ export default function SigninPage() {
         const accessToken = response.data.access_token;
         console.log("Access Token récupéré:", accessToken);
         login(accessToken);
-        // Ajouter un délai pour s'assurer que le message est visible avant la redirection
+        // Ajouter un délai pour s'assurer que le message est visible avant la redirection 
         setTimeout(() => {
           router.replace("/company/company-choice");
         }, 1000);
