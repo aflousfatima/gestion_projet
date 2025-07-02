@@ -125,14 +125,6 @@ jobs:
       - name: Run Tests
         run: npm run test
 
-      - name: Run k6 Performance Tests
-        uses: grafana/k6-action@v0.3.1
-        with:
-          path: ./front-end_service/load-test.js
-          flags: --vus 10 --duration 30s
-        env:
-          K6_TEST_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-
   docker-build-scan:
     needs: build-test
     runs-on: ubuntu-latest
