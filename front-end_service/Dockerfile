@@ -13,7 +13,7 @@ RUN apk add --no-cache \
 # Copier les fichiers de configuration
 COPY package.json package-lock.json ./
 COPY tsconfig.json ./
-COPY next.config.js ./
+COPY next.config.ts ./
 
 # Installer les dépendances
 RUN npm ci
