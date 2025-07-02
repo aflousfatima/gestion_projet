@@ -44,7 +44,7 @@ export default function ChooseCompanyPage() {
       </div>
 
       <div className="footer-note">
-        <p>Agilia - Where Agile Dreams Take Flight</p>
+        <p>Agilia - Where Agile Dreams Take Flight </p>
       </div>
     </div>
   );
