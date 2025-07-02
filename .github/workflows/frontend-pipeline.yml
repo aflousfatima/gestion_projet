@@ -74,14 +74,6 @@ jobs:
         run: npm run lint
         continue-on-error: true
 
-      - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v3
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          projectBaseDir: ./front-end_service
-
       - name: Generate CycloneDX SBOM
         run: |
           npm install -g @cyclonedx/cyclonedx-npm
@@ -123,7 +115,21 @@ jobs:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Run Tests
-        run: npm run test
+        run: npm run test -- --coverage
+
+      - name: Debug Coverage Report
+        run: |
+          ls -l coverage/
+          cat coverage/lcov.info || echo "No lcov.info found"
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          projectBaseDir: ./front-end_service
+          
 
   docker-build-scan:
     needs: build-test
