@@ -2,7 +2,7 @@
 FROM node:22.11.0-alpine AS builder
 WORKDIR /app
 
-# Installer les dépendances système nécessaires pour le build
+# Installer les dépendances système nécessaires pour le build 
 RUN apk add --no-cache \
     openssl \
     ca-certificates \
