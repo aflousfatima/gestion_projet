@@ -189,6 +189,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Push Docker Image
+        if: github.event_name == 'push'
+        uses: docker/build-push-action@v5
+        with:
+          context: ./front-end_service
+          file: ./front-end_service/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
+          platforms: linux/amd64
+          
       - name: Install Cosign
         if: github.event_name == 'push'
         uses: sigstore/cosign-installer@v3.7.0
@@ -201,15 +211,7 @@ jobs:
         run: |
           cosign sign --key env://COSIGN_PRIVATE_KEY ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-      - name: Push Docker Image
-        if: github.event_name == 'push'
-        uses: docker/build-push-action@v5
-        with:
-          context: ./front-end_service
-          file: ./front-end_service/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
-          platforms: linux/amd64
+
 
   notify:
     needs: [setup-dependencies, security-analysis, build-test, docker-build-scan, docker-sign-push]
@@ -217,10 +219,10 @@ jobs:
     if: always()
     steps:
       - name: Send Slack Notification
-        uses: slackapi/slack-github-action@v1.27.0
+        uses: slackapi/slack-github-action@v1.26.0
         with:
           slack-bot-token: ${{ secrets.SLACK_BOT_TOKEN }}
-          channel-id: 'general'
+          channel-id: 'C08V19BHQVB'
           text: |
             *GitHub Actions Workflow*: ${{ github.workflow }}
             *Status*: ${{ job.status }}
