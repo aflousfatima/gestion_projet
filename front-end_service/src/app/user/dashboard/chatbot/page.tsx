@@ -34,7 +34,6 @@ interface WebSocketMessage {
   confidence?: number;
 }
 
-// Sample intents with a subset of questions
 const intents = {
   intent_1: {
     description: "Provides a summary of the current sprint for a project.",
