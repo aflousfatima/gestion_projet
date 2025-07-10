@@ -151,7 +151,7 @@ jobs:
           echo "Test End Time: $END_TIME"
           echo "Test Time: $TEST_TIME seconds"
           # Extraire la couverture depuis le résumé Jest (% Stmts)
-          COVERAGE=$(npm run test -- --coverage --silent | grep -E 'All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*' | awk '{print $3}' | grep -o '[0-9]\+\.[0-9]\+' || echo "0")
+          COVERAGE=$(npm run test -- --coverage --silent | grep -E 'All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*' | awk '{print $3}' || echo "0")
           echo "Coverage: $COVERAGE%"
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
         env:
@@ -175,6 +175,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           projectBaseDir: ./front-end_service
+
 
   metrics:
     needs: build-test
@@ -202,17 +203,18 @@ jobs:
 
       - name: Verify Pushgateway Accessibility
         run: |
-          curl https://3f4af72e4de8.ngrok-free.app/-/healthy || echo "Pushgateway not accessible"
+          curl ${{ secrets.PUSHGATEWAY_URL }}/-/healthy || echo "Pushgateway not accessible"
 
       - name: Push Metrics to Pushgateway
         run: |
-          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME:-0}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME:-0}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE:-0}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
         env:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
           COVERAGE: ${{ env.COVERAGE }}
+
         
 
   docker-build-scan:
