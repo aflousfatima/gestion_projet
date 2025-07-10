@@ -131,7 +131,7 @@ jobs:
         run: |
           echo "Starting tests..."
           START_TIME=$(date +%s)
-          if ! npm run test -- --coverage; then
+          if ! npm run test -- --coverage --coverageReporters=json-summary; then
             echo "Error: npm run test failed"
             exit 1
           fi
@@ -144,8 +144,13 @@ jobs:
           echo "Test Start Time: $START_TIME"
           echo "Test End Time: $END_TIME"
           echo "Test Time: $TEST_TIME seconds"
-          # Extraire la couverture depuis coverage-summary.json
-          COVERAGE=$(node -pe "require('./coverage/coverage-summary.json').total.statements.pct" || echo "0")
+          # Vérifier si coverage-summary.json existe
+          if [[ -f "./coverage/coverage-summary.json" ]]; then
+            COVERAGE=$(node -pe "require('./coverage/coverage-summary.json').total.statements.pct" || echo "0")
+          else
+            echo "coverage-summary.json not found, falling back to Jest output"
+            COVERAGE=$(npm run test -- --coverage --silent | grep -E 'All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*' | awk '{print $3}' || echo "0")
+          fi
           echo "Coverage: $COVERAGE%"
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
         env:
@@ -157,6 +162,8 @@ jobs:
           ls -l coverage/
           echo "Content of coverage-summary.json:"
           cat coverage/coverage-summary.json || echo "No coverage-summary.json found"
+          echo "Content of lcov.info:"
+          cat coverage/lcov.info || echo "No lcov.info found"
           echo "Jest test output:"
           npm run test -- --coverage --silent || echo "No test output available"
 
@@ -206,6 +213,7 @@ jobs:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
           COVERAGE: ${{ env.COVERAGE }}
+
 
 
   docker-build-scan:
