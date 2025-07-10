@@ -113,34 +113,60 @@ jobs:
       - name: Build Next.js App
         id: build
         run: |
+          echo "Starting build..."
           START_TIME=$(date +%s)
-          npm run build
+          if ! npm run build; then
+            echo "Error: npm run build failed"
+            exit 1
+          fi
           END_TIME=$(date +%s)
+          if [[ -z "$START_TIME" || -z "$END_TIME" ]]; then
+            echo "Error: START_TIME or END_TIME is empty"
+            exit 1
+          fi
           BUILD_TIME=$((END_TIME - START_TIME))
+          echo "Build Start Time: $START_TIME"
+          echo "Build End Time: $END_TIME"
+          echo "Build Time: $BUILD_TIME seconds"
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
-          echo "Build Time: $BUILD_TIME seconds"  # Debug
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Run Tests
         id: test
         run: |
+          echo "Starting tests..."
           START_TIME=$(date +%s)
-          npm run test -- --coverage
+          if ! npm run test -- --coverage; then
+            echo "Error: npm run test failed"
+            exit 1
+          fi
           END_TIME=$(date +%s)
+          if [[ -z "$START_TIME" || -z "$END_TIME" ]]; then
+            echo "Error: START_TIME or END_TIME is empty"
+            exit 1
+          fi
           TEST_TIME=$((END_TIME - START_TIME))
-          echo "TEST_TIME=$TEST_TIME" >> $GITHUB_ENV
-          echo "Test Time: $TEST_TIME seconds"  # Debug
-          # Extraire la couverture totale depuis le résumé Jest
-          COVERAGE=$(npm run test -- --coverage --silent | grep -o '[0-9]\+\.[0-9]\+%' | head -1 | tr -d '%' || echo "0")
+          echo "Test Start Time: $START_TIME"
+          echo "Test End Time: $END_TIME"
+          echo "Test Time: $TEST_TIME seconds"
+          # Extraire la couverture depuis le résumé Jest (% Stmts)
+          COVERAGE=$(npm run test -- --coverage --silent | grep -E 'All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*' | awk '{print $3}' | grep -o '[0-9]\+\.[0-9]\+' || echo "0")
+          echo "Coverage: $COVERAGE%"
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
-          echo "Coverage: $COVERAGE%"  # Debug
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Debug Coverage Report
         run: |
+          echo "Listing coverage files:"
           ls -l coverage/
+          echo "Content of lcov.info:"
           cat coverage/lcov.info || echo "No lcov.info found"
+          echo "Content of coverage-final.json:"
           cat coverage/coverage-final.json || echo "No coverage-final.json found"
+          echo "Jest test output:"
+          npm run test -- --coverage --silent || echo "No test output available"
 
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v3
@@ -165,6 +191,10 @@ jobs:
           echo "BUILD_TIME: ${BUILD_TIME}"
           echo "TEST_TIME: ${TEST_TIME}"
           echo "COVERAGE: ${COVERAGE}"
+          if [[ -z "${BUILD_TIME}" || -z "${TEST_TIME}" || -z "${COVERAGE}" ]]; then
+            echo "Error: One or more environment variables are empty"
+            exit 1
+          fi
         env:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
@@ -172,13 +202,13 @@ jobs:
 
       - name: Verify Pushgateway Accessibility
         run: |
-          curl -I https://3f4af72e4de8.ngrok-free.app/-/healthy || echo "Pushgateway not accessible"
+          curl https://3f4af72e4de8.ngrok-free.app/-/healthy || echo "Pushgateway not accessible"
 
       - name: Push Metrics to Pushgateway
         run: |
-          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME:-0}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME:-0}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE:-0}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
+          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME:-0}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME:-0}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE:-0}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
         env:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
