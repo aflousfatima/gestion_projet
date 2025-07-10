@@ -519,7 +519,6 @@ const removeParticipant = async (userId: string) => {
   }
 };
 
-// Gérer le clic en dehors du pop-up
 useEffect(() => {
   const handleClickOutside = (event: MouseEvent) => {
     if (
@@ -576,14 +575,12 @@ useEffect(() => {
     fetchMessages();
   }, [accessToken, axiosInstance, channelId, channel?.type]);
 
-  // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [messages]);
 
-  // Send a new message
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !channel || !stompClientRef.current) return;
@@ -665,8 +662,7 @@ useEffect(() => {
     const [firstName, lastName] = senderName.split(" ");
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
   };
-
-  // Fetch current user
+  
   useEffect(() => {
     const fetchCurrentUser = async () => {
       if (accessToken && !currentUser) {
