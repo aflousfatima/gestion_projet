@@ -12,7 +12,7 @@ jest.mock('next/link', () => {
       {children}
     </a>
   );
-  MockLink.displayName = 'MockLink'; // Ajoute displayName pour éviter l'erreur ESLint
+  MockLink.displayName = 'MockLink'; 
   return MockLink;
 });
 
