@@ -23,12 +23,12 @@ interface AuthProviderProps {
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // ✅ Éviter les requêtes avant la récupération du token
+  const [isLoading, setIsLoading] = useState(true);
 
   // Fonction pour rafraîchir le token
   const refreshAccessToken = async () => {
     try {
-      console.log("🔄 Tentative de rafraîchissement du token...");
+      console.log(" Tentative de rafraîchissement du token...");
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/refresh`,
         {},
@@ -36,14 +36,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       );
 
       if (response.data.access_token) {
-        console.log("✅ Nouveau token reçu :", response.data.access_token);
+        console.log("Nouveau token reçu :", response.data.access_token);
         setAccessToken(response.data.access_token);
       } else {
-        console.log("⚠️ Impossible de récupérer un nouveau token.");
+        console.log("⚠ Impossible de récupérer un nouveau token.");
         setAccessToken(null);
       }
     } catch (error) {
-      console.error("❌ Erreur lors du rafraîchissement du token :", error);
+      console.error(" Erreur lors du rafraîchissement du token :", error);
       setAccessToken(null);
     } finally {
       setIsLoading(false);
@@ -60,19 +60,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const login = (token: string) => {
-    console.log("✅ Connexion réussie, token reçu :", token);
+    console.log(" Connexion réussie, token reçu :", token);
     setAccessToken(token);
   };
 
   const logout = async () => {
-    console.log("🚪 Déconnexion en cours...");
+    console.log(" Déconnexion en cours...");
     setAccessToken(null);
     await axios.post(
       `${process.env.NEXT_PUBLIC_API_AUTHENTIFICATON_SERVICE_URL}/api/logout`,
       {},
       { withCredentials: true }
     );
-    console.log("🔓 Déconnecté, token supprimé.");
+    console.log(" Déconnecté, token supprimé.");
   };
 
   return (
