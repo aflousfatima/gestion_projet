@@ -17,7 +17,7 @@ export default function SigninPage() {
     password: "",
   });
   const router = useRouter();
-  const { login } = useAuth(); // Utilisation du contexte Auth pour accéder à la fonction login
+  const { login } = useAuth();
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" | null }>({
     text: "",
     type: null,
@@ -54,7 +54,7 @@ export default function SigninPage() {
         const accessToken = response.data.access_token;
         console.log("Access Token récupéré:", accessToken);
         login(accessToken);
-        // Ajouter un délai pour s'assurer que le message est visible avant la redirection 
+        // ajouter un  delai pour s'assurer que le message est visible
         setTimeout(() => {
           router.replace("/company/company-choice");
         }, 1000);
