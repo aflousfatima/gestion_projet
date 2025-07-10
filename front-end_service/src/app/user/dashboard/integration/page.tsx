@@ -12,23 +12,22 @@ const Integrations: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Vérifier l'état de la connexion GitHub
   useEffect(() => {
     const checkGithubConnection = async () => {
-      console.log("🔍 Access Token:", accessToken);
+      console.log("Access Token:", accessToken);
       if (!accessToken || isLoading) {
-        console.log("🔍 Pas de token ou chargement en cours, annulation...");
+        console.log("Pas de token ou chargement en cours, annulation...");
         return;
       }
       try {
-        console.log("🔍 Vérification de la connexion GitHub...");
+        console.log("Vérification de la connexion GitHub...");
         const response = await axiosInstance.get(
           "http://localhost:8087/api/github-integration/check-token",
           {
             headers: { Authorization: `Bearer ${accessToken}` },
           }
         );
-        console.log("✅ Réponse de /api/github/check-token:", response.data);
+        console.log("Réponse de /api/github/check-token:", response.data);
         setGithubConnected(response.data.hasToken);
       } catch (err: unknown) {
         console.error(
@@ -57,7 +56,6 @@ const Integrations: React.FC = () => {
     checkGithubConnection();
   }, [accessToken, isLoading, axiosInstance]);
 
-  // Vérifier les paramètres d'URL pour les messages GitHub
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("github") === "success") {
@@ -68,13 +66,12 @@ const Integrations: React.FC = () => {
     }
   }, []);
 
-  // Gérer la connexion à GitHub
   const handleConnectGithub = () => {
     setGithubLoading(true);
     setError(null);
     setSuccessMessage(null);
     try {
-      console.log("🔄 Redirection vers l'authentification GitHub...");
+      console.log("Redirection vers l'authentification GitHub...");
       if (!accessToken) {
         throw new Error(
           "Aucun token d'accès disponible. Veuillez vous connecter."
@@ -83,7 +80,7 @@ const Integrations: React.FC = () => {
       const githubLoginUrl = `http://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(
         accessToken
       )}`;
-      console.log("🔄 Redirection vers:", githubLoginUrl);
+      console.log("Redirection vers:", githubLoginUrl);
       window.location.href = githubLoginUrl;
     } catch (err: unknown) {
       console.error("Erreur lors de la redirection GitHub:", err);
