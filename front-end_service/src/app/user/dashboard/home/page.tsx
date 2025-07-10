@@ -24,7 +24,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
 
-  // Formater la date actuelle
+
   useEffect(() => {
     const today = new Date();
     const options = {
@@ -37,17 +37,16 @@ const Home = () => {
     setCurrentDate(formattedDate);
   }, []);
 
-  // Récupérer les détails de l'utilisateur
   useEffect(() => {
     const fetchUserDetails = async () => {
       if (authLoading || !accessToken) {
-        console.log("🔍 Auth en chargement ou pas de token, arrêt de fetchUserDetails");
+        console.log(" Auth en chargement ou pas de token, arrêt de fetchUserDetails");
         setLoading(false);
         return;
       }
 
       try {
-        console.log("🔍 Récupération des détails de l'utilisateur...");
+        console.log("Récupération des détails de l'utilisateur...");
         const userDetailsResponse = await fetch(`${AUTH_SERVICE_URL}/api/me`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -59,7 +58,7 @@ const Home = () => {
         }
 
         const userDetails = await userDetailsResponse.json();
-        console.log("✅ Détails de l'utilisateur récupérés:", userDetails);
+        console.log(" Détails de l'utilisateur récupérés:", userDetails);
         setUserName(userDetails.firstName || "User");
       } catch (error) {
         console.error("Erreur lors de la récupération des détails utilisateur:", error);
@@ -71,10 +70,9 @@ const Home = () => {
     fetchUserDetails();
   }, [accessToken, authLoading]);
 
-  // Récupérer les tâches de l'utilisateur
   useEffect(() => {
     const fetchTasks = async () => {
-      console.log("🔍 Début de fetchTasks");
+      console.log(" Début de fetchTasks");
       console.log("Conditions: ", {
         authLoading,
         projectsLoading,
@@ -83,12 +81,12 @@ const Home = () => {
       });
 
       if (authLoading || projectsLoading || !accessToken) {
-        console.log("🔍 Conditions non remplies pour fetchTasks, arrêt");
+        console.log(" Conditions non remplies pour fetchTasks, arrêt");
         return;
       }
 
       try {
-        console.log("🔍 Récupération des tâches de l'utilisateur");
+        console.log(" Récupération des tâches de l'utilisateur");
         const response = await fetch(`http://localhost:8086/api/project/tasks/user/active-sprints`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -100,7 +98,7 @@ const Home = () => {
         }
 
         const tasksData = await response.json();
-        console.log("🔍 Tâches reçues:", tasksData);
+        console.log(" Tâches reçues:", tasksData);
 
         // Créer une map des projets pour associer projectName
         const projectMap = new Map(projects.map(p => [p.id, p.name]));
@@ -112,7 +110,7 @@ const Home = () => {
           projectName: projectMap.get(task.projectId) || "Projet inconnu",
         }));
 
-        console.log("✅ Tâches mappées:", mappedTasks);
+        console.log("Tâches mappées:", mappedTasks);
         setTasks(mappedTasks);
       } catch (error) {
         console.error("Erreur lors de la récupération des tâches:", error);
