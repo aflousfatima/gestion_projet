@@ -9,6 +9,12 @@ permissions:
 on:
   push:
     branches: [main]
+    paths:
+      - 'front-end_service/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'front-end_service/**'
 
 jobs:
   setup-dependencies:
