@@ -74,7 +74,7 @@ const Integrations: React.FC = () => {
       console.log("Redirection vers l'authentification GitHub...");
       if (!accessToken) {
         throw new Error(
-          "Aucun token d'accès disponible. Veuillez vous connecter."
+          "No token accesss available. you have to connect"
         );
       }
       const githubLoginUrl = `http://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(
