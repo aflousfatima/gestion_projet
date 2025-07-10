@@ -110,12 +110,24 @@ jobs:
             ${{ runner.os }}-npm-
 
       - name: Build Next.js App
-        run: npm run build
+        id: build
+        run: |
+          START_TIME=$(date +%s)
+          npm run build
+          END_TIME=$(date +%s)
+          echo "BUILD_TIME=$((END_TIME - START_TIME))" >> $GITHUB_ENV
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
       - name: Run Tests
-        run: npm run test -- --coverage
+        id: test
+        run: |
+          START_TIME=$(date +%s)
+          npm run test -- --coverage
+          END_TIME=$(date +%s)
+          echo "TEST_TIME=$((END_TIME - START_TIME))" >> $GITHUB_ENV
+          COVERAGE=$(grep -o '[0-9]\+\.[0-9]\+%' coverage/lcov.info | head -1 | tr -d '%')
+          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
 
       - name: Debug Coverage Report
         run: |
@@ -129,7 +141,25 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           projectBaseDir: ./front-end_service
-          
+
+  metrics:
+    needs: build-test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./front-end_service
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+      - name: Push Metrics to Pushgateway
+        run: |
+          echo "build_time_seconds ${BUILD_TIME} ${GITHUB_RUN_ID}" | curl --data-binary @- http://localhost:9091/metrics/job/ci_cd_metrics
+          echo "test_time_seconds ${TEST_TIME} ${GITHUB_RUN_ID}" | curl --data-binary @- http://localhost:9091/metrics/job/ci_cd_metrics
+          echo "test_coverage_percent ${COVERAGE} ${GITHUB_RUN_ID}" | curl --data-binary @- http://localhost:9091/metrics/job/ci_cd_metrics
+        env:
+          BUILD_TIME: ${{ env.BUILD_TIME }}
+          TEST_TIME: ${{ env.TEST_TIME }}
+          COVERAGE: ${{ env.COVERAGE }}
 
   docker-build-scan:
     needs: build-test
@@ -176,7 +206,6 @@ jobs:
         with:
           sarif_file: trivy-results.sarif
 
-
   docker-sign-push:
     needs: docker-build-scan
     runs-on: ubuntu-latest
@@ -204,7 +233,7 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ github.sha }}
           platforms: linux/amd64
-          
+
       - name: Install Cosign
         if: github.event_name == 'push'
         uses: sigstore/cosign-installer@v3.7.0
@@ -218,7 +247,7 @@ jobs:
           cosign sign --yes --key env://COSIGN_PRIVATE_KEY ghcr.io/${{ github.repository }}:${{ github.sha }}
 
   notify:
-    needs: [setup-dependencies, security-analysis, build-test, docker-build-scan, docker-sign-push]
+    needs: [setup-dependencies, security-analysis, build-test, metrics, docker-build-scan, docker-sign-push]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -233,4 +262,7 @@ jobs:
             *Status*: ${{ job.status }}
             *Repository*: ${{ github.repository }}
             *Commit*: ${{ github.sha }}
+            *Build Time*: ${{ env.BUILD_TIME }} seconds
+            *Test Time*: ${{ env.TEST_TIME }} seconds
+            *Test Coverage*: ${{ env.COVERAGE }}%
             *Run URL*: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
