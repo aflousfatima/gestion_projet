@@ -1,9 +1,10 @@
 name: CI/CD with DevSecOps and Docker for Next.js
 
 permissions:
-  contents: read
+  contents: write
   packages: write
   security-events: write
+  actions: read
 
 on:
   push:
@@ -115,7 +116,9 @@ jobs:
           START_TIME=$(date +%s)
           npm run build
           END_TIME=$(date +%s)
-          echo "BUILD_TIME=$((END_TIME - START_TIME))" >> $GITHUB_ENV
+          BUILD_TIME=$((END_TIME - START_TIME))
+          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+          echo "Build Time: $BUILD_TIME seconds"  # Debug
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
@@ -125,14 +128,19 @@ jobs:
           START_TIME=$(date +%s)
           npm run test -- --coverage
           END_TIME=$(date +%s)
-          echo "TEST_TIME=$((END_TIME - START_TIME))" >> $GITHUB_ENV
-          COVERAGE=$(grep -o '[0-9]\+\.[0-9]\+%' coverage/lcov.info | head -1 | tr -d '%')
+          TEST_TIME=$((END_TIME - START_TIME))
+          echo "TEST_TIME=$TEST_TIME" >> $GITHUB_ENV
+          echo "Test Time: $TEST_TIME seconds"  # Debug
+          # Extraire la couverture totale depuis le résumé Jest
+          COVERAGE=$(npm run test -- --coverage --silent | grep -o '[0-9]\+\.[0-9]\+%' | head -1 | tr -d '%' || echo "0")
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "Coverage: $COVERAGE%"  # Debug
 
       - name: Debug Coverage Report
         run: |
           ls -l coverage/
           cat coverage/lcov.info || echo "No lcov.info found"
+          cat coverage/coverage-final.json || echo "No coverage-final.json found"
 
       - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@v3
@@ -152,11 +160,25 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Debug Environment Variables
+        run: |
+          echo "BUILD_TIME: ${BUILD_TIME}"
+          echo "TEST_TIME: ${TEST_TIME}"
+          echo "COVERAGE: ${COVERAGE}"
+        env:
+          BUILD_TIME: ${{ env.BUILD_TIME }}
+          TEST_TIME: ${{ env.TEST_TIME }}
+          COVERAGE: ${{ env.COVERAGE }}
+
+      - name: Verify Pushgateway Accessibility
+        run: |
+          curl -I https://3f4af72e4de8.ngrok-free.app/-/healthy || echo "Pushgateway not accessible"
+
       - name: Push Metrics to Pushgateway
         run: |
-          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
+          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME:-0}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME:-0}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE:-0}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
         env:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
