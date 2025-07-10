@@ -2,7 +2,7 @@
 FROM node:22.11.0-alpine AS builder
 WORKDIR /app
 
-
+# Installer les dépendances système nécessaires pour le build 
 RUN apk add --no-cache \
     openssl \
     ca-certificates \
@@ -10,24 +10,25 @@ RUN apk add --no-cache \
     make \
     g++
 
-
+# Copier les fichiers de configuration
 COPY package.json package-lock.json ./
 COPY tsconfig.json ./
 COPY next.config.ts ./
 
-
+# Installer les dépendances
 RUN npm ci
 
-
+# Copier le reste des fichiers (respecte .dockerignore)
 COPY . .
 
-
+# Construire l'application
 RUN npm run build
 
 # Étape 2 : Runtime
 FROM node:22.11.0-alpine AS runner
 WORKDIR /app
 
+# Installer les dépendances système minimales pour l'exécution
 RUN apk add --no-cache \
     openssl \
     ca-certificates
