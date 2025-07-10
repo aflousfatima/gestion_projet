@@ -169,7 +169,7 @@ jobs:
           projectBaseDir: ./front-end_service
 
 
-    metrics:
+  metrics:
     needs: build-test
     runs-on: ubuntu-latest
     defaults:
@@ -207,8 +207,6 @@ jobs:
           TEST_TIME: ${{ env.TEST_TIME }}
           COVERAGE: ${{ env.COVERAGE }}
 
-
-        
 
   docker-build-scan:
     needs: build-test
