@@ -150,8 +150,8 @@ jobs:
           echo "Test Start Time: $START_TIME"
           echo "Test End Time: $END_TIME"
           echo "Test Time: $TEST_TIME seconds"
-          # Extraire la couverture depuis le résumé Jest (% Stmts)
-          COVERAGE=$(npm run test -- --coverage --silent | grep -E 'All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*' | awk '{print $3}' || echo "0")
+          # Extraire la couverture depuis coverage-summary.json
+          COVERAGE=$(node -pe "require('./coverage/coverage-summary.json').total.statements.pct" || echo "0")
           echo "Coverage: $COVERAGE%"
           echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
         env:
@@ -161,10 +161,8 @@ jobs:
         run: |
           echo "Listing coverage files:"
           ls -l coverage/
-          echo "Content of lcov.info:"
-          cat coverage/lcov.info || echo "No lcov.info found"
-          echo "Content of coverage-final.json:"
-          cat coverage/coverage-final.json || echo "No coverage-final.json found"
+          echo "Content of coverage-summary.json:"
+          cat coverage/coverage-summary.json || echo "No coverage-summary.json found"
           echo "Jest test output:"
           npm run test -- --coverage --silent || echo "No test output available"
 
@@ -177,8 +175,7 @@ jobs:
           projectBaseDir: ./front-end_service
 
 
-
-  metrics:
+    metrics:
     needs: build-test
     runs-on: ubuntu-latest
     defaults:
@@ -215,6 +212,7 @@ jobs:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
           COVERAGE: ${{ env.COVERAGE }}
+
 
         
 
