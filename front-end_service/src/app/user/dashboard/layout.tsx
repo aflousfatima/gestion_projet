@@ -71,9 +71,6 @@ export default function DashboardLayout({
   const [isTextChannelOpen, setIsTextChannelOpen] = useState(true);
   const [isVocalChannelOpen, setIsVocalChannelOpen] = useState(true);
 
-
-  // Récupérer les canaux publics
-// Récupérer les canaux publics
 useEffect(() => {
   const fetchChannels = async () => {
     if (accessToken) {
