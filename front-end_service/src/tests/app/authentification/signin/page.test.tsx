@@ -8,7 +8,7 @@ import { useAuth } from "../../../../context/AuthContext";
 
 expect.extend(toHaveNoViolations);
 
-// Mock next/link to avoid async updates from use-intersection
+
 jest.mock("next/link", () => {
   const MockedLink = ({
     children,
@@ -39,7 +39,6 @@ jest.mock("../../../../context/AuthContext", () => ({
   useAuth: jest.fn(),
 }));
 
-// Mock axios.isAxiosError to recognize our AxiosError instances
 jest
   .spyOn(axios, "isAxiosError")
   .mockImplementation((error: unknown): boolean => {
