@@ -90,6 +90,10 @@ jobs:
     defaults:
       run:
         working-directory: ./front-end_service
+    outputs:
+      build_time: ${{ steps.build.outputs.build_time }}
+      test_time: ${{ steps.test.outputs.test_time }}
+      coverage: ${{ steps.test.outputs.coverage }}
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -122,7 +126,7 @@ jobs:
           echo "Build Start Time: $START_TIME"
           echo "Build End Time: $END_TIME"
           echo "Build Time: $BUILD_TIME seconds"
-          echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+          echo "build_time=$BUILD_TIME" >> $GITHUB_OUTPUT
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
@@ -144,7 +148,6 @@ jobs:
           echo "Test Start Time: $START_TIME"
           echo "Test End Time: $END_TIME"
           echo "Test Time: $TEST_TIME seconds"
-          # Vérifier si coverage-summary.json existe
           if [[ -f "./coverage/coverage-summary.json" ]]; then
             COVERAGE=$(node -pe "require('./coverage/coverage-summary.json').total.statements.pct" || echo "0")
           else
@@ -152,7 +155,8 @@ jobs:
             COVERAGE=$(npm run test -- --coverage --silent | grep -E 'All files[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*' | awk '{print $3}' || echo "0")
           fi
           echo "Coverage: $COVERAGE%"
-          echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+          echo "test_time=$TEST_TIME" >> $GITHUB_OUTPUT
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
@@ -188,17 +192,13 @@ jobs:
 
       - name: Debug Environment Variables
         run: |
-          echo "BUILD_TIME: ${BUILD_TIME}"
-          echo "TEST_TIME: ${TEST_TIME}"
-          echo "COVERAGE: ${COVERAGE}"
-          if [[ -z "${BUILD_TIME}" || -z "${TEST_TIME}" || -z "${COVERAGE}" ]]; then
+          echo "BUILD_TIME: ${{ needs.build-test.outputs.build_time }}"
+          echo "TEST_TIME: ${{ needs.build-test.outputs.test_time }}"
+          echo "COVERAGE: ${{ needs.build-test.outputs.coverage }}"
+          if [[ -z "${{ needs.build-test.outputs.build_time }}" || -z "${{ needs.build-test.outputs.test_time }}" || -z "${{ needs.build-test.outputs.coverage }}" ]]; then
             echo "Error: One or more environment variables are empty"
             exit 1
           fi
-        env:
-          BUILD_TIME: ${{ env.BUILD_TIME }}
-          TEST_TIME: ${{ env.TEST_TIME }}
-          COVERAGE: ${{ env.COVERAGE }}
 
       - name: Verify Pushgateway Accessibility
         run: |
@@ -206,13 +206,9 @@ jobs:
 
       - name: Push Metrics to Pushgateway
         run: |
-          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
-        env:
-          BUILD_TIME: ${{ env.BUILD_TIME }}
-          TEST_TIME: ${{ env.TEST_TIME }}
-          COVERAGE: ${{ env.COVERAGE }}
+          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${{ needs.build-test.outputs.build_time }}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${{ needs.build-test.outputs.test_time }}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${{ needs.build-test.outputs.coverage }}" | curl --data-binary @- ${{ secrets.PUSHGATEWAY_URL }}/metrics/job/ci_cd_metrics
 
 
 
