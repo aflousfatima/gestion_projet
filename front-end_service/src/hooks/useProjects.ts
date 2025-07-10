@@ -56,8 +56,6 @@ export const useProjects = (): UseProjectsResult => {
           `${AUTH_SERVICE_URL}/api/user-id`
         );
         const authId = authIdResponse.data;
-
-        // Appeler le nouvel endpoint pour récupérer les projets de l'utilisateur
         const projectsResponse = await axiosInstance.get(
           `${PROJECT_SERVICE_URL}/api/projects/by-user?authId=${authId}`
         );
