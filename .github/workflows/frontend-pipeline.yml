@@ -145,11 +145,6 @@ jobs:
   metrics:
     needs: build-test
     runs-on: ubuntu-latest
-    services:
-      pushgateway:
-        image: prom/pushgateway:latest
-        ports:
-          - 9091:9091
     defaults:
       run:
         working-directory: ./front-end_service
@@ -159,13 +154,14 @@ jobs:
 
       - name: Push Metrics to Pushgateway
         run: |
-          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME}" | curl --data-binary @- http://pushgateway:9091/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME}" | curl --data-binary @- http://pushgateway:9091/metrics/job/ci_cd_metrics
-          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE}" | curl --data-binary @- http://pushgateway:9091/metrics/job/ci_cd_metrics
+          echo -e "# HELP build_time_seconds Time taken to build the Next.js app in seconds\n# TYPE build_time_seconds gauge\nbuild_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${BUILD_TIME}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_time_seconds Time taken to run tests in seconds\n# TYPE test_time_seconds gauge\ntest_time_seconds{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${TEST_TIME}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
+          echo -e "# HELP test_coverage_percent Test coverage percentage\n# TYPE test_coverage_percent gauge\ntest_coverage_percent{job=\"ci_cd_metrics\",run_id=\"${GITHUB_RUN_ID}\"} ${COVERAGE}" | curl --data-binary @- https://3f4af72e4de8.ngrok-free.app/metrics/job/ci_cd_metrics
         env:
           BUILD_TIME: ${{ env.BUILD_TIME }}
           TEST_TIME: ${{ env.TEST_TIME }}
           COVERAGE: ${{ env.COVERAGE }}
+        
 
   docker-build-scan:
     needs: build-test
