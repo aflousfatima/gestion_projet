@@ -1,5 +1,5 @@
 # ----------- Stage 1: Build -------------
-FROM python:3.12-slim AS builder
+FROM python:3.14.0rc1-slim AS builder
 
 # Configurer l'environnement pour éviter les invites interactives
 ENV DEBIAN_FRONTEND=noninteractive
@@ -23,7 +23,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     rm -rf /root/.cache/pip /tmp/* /var/tmp/*
 # ----------- Stage 2: Final Image -------------
-FROM python:3.12-slim
+FROM python:3.14.0rc1-slim
 
 # Configurer l'environnement pour éviter les invites interactives
 ENV DEBIAN_FRONTEND=noninteractive
