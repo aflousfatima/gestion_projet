@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -26,7 +28,7 @@ public class LoginService {
 
     @Value("${keycloak.realm}")
     private String keycloakRealm;
-
+    private static final Logger logger = LoggerFactory.getLogger(LoginService.class);
     @Value("${keycloak.resource}")
     private String keycloakClientId;
 
@@ -42,11 +44,11 @@ public class LoginService {
 
 
     public TokenDto authenticateUser(String email, String password) throws Exception {
-        System.out.println("Récupération du client secret depuis Vault...");
+        logger.info("Récupération du client secret depuis Vault...");
         String keycloakClientSecret = vaultService.getClientSecret();
-        System.out.println("Client Secret from Vault: " + keycloakClientSecret);
+        logger.info("Client Secret from Vault: {}", keycloakClientSecret);
         String tokenUrl = keycloakUrl + "/realms/" + keycloakRealm + "/protocol/openid-connect/token";
-        System.out.println("URL de token : " + tokenUrl);
+        logger.info("URL de token : {}", tokenUrl);
 
         MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
         params.add("client_id", keycloakClientId);
@@ -59,17 +61,16 @@ public class LoginService {
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(params, headers);
 
-        System.out.println("Envoi de la requête POST à Keycloak...");
+        logger.info("Envoi de la requête POST à Keycloak...");
         ResponseEntity<KeycloakTokenResponse> responseEntity = restTemplate.exchange(
                 tokenUrl, HttpMethod.POST, entity, KeycloakTokenResponse.class);
 
         if (responseEntity.getStatusCode() == HttpStatus.OK) {
-            System.out.println("Tokens récupérés avec succès !");
+            logger.info("Tokens récupérés avec succès !");
             KeycloakTokenResponse tokenResponse = responseEntity.getBody();
-
             return new TokenDto(tokenResponse.getAccessToken(), tokenResponse.getRefreshToken());
         } else {
-            System.out.println("Échec de l'authentification avec Keycloak !");
+            logger.error("Échec de l'authentification avec Keycloak !");
             throw new Exception("Échec de l'authentification avec Keycloak");
         }
     }

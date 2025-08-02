@@ -35,7 +35,7 @@ public class ProjectMemberRepositoryTest {
         ProjectMember projectMember = new ProjectMember();
         projectMember.setId(id);
         projectMember.setRoleInProject("DEVELOPER");
-        projectMember.setJoinedAt(LocalDateTime.now()); // Initialiser joinedAt
+        projectMember.setJoinedAt(LocalDateTime.now());
 
         // When
         ProjectMember saved = projectMemberRepository.save(projectMember);
@@ -47,8 +47,6 @@ public class ProjectMemberRepositoryTest {
         assertThat(saved.getId().getUserId()).isEqualTo("user1");
         assertThat(saved.getRoleInProject()).isEqualTo("DEVELOPER");
         assertThat(saved.getJoinedAt()).isNotNull();
-
-
     }
 
     @Test

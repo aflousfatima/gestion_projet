@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import "../../../../../styles/Dashboard-Project.css";
 import { useAuth } from "../../../../../context/AuthContext";
 import useAxios from "../../../../../hooks/useAxios";
-import { AxiosError } from "axios"; 
+import { AxiosError } from "axios";
 import {
   AUTH_SERVICE_URL,
   PROJECT_SERVICE_URL,
@@ -666,7 +666,7 @@ export default function ProjectLayout({
 
       // Fetch backlog
       const backlogResponse = await axiosInstance.get(
-        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`,
+        `${PROJECT_SERVICE_URL}/api/projects/${projectId}/user-stories`
       );
       setBacklog(backlogResponse.data);
       console.log("📚 Backlog récupéré :", backlogResponse.data);
@@ -883,7 +883,7 @@ export default function ProjectLayout({
               )}
             </div>
           ) : (
-            <p>No Team member found.</p>
+            <p></p>
           )}
           <button className="buton-share-style">
             <i className="fa fa-building"></i> Share
@@ -894,7 +894,6 @@ export default function ProjectLayout({
           >
             <i className="fa fa-rocket"></i> Agile
           </button>
-
         </div>
       </div>
 
@@ -946,20 +945,23 @@ export default function ProjectLayout({
           >
             <i className="fa fa-calendar"></i> Calendar
           </Link>
-        
-  
-          <button className="tasks-tab">
-            <i className="fa fa-comment"></i> Messages
-          </button>
 
           <button className="tasks-tab">
             <i className="fa fa-file"></i> Files
           </button>
 
+          <Link
+            className={`tasks-tab ${
+              pathname.includes("/meeting") ? "active" : ""
+            }`}
+            href={`/user/dashboard/project/${projectId}/meeting`}
+          >
+            <i className="fa fa-clock"></i> Meetings
+          </Link>
+
           <button className="tasks-tab">
             <i className="fa fa-plus"></i>
           </button>
-
         </div>
       </div>
 
@@ -980,22 +982,17 @@ export default function ProjectLayout({
           <button className="tasks-option">
             <i className="fa fa-sort"></i> Sort
           </button>
-          <button
-            className="tasks-option"
-          >
+          <button className="tasks-option">
             <i className="fa fa-user"></i> My Tasks
           </button>
           <button className="tasks-option">
             <i className="fa fa-gear"></i> Options
           </button>
           <Link
-            className={` ${
-              pathname.includes("/projectManagement")
-            }`}
+            className={` ${pathname.includes("/projectManagement")}`}
             href={`/user/dashboard/project/${projectId}/projectManagement`}
           >
             <img src="/Github.svg" alt="github" className="github-img" />
-                   
           </Link>
         </div>
       </div>

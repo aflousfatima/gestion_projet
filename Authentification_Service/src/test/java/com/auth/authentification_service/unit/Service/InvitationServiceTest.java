@@ -49,13 +49,10 @@ class InvitationServiceTest {
     @Test
     @DisplayName("Should create and send invitation successfully")
     void createAndSendInvitation_success() throws MessagingException {
-        // Arrange
-        ArgumentCaptor<Invitation> invitationCaptor = ArgumentCaptor.forClass(Invitation.class);
 
-        // Act
+        ArgumentCaptor<Invitation> invitationCaptor = ArgumentCaptor.forClass(Invitation.class);
         invitationService.createAndSendInvitation(invitationRequest);
 
-        // Assert
         verify(invitationRepository).save(invitationCaptor.capture());
         Invitation savedInvitation = invitationCaptor.getValue();
         assertEquals(invitationRequest.getEmail(), savedInvitation.getEmail());
@@ -71,7 +68,7 @@ class InvitationServiceTest {
                 eq("USER"),
                 eq("EntrepriseX"),
                 eq(123L),
-                anyString() // Le token est généré dynamiquement
+                anyString()
         );
         verifyNoMoreInteractions(invitationRepository, emailService);
     }

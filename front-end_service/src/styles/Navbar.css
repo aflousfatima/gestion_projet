@@ -32,7 +32,6 @@
   font-weight: 500;
   font-family: Garamond, serif;
   margin-left: 20px;
-  transition: color 0.3s ease;
 }
 
 .navbar-nav .nav-item .nav-link:hover {
@@ -55,7 +54,6 @@
   font-weight: 400;
   font-family: Garamond, serif;
   padding: 8px 20px;
-  transition: color 0.3s ease;
 }
 
 /* Style pour Start for Free */
@@ -67,7 +65,6 @@
   font-weight: 400;
   font-family: Garamond, serif;
   padding: 8px 20px;
-  transition: color 0.3s ease;
 }
 
 /* Navbar toggler */

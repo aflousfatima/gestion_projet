@@ -252,7 +252,7 @@ export default function Teams() {
               </div>
             ))
           ) : (
-            <p>No Team Memeber Found.</p>
+            <p></p>
           )}
         </div>
 

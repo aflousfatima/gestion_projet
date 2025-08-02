@@ -5,7 +5,7 @@
   height: 100%;
 }
   /* Header */
-  .header {
+  .header-dashboard-page {
     margin-bottom: 50px;
     width: 100%;
     max-width: 380px; /* Limite la largeur pour un centrage cohérent */

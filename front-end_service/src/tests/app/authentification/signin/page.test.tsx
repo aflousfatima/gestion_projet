@@ -137,21 +137,17 @@ describe("SigninPage Component", () => {
       data: { access_token: "mock-token" },
     });
     render(<SigninPage />);
-
     fireEvent.change(screen.getByPlaceholderText("e-mail"), {
       target: { value: "john@example.com" },
     });
     fireEvent.change(screen.getByPlaceholderText("password"), {
       target: { value: "password123" },
     });
-
     fireEvent.click(screen.getByRole("button", { name: /Sign In/i }));
-
     await waitFor(() => {
       expect(screen.getByText(/Login Successful!/i)).toBeInTheDocument();
       expect(mockLogin).toHaveBeenCalledWith("mock-token");
     });
-
     await waitFor(
       () => {
         expect(mockPush).toHaveBeenCalledWith("/company/company-choice");

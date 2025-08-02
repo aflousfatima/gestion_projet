@@ -289,7 +289,7 @@
 
 .project-roles-table th {
   padding: 1px 4px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.082);
 }
 
 .project-roles-table td {
@@ -298,7 +298,7 @@
 }
 .project-roles-table th {
   text-align: center;
-  background: #333333ce;
+  background: #3333336d;
   font-weight: 400;
   color: #ffffff;
   font-size: 0.9rem;
@@ -516,8 +516,8 @@
   border: none;
   border-radius: 8px;
   font-size: 0.95rem;
-  background: #33333330;
-  color: #fffdfd;
+  background: #4343430f;
+  color: #000000;
   transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -630,4 +630,66 @@
   padding: 20px;
   color: #333;
   font-family: 'Poppins', sans-serif;
+}
+
+.agenda-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.agenda-form .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-form select,
+.agenda-form input[type="time"] {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.add-slot-btn,
+.remove-slot-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.add-slot-btn {
+  background-color: #eba61e;
+  color: white;
+}
+
+.add-slot-btn:hover {
+  background-color: #218838;
+}
+
+.remove-slot-btn {
+  background-color: #dc3545;
+  color: white;
+  margin-left: 10px;
+}
+
+.remove-slot-btn:hover {
+  background-color: #c82333;
+}
+
+.agenda-display h3 {
+  margin-top: 20px;
+  font-size: 18px;
+}
+
+.agenda-display ul {
+  list-style: none;
+  padding: 0;
+}
+
+.agenda-display li {
+  margin: 10px 0;
+  font-size: 16px;
 }

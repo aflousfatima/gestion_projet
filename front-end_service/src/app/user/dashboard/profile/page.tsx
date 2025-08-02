@@ -17,6 +17,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import "../../../../styles/Dashboard-User-Profil.css";
 import axios from "axios";
+
 interface User {
   id?: string;
   firstName: string;
@@ -30,6 +31,10 @@ interface User {
     emailNotifications: boolean;
     taskUpdates: boolean;
     deadlineReminders: boolean;
+  };
+  agenda?: {
+    available_slots: { day: string; start: string; end: string }[];
+    blocked_slots: { day: string; start: string; end: string }[];
   };
 }
 
@@ -55,6 +60,10 @@ const ProfilePage: React.FC = () => {
       taskUpdates: true,
       deadlineReminders: true,
     },
+    agenda: {
+      available_slots: [],
+      blocked_slots: [],
+    },
   });
   const [projectRoles, setProjectRoles] = useState<ProjectRole[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -66,54 +75,69 @@ const ProfilePage: React.FC = () => {
   });
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isEditingAgenda, setIsEditingAgenda] = useState(false);
+  const [newSlot, setNewSlot] = useState({
+    type: "available",
+    day: "Monday",
+    start: "09:00",
+    end: "10:00",
+  });
 
-  // Récupérer les informations de l'utilisateur
+  // Récupérer les informations de l'utilisateur et l'agenda
   useEffect(() => {
     const fetchUserInfo = async () => {
       if (!accessToken || isLoading) return;
       try {
         console.log("🔍 Récupération des détails de l'utilisateur...");
-        const response = await axiosInstance.get(`${AUTH_SERVICE_URL}/api/me`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        console.log("✅ Réponse de /api/me:", response.data);
+        const userResponse = await axiosInstance.get(
+          `${AUTH_SERVICE_URL}/api/me`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        console.log("✅ Réponse de /api/me:", userResponse.data);
+
+        console.log("🔍 Récupération de l'agenda...");
+        const agendaResponse = await axiosInstance.get(
+          "http://localhost:8083/api/agenda",
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        console.log("✅ Réponse de /api/agenda:", agendaResponse.data);
+
+        // Mettre à jour l'état avec les données combinées
         setUser({
-          ...response.data,
+          ...userResponse.data,
           avatar:
-            response.data.avatar ||
+            userResponse.data.avatar ||
             `https://ui-avatars.com/api/?name=${
-              response.data.firstName?.charAt(0) || "U"
-            }+${response.data.lastName?.charAt(0) || "U"}`,
-          notificationPreferences: response.data.notificationPreferences || {
+              userResponse.data.firstName?.charAt(0) || "U"
+            }+${userResponse.data.lastName?.charAt(0) || "U"}`,
+          notificationPreferences: userResponse.data
+            .notificationPreferences || {
             emailNotifications: true,
             taskUpdates: true,
             deadlineReminders: true,
           },
+          agenda: {
+            available_slots: agendaResponse.data.available_slots || [],
+            blocked_slots: agendaResponse.data.blocked_slots || [],
+          },
         });
       } catch (err: unknown) {
         if (axios.isAxiosError(err)) {
-          console.error(
-            "Erreur lors de la récupération des infos utilisateur:",
-            err
-          );
+          console.error("Erreur lors de la récupération des infos:", err);
           setError(
             err.response?.data?.message ??
-              "Erreur lors de la récupération des informations utilisateur"
+              "Erreur lors de la récupération des informations"
           );
         } else if (err instanceof Error) {
-          console.error(
-            "Erreur lors de la récupération des infos utilisateur:",
-            err
-          );
+          console.error("Erreur lors de la récupération des infos:", err);
           setError(err.message);
         } else {
-          console.error(
-            "Erreur lors de la récupération des infos utilisateur:",
-            err
-          );
-          setError(
-            "Erreur lors de la récupération des informations utilisateur"
-          );
+          console.error("Erreur lors de la récupération des infos:", err);
+          setError("Erreur lors de la récupération des informations");
         }
       }
     };
@@ -295,6 +319,99 @@ const ProfilePage: React.FC = () => {
         : "U";
     return `${firstInitial}${lastInitial}`.toUpperCase();
   };
+
+  // Gérer les changements dans le formulaire d'agenda
+  const handleSlotChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setNewSlot((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Ajouter un nouveau créneau à l'agenda
+  const handleAddSlot = () => {
+    const slot = { day: newSlot.day, start: newSlot.start, end: newSlot.end };
+    setUser((prev) => ({
+      ...prev,
+      agenda: {
+        ...prev.agenda!,
+        [newSlot.type === "available" ? "available_slots" : "blocked_slots"]: [
+          ...prev.agenda![
+            newSlot.type === "available" ? "available_slots" : "blocked_slots"
+          ],
+          slot,
+        ],
+      },
+    }));
+    setNewSlot({
+      type: "available",
+      day: "Monday",
+      start: "09:00",
+      end: "10:00",
+    });
+  };
+
+  // Supprimer un créneau
+  const handleRemoveSlot = (type: "available" | "blocked", index: number) => {
+    setUser((prev) => ({
+      ...prev,
+      agenda: {
+        ...prev.agenda!,
+        [type === "available" ? "available_slots" : "blocked_slots"]:
+          prev.agenda![
+            type === "available" ? "available_slots" : "blocked_slots"
+          ].filter((_, i) => i !== index),
+      },
+    }));
+  };
+
+  // Soumettre les modifications de l'agenda
+  const handleAgendaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const agendaToSend = {
+        available_slots: user.agenda?.available_slots ?? [],
+        blocked_slots: user.agenda?.blocked_slots ?? [],
+      };
+      console.log("📤 Corps de la requête envoyé à /api/agenda:", agendaToSend);
+      await axiosInstance.put(
+        "http://localhost:8083/api/agenda",
+        agendaToSend,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      setSuccessMessage("Agenda updated successfully!");
+      setIsEditingAgenda(false);
+      setError(null);
+
+      // Recharger l'agenda après la mise à jour pour refléter les changements
+      const agendaResponse = await axiosInstance.get(
+        "http://localhost:8083/api/agenda",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      console.log(
+        "✅ Réponse de /api/agenda après mise à jour:",
+        agendaResponse.data
+      );
+      setUser((prev) => ({
+        ...prev,
+        agenda: {
+          available_slots: agendaResponse.data.available_slots || [],
+          blocked_slots: agendaResponse.data.blocked_slots || [],
+        },
+      }));
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Error updating agenda");
+      setSuccessMessage(null);
+      console.error("❌ Erreur lors de la mise à jour de l'agenda:", err);
+    }
+  };
+
+  // Log pour déboguer l'état de user.agenda
+  console.log("🛠️ État actuel de user.agenda:", user.agenda);
 
   if (isLoading) {
     return (
@@ -591,6 +708,147 @@ const ProfilePage: React.FC = () => {
                 </label>
               </div>
             </form>
+          </div>
+        </div>
+
+        <div className="profile-card">
+          <div className="card-header">
+            <h2>
+              <FontAwesomeIcon icon={faBell} /> Agenda
+            </h2>
+            {!isEditingAgenda ? (
+              <button
+                className="edit-btn"
+                onClick={() => setIsEditingAgenda(true)}
+              >
+                <FontAwesomeIcon icon={faEdit} /> Edit
+              </button>
+            ) : (
+              <div className="form-actions">
+                <button className="save-btn" onClick={handleAgendaSubmit}>
+                  <FontAwesomeIcon icon={faSave} /> Save
+                </button>
+                <button
+                  className="cancel-btn"
+                  onClick={() => setIsEditingAgenda(false)}
+                >
+                  <FontAwesomeIcon icon={faTimes} /> Cancel
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="card-body">
+            {isEditingAgenda ? (
+              <form
+                className="agenda-form"
+                onSubmit={(e) => e.preventDefault()}
+              >
+                <div className="form-group">
+                  <label htmlFor="slotType">Slot Type</label>
+                  <select
+                    id="slotType"
+                    name="type"
+                    value={newSlot.type}
+                    onChange={handleSlotChange}
+                    data-testid="slot-type"
+                  >
+                    <option value="available">Available</option>
+                    <option value="blocked">Blocked</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="slotDay">Day</label>
+                  <select
+                    id="slotDay"
+                    name="day"
+                    value={newSlot.day}
+                    onChange={handleSlotChange}
+                    data-testid="slot-day"
+                  >
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                    <option value="Friday">Friday</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="slotStart">Start Time</label>
+                  <input
+                    id="slotStart"
+                    type="time"
+                    name="start"
+                    value={newSlot.start}
+                    onChange={handleSlotChange}
+                    data-testid="slot-start"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="slotEnd">End Time</label>
+                  <input
+                    id="slotEnd"
+                    type="time"
+                    name="end"
+                    value={newSlot.end}
+                    onChange={handleSlotChange}
+                    data-testid="slot-end"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="add-slot-btn"
+                  onClick={handleAddSlot}
+                  data-testid="add-slot"
+                >
+                  Add Slot
+                </button>
+              </form>
+            ) : (
+              <div className="agenda-display">
+                <h3>Available Slots</h3>
+                {user.agenda && user.agenda.available_slots.length > 0 ? (
+                  <ul>
+                    {user.agenda.available_slots.map((slot, index) => (
+                      <li key={index}>
+                        {slot.day} {slot.start}–{slot.end}
+                        {isEditingAgenda && (
+                          <button
+                            className="remove-slot-btn"
+                            onClick={() => handleRemoveSlot("available", index)}
+                            data-testid={`remove-available-slot-${index}`}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No available slots defined.</p>
+                )}
+                <h3>Blocked Slots</h3>
+                {user.agenda && user.agenda.blocked_slots.length > 0 ? (
+                  <ul>
+                    {user.agenda.blocked_slots.map((slot, index) => (
+                      <li key={index}>
+                        {slot.day} {slot.start}–{slot.end}
+                        {isEditingAgenda && (
+                          <button
+                            className="remove-slot-btn"
+                            onClick={() => handleRemoveSlot("blocked", index)}
+                            data-testid={`remove-blocked-slot-${index}`}
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No blocked slots defined.</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -402,7 +402,7 @@ const handleLogout = async () => {
                 setIsAddMenuOpen((prev) => !prev);
               }}
             >
-              <i className="fa fa-plus icon"></i>
+              <i className="fa fa-plus icon-new"></i>
               <span className="text-icon-add">add</span>
             </span>
             {/* Menu déroulant pour les options "add" */}

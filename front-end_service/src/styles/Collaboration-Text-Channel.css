@@ -1,4 +1,4 @@
-.channel-container {
+.channel-container-text {
   display: flex;
   flex-direction: column;
   height: 100vh; /* Hauteur pleine de la fenêtre */
@@ -146,7 +146,7 @@
   overflow: hidden;
 }
 
-.messages {
+.messages-canal {
   flex: 1;
   padding: 20px;
   padding-bottom: 130px; /* Espace pour éviter que les messages soient masqués par la barre fixée */

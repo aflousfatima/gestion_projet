@@ -111,7 +111,7 @@ async def chat(request: ChatRequest, token: Optional[str] = Depends(get_token)):
         raise HTTPException(status_code=401, detail="Invalid token: Missing or invalid Authorization header")
     try:
         logger.debug(f"Calling rag_pipeline with query: {request.query}, user_id: {request.userId}, token: {token[:10]}...")
-        intent, response, distances, response_time, metadata_results, parameters, search_time, param_time = await rag_pipeline(
+        intent, response, distances, response_time, metadata_results, parameters, search_time, param_time =  rag_pipeline(
             request.query, user_id=request.userId, token=token
         )
         logger.debug("rag_pipeline returned successfully")
@@ -167,7 +167,7 @@ async def websocket_chat(websocket: WebSocket):
             logger.debug("Sent typing status")
 
             logger.debug(f"Calling rag_pipeline with query: {query}, user_id: {user_id_from_message}, token: Bearer {token[:10]}...")
-            intent, response, distances, response_time, metadata_results, parameters, search_time, param_time = await rag_pipeline(
+            intent, response, distances, response_time, metadata_results, parameters, search_time, param_time = rag_pipeline(
                 query, user_id=user_id_from_message, token=f"Bearer {token}"
             )
             logger.debug("rag_pipeline returned successfully")

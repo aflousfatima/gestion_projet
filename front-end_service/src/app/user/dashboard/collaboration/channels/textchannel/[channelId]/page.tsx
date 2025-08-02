@@ -1221,15 +1221,15 @@ useEffect(() => {
 
   if (!channel) {
     return (
-      <div className="channel-container">
+      <div className="channel-container-text">
         {error && <div className="error-message">{error}</div>}
-        <div className="loading">Chargement...</div>
+        <div className="loading">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="channel-container">
+    <div className="channel-container-text">
       {error && <div className="error-message">{error}</div>}
       {successMessage && (
         <div className="success-message">{successMessage}</div>
@@ -1551,7 +1551,7 @@ useEffect(() => {
     </>
   )}
 </div>
-            <div className="messages">
+            <div className="messages-canal">
               {messageGroups.length > 0 ? (
                 messageGroups.map((group) => (
                   <div key={group.date} className="message-group">

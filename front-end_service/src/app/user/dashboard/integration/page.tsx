@@ -77,7 +77,7 @@ const Integrations: React.FC = () => {
           "No token accesss available. you have to connect"
         );
       }
-      const githubLoginUrl = `http://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(
+      const githubLoginUrl = `https://localhost:8087/api/github-integration/oauth/login?accessToken=${encodeURIComponent(
         accessToken
       )}`;
       console.log("Redirection vers:", githubLoginUrl);
@@ -123,7 +123,7 @@ const Integrations: React.FC = () => {
                   onClick={async () => {
                     try {
                       await axiosInstance.delete(
-                        "http://localhost:8087/api/github-integration/remove-token",
+                        "https://localhost:8087/api/github-integration/remove-token",
                         {
                           headers: { Authorization: `Bearer ${accessToken}` },
                         }

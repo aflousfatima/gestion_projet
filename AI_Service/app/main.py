@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import requests
 import uuid
 import socket
-
+from prometheus_fastapi_instrumentator import Instrumentator
 app = FastAPI(
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json"
@@ -23,6 +23,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+Instrumentator().instrument(app).expose(app, endpoint="/actuator/prometheus")
+
 
 # Configurer le logging
 setup_logging()
@@ -75,7 +79,7 @@ def deregister_from_consul():
     try:
         res = requests.put(url)
         if res.status_code == 200:
-            print("🧼 Service supprimé de Consul")
+            print(" Service supprimé de Consul")
         else:
             print(f"❌ Échec de la suppression ({res.status_code}): {res.text}")
     except Exception as e:

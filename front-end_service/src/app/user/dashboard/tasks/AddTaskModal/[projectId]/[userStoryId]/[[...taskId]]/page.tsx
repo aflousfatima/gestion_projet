@@ -579,7 +579,7 @@ export default function AddTaskModalPage() {
                       ) : error ? (
                         <span>{error}</span>
                       ) : teamMembers.length === 0 ? (
-                        <span>No team members found</span>
+                        <span></span>
                       ) : (
                         teamMembers.map((user) => (
                           <label key={user.id} className="team-member">
