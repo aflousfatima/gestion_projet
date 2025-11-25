@@ -60,7 +60,7 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-consul-discovery</artifactId>
-            <version>4.2.0</version>
+            <version>5.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
@@ -208,7 +208,7 @@
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
-            <version>4.0.0-M2</version>
+            <version>4.0.0</version>
         </dependency>
     </dependencies>
 
