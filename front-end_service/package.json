@@ -35,7 +35,7 @@
     "react-hook-form": "^7.55.0",
     "react-pdf": "^9.2.1",
     "react-quill-new": "^3.4.6",
-    "react-router-dom": "^7.6.2",
+    "react-router-dom": "^7.12.0",
     "react-toastify": "^11.0.5",
     "sanitize-html": "^2.16.0",
     "sockjs-client": "^1.6.1",
